@@ -44,7 +44,11 @@ document.getElementById("upload-form").onsubmit = function(event) {
         } else {
             document.getElementById("pdf-content").value = data.content;
             document.getElementById("result").style.display = "block";
-            document.getElementById("save-btn").dataset.filename = data.file_name;
+            if (data.file_name) {
+                document.getElementById("save-btn").dataset.filename = data.file_name;
+            } else {
+                alert("❌ 文件名未定义");
+            }
         }
     });
 };

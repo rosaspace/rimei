@@ -62,7 +62,7 @@ def save_container(request):
     if request.method == "POST":
         file_name = request.POST.get("file_name")
         content = request.POST.get("content")
-
+        print("file name: ", file_name)
         if file_name and content:
             container = Container(file_name=file_name, content=content)
             container.save()
