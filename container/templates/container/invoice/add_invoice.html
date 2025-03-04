@@ -1,0 +1,136 @@
+{% extends "container/base.html" %}
+{% block content %}
+<h2>🧾 Add Invoice</h2>
+
+<!-- Information Section -->
+<div class="info-section mb-4 border p-3 rounded">
+    <div class="d-flex justify-content-between">
+        <div class="left-info">
+            <p>Container ID: <strong>{{ container_id }}</strong></p> <!-- 显示 Container ID -->
+            <p>Container File Name: <strong>{{ container.container_pdfname }}</strong></p>
+            <p>Pickup Number: <strong>{{ container.pickup_number }}</strong></p>
+            <p>Invoice ID: <strong>{{ container.invoice_id }}</strong></p>
+            <p>Invoice File Name: <strong>{{ container.invoice_pdfname }}</strong></p>
+        </div>
+        <div class="right-info">
+            <p>Railway Date: <strong>{{ container.railway_date }}</strong></p>
+            <p>Pickup Date: <strong>{{ container.pickup_date }}</strong></p>
+            <p>Delivery Date: <strong>{{ container.delivery_date }}</strong></p>
+            <p>Empty Date: <strong>{{ container.empty_date }}</strong></p>
+            <p>Created At: <strong>{{ container.created_at }}</strong></p>
+        </div>
+    </div>
+</div>
+
+<!-- Functionality Section -->
+<div>
+    <form id="invoice-form" enctype="multipart/form-data" class="border p-3 rounded mb-4">
+        <div class="mb-3">
+            <label for="invoice-file" class="form-label">Upload Invoice PDF</label>
+            <input type="file" id="invoice-file" accept="application/pdf" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload and Parse Invoice</button>
+    </form>
+    <!-- Parsing Results -->
+    <div id="result" style="display: none;">
+        <h4>Invoice Information:</h4>
+        <p>Address: <span id="invoice-address"></span></p>
+        <p>Date: <span id="invoice-date"></span></p>
+        <p>Amount: <span id="invoice-amount"></span></p>
+        <button id="save-btn" class="btn btn-success mt-3">✅ Save Invoice</button>
+    </div>
+</div>
+
+<hr>
+
+<!-- Email Section -->
+<div class="email-section border p-3 rounded mb-4">
+    <h4>Send Email:</h4>
+    <div class="mb-3">
+        <label for="recipient" class="form-label">Recipient:</label>
+        <input type="email" id="recipient" class="form-control" placeholder="Enter recipient's email" required>
+    </div>
+    <div class="mb-3">
+        <label for="subject" class="form-label">Subject:</label>
+        <input type="text" id="subject" class="form-control" placeholder="Enter email subject" required>
+    </div>
+    <div class="mb-3">
+        <label for="body" class="form-label">Body:</label>
+        <textarea id="body" class="form-control" rows="3" placeholder="Enter email body" required></textarea>
+    </div>
+    <button id="outlook-link" class="btn btn-info">Open in Outlook</button>
+</div>
+
+{% endblock %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+
+        document.getElementById("invoice-form").onsubmit = function (event) {
+            event.preventDefault();
+            let fileInput = document.getElementById("invoice-file").files[0];
+
+            if (!fileInput) {
+                alert("Please select an invoice PDF file first.");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("invoice_file", fileInput);
+
+            fetch("{% url 'upload_invoice' container_id %}", {  // Use container_id
+                method: "POST",
+                body: formData,
+                headers: { "X-CSRFToken": "{{ csrf_token }}" }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("❌ Upload failed: " + data.error);
+                    } else {
+                        document.getElementById("invoice-address").innerText = data.address;
+                        document.getElementById("invoice-date").innerText = data.date;
+                        document.getElementById("invoice-amount").innerText = data.amount;
+                        document.getElementById("result").style.display = "block";
+                    }
+                });
+        };
+
+        document.getElementById("save-btn").onclick = function () {
+            let containerId = "{{ container_id }}";  // Use template variable
+            let address = document.getElementById("invoice-address").innerText;
+            let date = document.getElementById("invoice-date").innerText;
+            let amount = document.getElementById("invoice-amount").innerText;
+
+            fetch("{% url 'save_invoice' %}", {
+                method: "POST",
+                body: JSON.stringify({ container_id: containerId, address: address, date: date, amount: amount }),
+                headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("❌ Save failed: " + data.error);
+                    } else {
+                        alert("✅ Invoice saved successfully!");
+                    }
+                });
+        };
+
+        // Outlook link functionality
+        document.getElementById("outlook-link").onclick = function() {
+            console("sendEmail")
+            sendEmail();
+        };
+
+        function sendEmail() {
+            let recipient = document.getElementById("recipient").value;  // 获取收件人
+            let subject = document.getElementById("subject").value;      // 获取主题
+            let body = document.getElementById("body").value;            // 获取邮件内容
+
+            // 创建 mailto 链接
+            let mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoLink;  // 重定向到 mailto 链接
+        }
+    });
+</script>

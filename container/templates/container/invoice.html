@@ -7,18 +7,35 @@
         <thead>
             <tr>
                 <th>ID</th>
+                <th>Container ID</th>
                 <th>File Name</th>
                 <th>Content</th>
                 <th>Created At</th>
+                <th>Railway Date</th>
+                <th>Pickup Date</th>
+                <th>Delivery Date</th>
+                <th>Empty Date</th>
+                <th>Pickup Number</th>
+                <th>Invoice ID</th>
+                <th>Invoice PDF Name</th>
             </tr>
         </thead>
         <tbody>
             {% for container in containers %}
             <tr>
                 <td>{{ container.id }}</td>
-                <td>{{ container.file_name }}</td>
+                <td>
+                    <a href="{% url 'add_invoice' container.container_id %}">{{ container.container_id }}</a>
+                </td>
+                <td>{{ container.invoice_pdfname }}</td>
                 <td>{{ container.content }}</td>
                 <td>{{ container.created_at }}</td>
+                <td>{{ container.railway_date }}</td>
+                <td>{{ container.pickup_date }}</td>
+                <td>{{ container.delivery_date }}</td>
+                <td>{{ container.empty_date }}</td>
+                <td>{{ container.pickup_number }}</td>
+                <td>{{ container.invoice_id }}</td>
             </tr>
             {% endfor %}
         </tbody>

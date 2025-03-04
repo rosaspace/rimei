@@ -10,6 +10,8 @@ urlpatterns = [
     path("invoice/", views.invoice_view, name="invoice"),
     path("payment/", views.payment_view, name="payment"),
 
+    path("add_invoice/<str:container_id>/", views.add_invoice, name="add_invoice"),
+
     path("upload_pdf/", container.upload_pdf, name="upload_pdf"),
     path("save_container/", container.save_container, name="save_container"),
 ]
