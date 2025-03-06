@@ -23,6 +23,10 @@ def payment_view(request):
     template = "container/payment.html"
     return render(request, template)
 
+def permission_view(request):
+    template = "container/permission.html"
+    return render(request, template)
+
 def edit_invoice(request, container_id):
     print("--------------edit_invoice-----------------")
     if request.method == "POST":
