@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import Container
+from django.contrib.auth.models import User
+from .models import UserAndPermission
 
 # Create your views here.
 def index(request):
@@ -18,6 +20,22 @@ def invoice_view(request):
 def payment_view(request):
     template = "container/payment.html"
     return render(request, template)
+
+def permission_view(request):
+    # 查询所有用户及其权限
+    users_with_permissions = []
+    users = User.objects.all()  # 获取所有用户
+
+    for user in users:
+        permissions = user.userandpermission_set.all()  # 获取用户的所有权限
+        user_permissions = {
+            'username': user.username,
+            'permissions': [permission.permissionIndex.name for permission in permissions]  # 获取权限名称
+        }
+        users_with_permissions.append(user_permissions)
+
+    template = "container/permission.html"
+    return render(request, template, {'users_with_permissions': users_with_permissions})
 
 def add_invoice(request, container_id):
     if request.method == "POST":
