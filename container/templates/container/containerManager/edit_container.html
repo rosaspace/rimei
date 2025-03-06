@@ -1,0 +1,110 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<h2>🧾 Edit Container</h2>
+
+<div class="container-form">
+    <form id="edit-container-form">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Container ID</label>
+                <div class="container-id-display">{{ container.container_id }}</div>
+                <input type="hidden" id="container-id" value="{{ container.container_id }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="pickup-number" class="form-label">Pickup Number</label>
+                <input type="text" class="form-control" id="pickup-number" name="pickup_number" 
+                       value="{{ container.pickup_number }}" required>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="railway-date" class="form-label">Railway Date</label>
+                <input type="date" class="form-control" id="railway-date" name="railway_date" 
+                       value="{{ container.railway_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="pickup-date" class="form-label">Pickup Date</label>
+                <input type="date" class="form-control" id="pickup-date" name="pickup_date" 
+                       value="{{ container.pickup_date|date:'Y-m-d' }}">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="delivery-date" class="form-label">Delivery Date</label>
+                <input type="date" class="form-control" id="delivery-date" name="delivery_date" 
+                       value="{{ container.delivery_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="empty-date" class="form-label">Empty Date</label>
+                <input type="date" class="form-control" id="empty-date" name="empty_date" 
+                       value="{{ container.empty_date|date:'Y-m-d' }}">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="container-pdf" class="form-label">Container PDF</label>
+            {% if container.container_pdfname %}
+                <p class="text-muted">Current file: {{ container.container_pdfname }}</p>
+            {% endif %}
+            <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Update Container</button>
+            <a href="{% url 'container' %}" class="btn btn-secondary ms-2">Back</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById("edit-container-form").onsubmit = function(event) {
+            event.preventDefault();
+            
+            let formData = new FormData();
+            formData.append("container_id", document.getElementById("container-id").value);
+            formData.append("pickup_number", document.getElementById("pickup-number").value);
+            
+            // 添加日期字段
+            const dateFields = ["railway-date", "pickup-date", "delivery-date", "empty-date"];
+            dateFields.forEach(field => {
+                const value = document.getElementById(field).value;
+                if (value) {
+                    formData.append(field.replace("-", "_"), value);
+                }
+            });
+            
+            // 添加PDF文件（如果有新上传）
+            const containerPdf = document.getElementById("container-pdf").files[0];
+            if (containerPdf) {
+                formData.append("container_pdf", containerPdf);
+            }
+
+            fetch("{% url 'edit_container' container.container_id %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("❌ Update failed: " + data.error);
+                } else {
+                    alert("✅ Container updated successfully!");
+                    window.location.href = "{% url 'container' %}";  // 更新成功后返回列表页
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("❌ An error occurred while updating the container.");
+            });
+        };
+    });
+</script>
+
+{% endblock %}

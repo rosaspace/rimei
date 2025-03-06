@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.core.files.storage import default_storage
 from ..models import Container
 from django.conf import settings
+from django.utils import timezone
 
 UPLOAD_DIR = "uploads/"
 
@@ -57,19 +58,85 @@ def upload_pdf(request):
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
-# 处理保存到数据库
-def save_container(request):
-    if request.method == "POST":
-        file_name = request.POST.get("file_name")
-        content = request.POST.get("content")
-        print("file name: ", file_name)
-        if file_name and content:
-            container = Container(file_name=file_name, content=content)
-            container.save()
-            return JsonResponse({"message": "保存成功", "id": container.id})
-    
-    return JsonResponse({"error": "数据错误"}, status=400)
+# 打开添加Container页面
+def add_container_view(request):
+    """显示添加Container的页面"""
+    return render(request, 'container/containerManager/add_container.html')
 
-# 渲染 container 页面
-def container(request):
-    return render(request, "container/container.html")
+# 新增Container
+def add_container(request):
+    """处理添加Container的API请求"""
+    print("----------add_container-----------")
+    if request.method == 'POST':
+        try:
+            # 获取基本字段
+            container_id = request.POST.get('container_id')
+            pickup_number = request.POST.get('pickup_number')
+            
+            # 创建新的Container实例
+            container = Container(
+                container_id=container_id,
+                pickup_number=pickup_number,
+                created_at=timezone.now()
+            )
+            
+            # 处理日期字段
+            date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']
+            for field in date_fields:
+                value = request.POST.get(field)
+                if value:
+                    parsed_date = datetime.strptime(value, '%Y-%m-%d').date()
+                    setattr(container, field, parsed_date)
+            
+            # 处理PDF文件
+            if 'container_pdf' in request.FILES:
+                container.container_pdf = request.FILES['container_pdf']
+                container.container_pdfname = request.FILES['container_pdf'].name
+            
+            container.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Container saved successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+# 修改Container
+def save_container(request):
+    print("----------save_container-----------")
+    if request.method == 'POST':
+        try:
+            container_id = request.POST.get('container_id')
+            pickup_number = request.POST.get('pickup_number')
+            
+            # 创建新的 Container 记录
+            container = Container(
+                container_id=container_id,
+                pickup_number=pickup_number,
+                created_at=timezone.now()
+            )
+            
+            # 如果上传了 PDF 文件
+            if 'container_pdf' in request.FILES:
+                container.container_pdf = request.FILES['container_pdf']
+                container.container_pdfname = request.FILES['container_pdf'].name
+            
+            container.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Container saved successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

@@ -20,7 +20,34 @@
         .sidebar a:hover {
             background-color: #495057;
         }
+
+        /* Make table header sticky */
+        .table thead tr {
+            position: sticky;
+            top: 0;
+            background-color: #343a40; /* Dark background */
+            color: #ffffff;
+            z-index: 10;
+        }
+
+        /* Style the table header */
+        .table th {
+            padding: 10px;
+            border-bottom: 2px solid #ddd;
+            font-size: 1.1em;
+            text-transform: uppercase; /* Uppercase text */
+            background-color: lightblue;
+        }
+
+        /* Make the table scrollable */
+        .table-container {
+            max-height: 500px; /* Adjust based on your layout */
+            overflow-y: auto;
+        }
     </style>
+
+    {% block head %}
+    {% endblock %}  <!-- Allow child templates to insert styles -->
 </head>
 
 <body>

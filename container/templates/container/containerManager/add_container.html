@@ -1,0 +1,95 @@
+{% extends "container/base.html" %}
+{% block content %}
+<h2>🧾 Add Container</h2>
+
+<div class="container-form">
+    <form id="add-container-form">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="container-id" class="form-label">Container ID*</label>
+                <input type="text" class="form-control" id="container-id" name="container_id" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="pickup-number" class="form-label">Pickup Number</label>
+                <input type="text" class="form-control" id="pickup-number" name="pickup_number">
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="railway-date" class="form-label">Railway Date</label>
+                <input type="date" class="form-control" id="railway-date" name="railway_date">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="pickup-date" class="form-label">Pickup Date</label>
+                <input type="date" class="form-control" id="pickup-date" name="pickup_date">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="delivery-date" class="form-label">Delivery Date</label>
+                <input type="date" class="form-control" id="delivery-date" name="delivery_date">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="empty-date" class="form-label">Empty Date</label>
+                <input type="date" class="form-control" id="empty-date" name="empty_date">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="container-pdf" class="form-label">Container PDF</label>
+            <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Save Container</button>
+            <a href="{% url 'container' %}" class="btn btn-secondary ms-2">Back</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // 添加 Container 表单提交处理
+        document.getElementById("add-container-form").onsubmit = function(event) {
+            event.preventDefault();
+            
+            console.log("----------Save Container-----------")
+            let formData = new FormData();
+            formData.append("container_id", document.getElementById("container-id").value);
+            formData.append("pickup_number", document.getElementById("pickup-number").value);
+            
+            const containerPdf = document.getElementById("container-pdf").files[0];
+            if (containerPdf) {
+                formData.append("container_pdf", containerPdf);
+            }
+
+            fetch("{% url 'add_container' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("❌ Save failed: " + data.error);
+                } else {
+                    alert("✅ Container saved successfully!");
+                    // 可以选择是否重置表单
+                    // document.getElementById("container-form").reset();
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("❌ An error occurred while saving the container.");
+            });
+        };
+
+    });
+</script>
+
+{% endblock %}
