@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Container
 from django.http import JsonResponse
+from django.contrib.auth.models import User
+from .models import UserAndPermission
 
 # Create your views here.
 def index(request):

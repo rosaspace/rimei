@@ -6,3 +6,5 @@ class ContainerAdmin(admin.ModelAdmin):
 
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
+admin.site.register(Permission)
+admin.site.register(UserAndPermission)

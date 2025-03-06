@@ -1,0 +1,26 @@
+{% extends "container/base.html" %}
+{% block content %}
+<h2>Manage User Permissions</h2>
+
+<a href="{% url 'add_user' %}" class="btn btn-primary">👤 Add User</a>
+
+<a href="{% url 'assign_permission' %}" class="btn btn-primary">🔒 Assign Permission</a>  <!-- 添加权限分配链接 -->
+
+<h3>Existing Users and Permissions</h3>
+<ul class="list-group">
+    {% for user in users_with_permissions %}
+    <li class="list-group-item">
+        <strong>{{ user.username }}</strong>
+        <ul>
+            {% if user.permissions %}
+                {% for permission in user.permissions %}
+                <li>{{ permission }}</li>
+                {% endfor %}
+            {% else %}
+                <li>No Permissions</li>
+            {% endif %}
+        </ul>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}
