@@ -19,8 +19,9 @@ db.sqlite3
 # Ignore compiled files
 *.pyc
 
-# Ignore Django migrations
-*/migrations/
+# Ignore only compiled migration files, but keep actual migrations
+*/migrations/*.pyc
+*/migrations/__pycache__/
 
 # Ignore media files
 /media/
