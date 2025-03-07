@@ -1,34 +1,20 @@
-# Ignore Python cache files
+# Ignore Python bytecode files
 __pycache__/
 *.py[cod]
-*$py.class
 
-# Ignore environment variables and virtualenv
-.env
-venv/
+# Ignore environment files
 env/
+venv/
+*.env
 
-# Ignore Django migration files (optional, but usually tracked)
-**/migrations/*.py
-!**/migrations/__init__.py
-
-# Ignore database files (if using SQLite)
+# Ignore database files
 db.sqlite3
-db.sqlite3-journal
+*.sqlite3
 
-# Ignore media and static files (if generated dynamically)
-media/
-staticfiles/
-*.log
-
-# Ignore IDE and editor files
+# Ignore IDE/editor-specific files
 .vscode/
 .idea/
-.DS_Store
+*.swp
 
-# Ignore compiled and temporary files
-tmp/
-container/__pycache__/admin.cpython-312.pyc
-container/__pycache__/models.cpython-312.pyc
-container/__pycache__/urls.cpython-312.pyc
-container/__pycache__/views.cpython-312.pyc
+# Ignore compiled files
+*.pyc

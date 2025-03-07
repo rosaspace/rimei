@@ -1,0 +1,75 @@
+{% extends "container/base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>📦 Add Invoice</h2>
+    
+    <!-- 上传 PDF -->
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="file" id="pdf-file" accept="application/pdf" required>
+        <button type="submit" class="btn btn-primary">上传并解析</button>
+    </form>
+
+    <hr>
+
+    <!-- 解析结果 -->
+    <div id="result" style="display: none;">
+        <h4>解析内容：</h4>
+        <textarea id="pdf-content" class="form-control" rows="10"></textarea>
+        <button id="save-btn" class="btn btn-success mt-3">✅ 保存数据</button>
+    </div>
+</div>
+
+<script>
+document.getElementById("upload-form").onsubmit = function(event) {
+    event.preventDefault();
+    let fileInput = document.getElementById("pdf-file").files[0];
+    
+    if (!fileInput) {
+        alert("请先选择 PDF 文件");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("pdf_file", fileInput);
+
+    fetch("{% url 'upload_pdf' %}", {
+        method: "POST",
+        body: formData,
+        headers: { "X-CSRFToken": "{{ csrf_token }}" }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert("❌ 上传失败：" + data.error);
+        } else {
+            document.getElementById("pdf-content").value = data.content;
+            document.getElementById("result").style.display = "block";
+            if (data.file_name) {
+                document.getElementById("save-btn").dataset.filename = data.file_name;
+            } else {
+                alert("❌ 文件名未定义");
+            }
+        }
+    });
+};
+
+document.getElementById("save-btn").onclick = function() {
+    let content = document.getElementById("pdf-content").value;
+    let fileName = this.dataset.filename;
+
+    fetch("{% url 'save_container' %}", {
+        method: "POST",
+        body: new URLSearchParams({ "file_name": fileName, "content": content }),
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": "{{ csrf_token }}" }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert("❌ 保存失败：" + data.error);
+        } else {
+            alert("✅ 数据保存成功！");
+        }
+    });
+};
+</script>
+{% endblock %}

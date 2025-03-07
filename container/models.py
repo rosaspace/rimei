@@ -1,11 +1,12 @@
 from django.db import models
 
 class Container(models.Model):
-    container_pdfname = models.CharField(max_length=255)  # 上传的PDF文件名
+    container_id = models.CharField(max_length=255)  # Container ID
+    container_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
     content = models.TextField(blank=True, null=True)  # 解析出的内容
     created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
     created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
-    container_id = models.CharField(max_length=255, blank=True, null=True)  # Container ID
+    
     railway_date = models.DateField(blank=True, null=True)  # 铁路日期
     pickup_date = models.DateField(blank=True, null=True)  # 提货日期
     delivery_date = models.DateField(blank=True, null=True)  # 交货日期
