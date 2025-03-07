@@ -18,3 +18,9 @@ db.sqlite3
 
 # Ignore compiled files
 *.pyc
+
+# Ignore Django migrations
+*/migrations/
+
+# Ignore media files
+/media/
