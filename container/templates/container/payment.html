@@ -2,4 +2,41 @@
 {% block content %}
     <h2>💰 Payment Page</h2>
     <p>This is Payment Information</p>
+
+    <!-- Email Section -->
+    <div class="email-section border p-3 rounded mb-4">
+        <h4>Send Email:</h4>
+        <div class="mb-3">
+            <label for="recipient" class="form-label">Recipient:</label>
+            <input type="email" id="recipient" class="form-control" placeholder="Enter recipient's email" required>
+        </div>
+        <div class="mb-3">
+            <label for="subject" class="form-label">Subject:</label>
+            <input type="text" id="subject" class="form-control" placeholder="Enter email subject" required>
+        </div>
+        <div class="mb-3">
+            <label for="body" class="form-label">Body:</label>
+            <textarea id="body" class="form-control" rows="3" placeholder="Enter email body" required></textarea>
+        </div>
+        <button id="outlook-link" class="btn btn-info">Open in Outlook</button>
+    </div>
 {% endblock %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Outlook link functionality
+        document.getElementById("outlook-link").onclick = function() {
+            sendEmail();
+        };
+
+        function sendEmail() {
+            let recipient = document.getElementById("recipient").value;  // 获取收件人
+            let subject = document.getElementById("subject").value;      // 获取主题
+            let body = document.getElementById("body").value;            // 获取邮件内容
+
+            // 创建 mailto 链接
+            let mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoLink;  // 重定向到 mailto 链接
+        }
+    });
+</script>

@@ -26,6 +26,7 @@
         </div>
     </div>
     <button type="submit" class="btn btn-primary">Assign Permissions</button>
+    <a href="{% url 'permission' %}" class="btn btn-secondary ms-2">Back</a>
 </form>
 
 <h3>Current Permissions</h3>
@@ -37,7 +38,7 @@
     function updateFormAction() {
         var select = document.getElementById("user_id");
         const userId = select.options[select.selectedIndex].text;
-        alert("选中的文本是：" + userId);
+        // alert("选中的文本是：" + userId);
         const form = document.getElementById("assign-permission-form");
         if (userId) {
             form.action = "{% url 'update_user_permissions' user_id='0' %}".replace('0', userId);

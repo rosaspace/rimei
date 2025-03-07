@@ -17,7 +17,6 @@
                     <th>ID</th>
                     <th>Container ID</th>
                     <th>File Name</th>
-                    <th>Content</th>
                     <th>Created At</th>
                     <th>Railway Date</th>
                     <th>Pickup Date</th>
@@ -34,7 +33,6 @@
                         <a href="{% url 'edit_container' container.container_id %}">{{ container.container_id }}</a>
                     </td>
                     <td>{{ container.container_pdfname }}</td>
-                    <td>{{ container.content }}</td>
                     <td>{{ container.created_at |date:"m/d/Y" }}</td>
                     <td>{{ container.railway_date |date:"m/d/Y" }}</td>
                     <td>{{ container.pickup_date |date:"m/d/Y" }}</td>
@@ -46,53 +44,5 @@
             </tbody>
         </table>
     </div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            document.getElementById("add-container-form").onsubmit = function(event) {
-                event.preventDefault();
-                
-                let formData = new FormData();
-                formData.append("container_id", document.getElementById("container-id").value);
-                formData.append("pickup_number", document.getElementById("pickup-number").value);
-                
-                // 添加日期字段
-                const dateFields = ["railway-date", "pickup-date", "delivery-date", "empty-date"];
-                dateFields.forEach(field => {
-                    const value = document.getElementById(field).value;
-                    if (value) {
-                        formData.append(field.replace("-", "_"), value);
-                    }
-                });
-                
-                // 添加PDF文件
-                const containerPdf = document.getElementById("container-pdf").files[0];
-                if (containerPdf) {
-                    formData.append("container_pdf", containerPdf);
-                }
-    
-                fetch("{% url 'add_container' %}", {
-                    method: "POST",
-                    body: formData,
-                    headers: {
-                        "X-CSRFToken": "{{ csrf_token }}"
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert("❌ Save failed: " + data.error);
-                    } else {
-                        alert("✅ Container saved successfully!");
-                        window.location.href = "{% url 'container' %}";  // 保存成功后返回列表页
-                    }
-                })
-                .catch(error => {
-                    console.error("Error:", error);
-                    alert("❌ An error occurred while saving the container.");
-                });
-            };
-        });
-    </script>
 
 {% endblock %}

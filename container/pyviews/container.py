@@ -1,11 +1,12 @@
 import os
 import fitz  # PyMuPDF 解析 PDF
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.core.files.storage import default_storage
 from ..models import Container
 from django.conf import settings
 from django.utils import timezone
+from datetime import datetime
 
 UPLOAD_DIR = "uploads/"
 
@@ -132,6 +133,50 @@ def save_container(request):
             return JsonResponse({
                 'success': True,
                 'message': 'Container saved successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+# 修改Container
+def edit_container(request, container_id):
+    """处理编辑Container的API请求"""
+    container = get_object_or_404(Container, container_id=container_id)
+    
+    if request.method == 'GET':
+        # 显示编辑页面
+        return render(request, 'container/containerManager/edit_container.html', {'container': container})
+        
+    elif request.method == 'POST':
+        try:
+            # 更新基本字段
+            container.pickup_number = request.POST.get('pickup_number', container.pickup_number)
+            print(f"pickup_number: {container.pickup_number}")
+            
+            # 更新日期字段
+            date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']
+            for field in date_fields:
+                value = request.POST.get(field)
+                if value:
+                    parsed_date = datetime.strptime(value, '%Y-%m-%d').date()
+                    setattr(container, field, parsed_date)
+                else:
+                    setattr(container, field, None)
+            # 处理PDF文件
+            if 'container_pdf' in request.FILES:
+                container.container_pdfname = request.FILES['container_pdf']
+                
+                # 打印 PDF 文件名
+                print(f"Uploaded PDF file name: {container.container_pdfname}")
+            container.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Container updated successfully'
             })
             
         except Exception as e:

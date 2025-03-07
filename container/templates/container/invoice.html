@@ -23,7 +23,6 @@
                     <th>ID</th>
                     <th>Container ID</th>
                     <th>File Name</th>
-                    <th>Content</th>
                     <th>Created At</th>
                     <th>Railway Date</th>
                     <th>Pickup Date</th>
@@ -42,7 +41,6 @@
                         <a href="{% url 'edit_invoice' container.container_id %}">{{ container.container_id }}</a>
                     </td>
                     <td>{{ container.container_pdfname }}</td>
-                    <td>{{ container.content }}</td>
                     <td>{{ container.created_at |date:"m/d/Y"}}</td>
                     <td>{{ container.railway_date |date:"m/d/Y"}}</td>
                     <td>{{ container.pickup_date |date:"m/d/Y"}}</td>
