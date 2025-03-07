@@ -35,3 +35,26 @@ class UserAndPermission(models.Model):
 
     def __str__(self):
         return f"{self.username.username} - {self.permissionIndex.name}"  # 返回用户和权限的组合
+
+class RMOrder(models.Model):
+    so_num = models.CharField(max_length=255, unique=True)  # 销售订单号
+    po_num = models.CharField(max_length=255)  # 采购订单号
+    plts = models.IntegerField()  # 托盘数量
+    customer_name = models.ForeignKey('RMCustomer', on_delete=models.CASCADE)  # 关联客户表
+    bol_pdfname = models.CharField(max_length=255, blank=True, null=True)  # BOL的PDF文件名
+    pickup_date = models.DateField(blank=True, null=True)  # 提货日期
+    outbound_date = models.DateField(blank=True, null=True)  # 出库日期
+    is_sendemail = models.BooleanField(default=False) # 是否发送邮件
+    is_updateInventory = models.BooleanField(default=False) # 是否更新库存
+    created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
+    created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
+
+    def __str__(self):
+        return f"{self.so_num} - {self.customer_name}"
+
+class RMCustomer(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
+    description = models.TextField(blank=True, null=True)  # 客户描述
+
+    def __str__(self):
+        return self.name

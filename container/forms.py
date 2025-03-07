@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import Permission, UserAndPermission
+from .models import Permission, UserAndPermission, RMOrder
 
 class UserPermissionForm(forms.ModelForm):
     class Meta:
@@ -18,3 +18,9 @@ class UserCreationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+class OrderForm(forms.ModelForm):
+    class Meta:
+        model = RMOrder
+        fields = ['is_sendemail', 'is_updateInventory']
+

@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 from . import views
-from .pyviews import container, invoice
+from .pyviews import container, invoice, rmorder
 from .pyviews import user
 
 urlpatterns = [
@@ -11,6 +11,7 @@ urlpatterns = [
     path("container/", views.container_view, name="container"),
     path("invoice/", views.invoice_view, name="invoice"),
     path("payment/", views.payment_view, name="payment"),
+    path("rimeiorder/", views.rimeiorder, name="rimeiorder"),    
 
     # container
     path("upload_pdf/", container.upload_pdf, name="upload_pdf"),
@@ -28,4 +29,9 @@ urlpatterns = [
     path('assign_permission/', user.assign_permission_view, name='assign_permission'),
     path('update_user_permissions/<str:user_id>/', user.update_user_permissions, name='update_user_permissions'),
     path("permission/", user.permission_view, name ="permission"),
+
+    # rimei order
+    path('create-rmorder/', rmorder.create_rmorder, name='create_rmorder'),
+    path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
+    
 ]
