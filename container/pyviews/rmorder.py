@@ -1,10 +1,13 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from ..models import RMOrder, RMCustomer
+from ..models import RMOrder, RMCustomer, OrderImage
 from django.views.decorators.http import require_http_methods
+from django.db.models import Q
+from django.http import JsonResponse
+from django.db.models import Count
 
 @require_http_methods(["GET", "POST"])
-def create_rmorder(request):
+def add_order(request):
     if request.method == "POST":
         try:
             # 检查SO号是否已存在
@@ -84,3 +87,53 @@ def edit_order(request, so_num):
     except RMOrder.DoesNotExist:
         messages.error(request, '订单不存在')
         return redirect('rmorder')
+    
+def search_order(request):
+    print("--------------search_order-----------------")
+    
+    # 获取搜索参数
+    search_so = request.GET.get('search_so', '')
+    search_po = request.GET.get('search_po', '')
+    search_customer = request.GET.get('search_customer', '')
+    search_pickup_date = request.GET.get('search_pickup_date', '')
+
+    # 构建查询条件
+    filters = Q()
+    if search_so:
+        filters &= Q(so_num=search_so)
+    if search_po:
+        filters &= Q(po_num=search_po)
+    if search_customer:
+        filters &= Q(customer_name__id=search_customer)  # 使用客户 ID 进行过滤
+    if search_pickup_date:
+        filters &= Q(pickup_date=search_pickup_date)
+
+    # 根据过滤条件获取订单，并计算每个订单的图片数量
+    rimeiorders = RMOrder.objects.filter(filters).annotate(image_count=Count('images'))
+
+    # 打印每个订单的图片数量
+    # for order in rimeiorders:
+    #     print(f"Order ID: {order.id}, Image Count: {order.image_count}")
+
+    # 获取所有客户
+    customers = RMCustomer.objects.all()
+
+    return render(request, 'container/rmorder.html', {
+        'rimeiorders': rimeiorders,
+        'customers': customers,  # 将客户列表传递给模板
+    })
+
+@require_http_methods(["POST"])
+def upload_images(request, order_id):
+    try:
+        order = RMOrder.objects.get(id=order_id)
+        images = request.FILES.getlist('images')  # 获取上传的图片
+
+        for image in images:
+            OrderImage.objects.create(order=order, image=image)  # 保存图片与订单的关联
+
+        return JsonResponse({"success": True})
+    except RMOrder.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Order does not exist."}, status=404)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

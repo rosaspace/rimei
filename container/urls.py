@@ -11,18 +11,20 @@ urlpatterns = [
     path("container/", views.container_view, name="container"),
     path("invoice/", views.invoice_view, name="invoice"),
     path("payment/", views.payment_view, name="payment"),
-    path("rimeiorder/", views.rimeiorder, name="rimeiorder"),    
+    path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),    
 
     # container
     path("upload_pdf/", container.upload_pdf, name="upload_pdf"),
     path("save_container/", container.save_container, name="save_container"),
+
+    path('add_container/', container.add_container, name='add_container'), 
     path('add_container_view/', container.add_container_view, name='add_container_view'),
-    path('add_container/', container.add_container, name='add_container'),   
     path("edit_container/<str:container_id>/", container.edit_container, name="edit_container"), 
 
     # Invoice    
-    path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
+    path('add_invoice/', invoice.add_invoice, name='add_invoice'),
     path('add_invoice_view/', invoice.add_invoice_view, name='add_invoice_view'),
+    path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
 
     # user manager
     path('add_user/', user.add_user_view, name='add_user'),
@@ -31,7 +33,9 @@ urlpatterns = [
     path("permission/", user.permission_view, name ="permission"),
 
     # rimei order
-    path('create-rmorder/', rmorder.create_rmorder, name='create_rmorder'),
+    path('add_order/', rmorder.add_order, name='add_order'),
     path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
+    path("search_order/", rmorder.search_order, name="search_order"),
+    path('upload_images/<int:order_id>/', rmorder.upload_images, name='upload_images'),
     
 ]

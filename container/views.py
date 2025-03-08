@@ -4,6 +4,7 @@ from .models import Container, RMOrder
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .models import UserAndPermission
+from django.db.models import Count
 
 # Create your views here.
 def index(request):
@@ -24,9 +25,10 @@ def payment_view(request):
     template = "container/payment.html"
     return render(request, template)
 
-def rimeiorder(request):
+def rimeiorder_view(request):
     template = "container/rmorder.html"
-    orders = RMOrder.objects.all()
+    # orders = RMOrder.objects.all()
+    orders = RMOrder.objects.all().annotate(image_count=Count('images'))
     return render(request, template, {'rimeiorders': orders})
 
 

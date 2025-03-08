@@ -5,7 +5,7 @@
 <div class="container mt-4">
     <h2 class="mb-4">{% if order %}Edit Order{% else %}Add Order{% endif %}</h2>
     
-    <form method="POST" {% if order %}action="{% url 'edit_order' order.so_num %}"{% else %}action="{% url 'create_rmorder' %}"{% endif %} class="needs-validation" novalidate>
+    <form method="POST" {% if order %}action="{% url 'edit_order' order.so_num %}"{% else %}action="{% url 'add_order' %}"{% endif %} class="needs-validation" novalidate>
         {% csrf_token %}
         
         <div class="row">

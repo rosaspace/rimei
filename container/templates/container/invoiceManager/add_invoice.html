@@ -1,76 +1,101 @@
 {% extends "container/base.html" %}
 {% block content %}
 <div class="container mt-4">
-    <h2>📦 Add Invoice</h2>
-    
-    <!-- 上传 PDF -->
-    <form id="upload-form" enctype="multipart/form-data">
-        <input type="file" id="pdf-file" accept="application/pdf" required>
-        <button type="submit" class="btn btn-primary">上传并解析</button>
-        <a href="{% url 'invoice' %}" class="btn btn-secondary ms-2">Back</a>
-    </form>
+    <h2>🧾 {% if container_id %}Edit Invoice{% else %}Add Invoice{% endif %}</h2>
 
-    <hr>
+    <!-- 添加自定义样式 -->
+    <style>
+        .info-section, .email-section, #invoice-form {
+            background-color: #f1f3f5;  /* 更深的灰色背景 */
+            border: 2px solid #ced4da !important;  /* 更深的边框颜色 */
+            border-radius: 6px;  /* 稍微增加圆角 */
+        }
+        .info-section {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);  /* 增强阴影效果 */
+        }
+        .left-info, .right-info {
+            padding: 12px;  /* 增加内边距 */
+        }
+        .left-info p, .right-info p {
+            margin-bottom: 0.5rem;
+            color: #495057;
+        }
+        strong {
+            color: #212529;
+        }
+        /* 添加边框悬停效果 */
+        .info-section:hover, .email-section:hover, #invoice-form:hover {
+            border-color: #adb5bd !important;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.18);
+        }
+    </style>
 
-    <!-- 解析结果 -->
-    <div id="result" style="display: none;">
-        <h4>解析内容：</h4>
-        <textarea id="pdf-content" class="form-control" rows="10"></textarea>
-        <button id="save-btn" class="btn btn-success mt-3">✅ 保存数据</button>
+    <!-- Information Section -->
+    <div class="info-section mb-4 border p-3 rounded">
+        <div class="d-flex justify-content-between">
+            <div class="left-info">
+                <p>Container ID: <strong>{{ container_id }}</strong></p> <!-- 显示 Container ID -->
+                {% if container %}
+                    <p>Container File Name: <strong>{{ container.container_pdfname }}</strong></p>
+                    <p>Pickup Number: <strong>{{ container.pickup_number }}</strong></p>
+                    <p>Invoice ID: <strong>{{ container.invoice_id }}</strong></p>
+                    <p>Invoice File Name: <strong>{{ container.invoice_pdfname }}</strong></p>
+                {% endif %}
+            </div>
+            <div class="right-info">
+                {% if container %}
+                    <p>Railway Date: <strong>{{ container.railway_date }}</strong></p>
+                    <p>Pickup Date: <strong>{{ container.pickup_date }}</strong></p>
+                    <p>Delivery Date: <strong>{{ container.delivery_date }}</strong></p>
+                    <p>Empty Date: <strong>{{ container.empty_date }}</strong></p>
+                    <p>Created At: <strong>{{ container.created_at }}</strong></p>
+                {% endif %}
+            </div>
+        </div>
     </div>
-</div>
 
-<script>
-document.getElementById("upload-form").onsubmit = function(event) {
-    event.preventDefault();
-    let fileInput = document.getElementById("pdf-file").files[0];
-    
-    if (!fileInput) {
-        alert("请先选择 PDF 文件");
-        return;
-    }
+    <!-- Functionality Section -->
+    <div>
+        <form id="invoice-form" enctype="multipart/form-data" class="border p-3 rounded mb-4">
+            <div class="mb-3">
+                <label for="invoice-file" class="form-label">Upload Invoice PDF</label>
+                <input type="file" id="invoice-file" name="invoice_file" accept="application/pdf" required>
+            </div>
+            <button type="submit" class="btn btn-primary">{% if container_id %}Update Invoice{% else %}Upload Invoice{% endif %}</button>
+            <a href="{% url 'invoice' %}" class="btn btn-secondary ms-2">Back</a>
+        </form>
+    </div>
 
-    let formData = new FormData();
-    formData.append("pdf_file", fileInput);
+    <script>
+    document.getElementById("invoice-form").onsubmit = function(event) {
+        event.preventDefault();
+        let fileInput = document.getElementById("invoice-file").files[0];
+        
+        if (!fileInput) {
+            alert("请先选择 PDF 文件");
+            return;
+        }
 
-    fetch("{% url 'upload_pdf' %}", {
-        method: "POST",
-        body: formData,
-        headers: { "X-CSRFToken": "{{ csrf_token }}" }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert("❌ 上传失败：" + data.error);
-        } else {
-            document.getElementById("pdf-content").value = data.content;
-            document.getElementById("result").style.display = "block";
-            if (data.file_name) {
-                document.getElementById("save-btn").dataset.filename = data.file_name;
+        let formData = new FormData();
+        formData.append("invoice_file", fileInput);
+
+        // 确保 URL 指向正确的视图，并传递 container_id
+        fetch("{% url 'edit_invoice' container_id=container_id %}", {  // 使用 'add_invoice' 视图
+            method: "POST",
+            body: formData,
+            headers: { "X-CSRFToken": "{{ csrf_token }}" }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert("❌ 上传失败：" + data.error);
             } else {
-                alert("❌ 文件名未定义");
+                // alert("✅ 数据保存成功！");
+                // 这里可以添加其他逻辑，比如重定向
+                window.location.href = "{% url 'invoice' %}";  // 上传成功后重定向到发票页面
             }
-        }
-    });
-};
-
-document.getElementById("save-btn").onclick = function() {
-    let content = document.getElementById("pdf-content").value;
-    let fileName = this.dataset.filename;
-
-    fetch("{% url 'save_container' %}", {
-        method: "POST",
-        body: new URLSearchParams({ "file_name": fileName, "content": content }),
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": "{{ csrf_token }}" }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert("❌ 保存失败：" + data.error);
-        } else {
-            alert("✅ 数据保存成功！");
-        }
-    });
-};
-</script>
+        });
+    };
+    </script>
+</div>
 {% endblock %}

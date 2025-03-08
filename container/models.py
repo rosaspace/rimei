@@ -58,3 +58,8 @@ class RMCustomer(models.Model):
 
     def __str__(self):
         return self.name
+
+class OrderImage(models.Model):
+    order = models.ForeignKey(RMOrder, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='order_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)

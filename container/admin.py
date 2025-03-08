@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Container,Permission,UserAndPermission  # 导入 Container 模型
-from .models import RMOrder, RMCustomer
+from .models import RMOrder, RMCustomer,OrderImage
 from .forms import OrderForm
 
 class ContainerAdmin(admin.ModelAdmin):
@@ -19,3 +19,4 @@ admin.site.register(Permission)
 admin.site.register(UserAndPermission)
 admin.site.register(RMOrder, RMOrderAdmin)
 admin.site.register(RMCustomer)
+admin.site.register(OrderImage)
