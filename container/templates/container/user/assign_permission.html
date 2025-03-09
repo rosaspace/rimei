@@ -3,7 +3,7 @@
 {% block content %}
 <h2>Assign Permissions to Users</h2>
 
-<form method="post" id="assign-permission-form" action="{% url 'update_user_permissions' user_id=0 %}">
+<form method="post" id="assign-permission-form" action="{% url 'update_user_permissions' user_id=0 %}" onsubmit="return handleSubmit()">
     {% csrf_token %}
     <div class="mb-3">
         <label for="user_id" class="form-label">Select User:</label>
@@ -34,17 +34,31 @@
     <!-- 当前权限将通过服务器端渲染填充 -->
 </ul>
 
+{% endblock %}
+
+{% block scripts %}
+
 <script>
     function updateFormAction() {
         var select = document.getElementById("user_id");
         const userId = select.options[select.selectedIndex].text;
-        // alert("选中的文本是：" + userId);
         const form = document.getElementById("assign-permission-form");
         if (userId) {
             form.action = "{% url 'update_user_permissions' user_id='0' %}".replace('0', userId);
         } else {
             form.action = "";  // 如果没有选择用户，清空 action
         }
+    }
+
+    function handleSubmit() {
+        // 这里可以添加任何需要在提交前执行的逻辑
+        // 例如，显示加载动画等
+        return true;  // 返回 true 以允许表单提交
+    }
+
+    // 处理成功响应后重定向
+    function redirectToPermissions() {
+        window.location.href = "{% url 'permission' %}";
     }
 </script>
 

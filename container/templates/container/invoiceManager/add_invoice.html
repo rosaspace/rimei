@@ -66,6 +66,9 @@
         </form>
     </div>
 
+    {% endblock %}
+
+    {% block scripts %}
     <script>
     document.getElementById("invoice-form").onsubmit = function(event) {
         event.preventDefault();

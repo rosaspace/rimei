@@ -73,11 +73,13 @@ def add_container(request):
             # 获取基本字段
             container_id = request.POST.get('container_id')
             pickup_number = request.POST.get('pickup_number')
+            plts_value = request.POST.get('plts')
             
             # 创建新的Container实例
             container = Container(
                 container_id=container_id,
                 pickup_number=pickup_number,
+                plts = plts_value,
                 created_at=timezone.now()
             )
             
@@ -156,6 +158,12 @@ def edit_container(request, container_id):
             # 更新基本字段
             container.pickup_number = request.POST.get('pickup_number', container.pickup_number)
             print(f"pickup_number: {container.pickup_number}")
+
+            # 更新 PLTS 字段
+            plts_value = request.POST.get('plts')
+            if plts_value is not None:
+                container.plts = int(plts_value)  # 将 PLTS 转换为整数并保存
+                print(f"PLTS updated to: {container.plts}")
             
             # 更新日期字段
             date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']

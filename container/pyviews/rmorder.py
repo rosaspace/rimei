@@ -1,10 +1,13 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from ..models import RMOrder, RMCustomer, OrderImage
+from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct,RMInventory
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from django.http import JsonResponse
 from django.db.models import Count
+from datetime import datetime
+from django.http import HttpResponse
+import pandas as pd
 
 @require_http_methods(["GET", "POST"])
 def add_order(request):
@@ -137,3 +140,78 @@ def upload_images(request, order_id):
         return JsonResponse({"success": False, "error": "Order does not exist."}, status=404)
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+    
+def export_pallet(request):
+    # 获取请求中的月份和年份
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+
+    if month and year:
+        # 过滤出指定月份的订单
+        start_date = datetime(int(year), int(month), 1)
+        if month == '12':
+            end_date = datetime(int(year) + 1, 1, 1)  # 下一年1月1日
+        else:
+            end_date = datetime(int(year), int(month) + 1, 1)  # 下个月的1日
+
+        # 查询 "gloves in" 数据
+        gloves_in_orders = Container.objects.filter(empty_date__gte=start_date, empty_date__lt=end_date)
+
+        # 创建 "gloves in" DataFrame
+        gloves_in_data = {
+            'Empty Date': [order.empty_date for order in gloves_in_orders],  # 假设有 empty_date 字段
+            'Container ID': [order.container_id for order in gloves_in_orders],  # 假设有 container_id 字段
+            'PLTS': [order.plts for order in gloves_in_orders],
+        }
+        gloves_in_df = pd.DataFrame(gloves_in_data)
+
+        # 查询 "gloves out" 数据（根据您的需求进行调整）
+        gloves_out_orders = RMOrder.objects.filter(outbound_date__gte=start_date, outbound_date__lt=end_date)
+
+        # 创建 "gloves out" DataFrame
+        gloves_out_data = {
+            'Outbound Date': [order.outbound_date for order in gloves_out_orders],
+            'SO': [order.so_num for order in gloves_out_orders],
+            'PLTS': [order.plts for order in gloves_out_orders],
+        }
+        gloves_out_df = pd.DataFrame(gloves_out_data)
+
+        # 创建 Excel 文件
+        with pd.ExcelWriter(f'orders_{year}_{month}_pallets.xlsx', engine='openpyxl') as writer:
+            gloves_in_df.to_excel(writer, sheet_name='gloves in', index=False)
+            gloves_out_df.to_excel(writer, sheet_name='gloves out', index=False)
+
+        # 返回 Excel 文件
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="rmorders_{year}_{month}_pallets.xlsx"'
+        with pd.ExcelWriter(response, engine='openpyxl') as writer:
+            gloves_in_df.to_excel(writer, sheet_name='gloves in', index=False)
+            gloves_out_df.to_excel(writer, sheet_name='gloves out', index=False)
+
+        return response
+    else:
+        return HttpResponse("Invalid month or year", status=400)
+    
+def import_excel(request):
+    if request.method == "POST" and request.FILES.get("excel_file"):
+        excel_file = request.FILES["excel_file"]
+
+        # Read the Excel file into a DataFrame
+        df = pd.read_excel(excel_file, engine='openpyxl')
+
+        # Ensure column names match the model fields
+        for index, row in df.iterrows():
+            # Create RMProduct instance
+            product = RMProduct.objects.create(
+                name=row["Display Name"],
+                description=""  # description 为空
+            )
+            # Create RMInventory instance
+            RMInventory.objects.create(
+                product=product,
+                quantity=row["Quantity On Hand"]
+            )
+
+        return JsonResponse({"message": "Excel data imported successfully!"})
+    
+    return JsonResponse({"error": "No file uploaded"}, status=400)

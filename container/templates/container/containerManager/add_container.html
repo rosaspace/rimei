@@ -36,10 +36,15 @@
                 <input type="date" class="form-control" id="empty-date" name="empty_date">
             </div>
         </div>
-
-        <div class="mb-3">
-            <label for="container-pdf" class="form-label">Container PDF</label>
-            <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="plts" class="form-label">PLTS</label>
+                <input type="number" class="form-control" id="plts" name="plts" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="container-pdf" class="form-label">Container PDF</label>
+                <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+            </div>
         </div>
 
         <div class="mt-4">
@@ -48,7 +53,9 @@
         </div>
     </form>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         
@@ -60,6 +67,7 @@
             let formData = new FormData();
             formData.append("container_id", document.getElementById("container-id").value);
             formData.append("pickup_number", document.getElementById("pickup-number").value);
+            formData.append("plts", document.getElementById("plts").value);
             
             const containerPdf = document.getElementById("container-pdf").files[0];
             if (containerPdf) {
@@ -78,9 +86,10 @@
                 if (data.error) {
                     alert("❌ Save failed: " + data.error);
                 } else {
-                    alert("✅ Container saved successfully!");
+                    // alert("✅ Container saved successfully!");
                     // 可以选择是否重置表单
                     // document.getElementById("container-form").reset();
+                    window.location.href = "{% url 'container' %}";
                 }
             })
             .catch(error => {

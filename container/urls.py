@@ -11,7 +11,8 @@ urlpatterns = [
     path("container/", views.container_view, name="container"),
     path("invoice/", views.invoice_view, name="invoice"),
     path("payment/", views.payment_view, name="payment"),
-    path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),    
+    path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
+   
 
     # container
     path("upload_pdf/", container.upload_pdf, name="upload_pdf"),
@@ -26,7 +27,7 @@ urlpatterns = [
     path('add_invoice_view/', invoice.add_invoice_view, name='add_invoice_view'),
     path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
 
-    # user manager
+    # user
     path('add_user/', user.add_user_view, name='add_user'),
     path('assign_permission/', user.assign_permission_view, name='assign_permission'),
     path('update_user_permissions/<str:user_id>/', user.update_user_permissions, name='update_user_permissions'),
@@ -37,5 +38,7 @@ urlpatterns = [
     path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
     path("search_order/", rmorder.search_order, name="search_order"),
     path('upload_images/<int:order_id>/', rmorder.upload_images, name='upload_images'),
+    path('export_pallet/',rmorder.export_pallet,name='export_pallet'),
+    path("import_excel/", rmorder.import_excel, name="import_excel"),  
     
 ]

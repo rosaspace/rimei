@@ -8,7 +8,7 @@ def add_invoice(request):
         print("-----------------add_invoice_post-----------------")
         # 创建新容器实例
         container = Container()  
-        container.invoice_id = "生成的发票ID"  # 生成或获取发票ID
+        container.invoice_id = ""  # 生成或获取发票ID
         print("----------hello1----------------")
         if 'invoice_file' in request.FILES:
             print("----------hello2----------------")

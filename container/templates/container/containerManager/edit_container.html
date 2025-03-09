@@ -44,12 +44,19 @@
             </div>
         </div>
 
-        <div class="mb-3">
-            <label for="container-pdf" class="form-label">Container PDF</label>
-            {% if container.container_pdfname %}
-                <p class="text-muted">Current file: {{ container.container_pdfname }}</p>
-            {% endif %}
-            <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="plts" class="form-label">PLTS</label>
+                <input type="number" class="form-control" id="plts" name="plts" 
+                       value="{{ container.plts }}" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="container-pdf" class="form-label">Container PDF</label>
+                {% if container.container_pdfname %}
+                    <p class="text-muted">Current file: {{ container.container_pdfname }}</p>
+                {% endif %}
+                <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+            </div>
         </div>
 
         <div class="mt-4">
@@ -59,6 +66,9 @@
     </form>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("edit-container-form").onsubmit = function(event) {
@@ -68,6 +78,9 @@
             formData.append("container_id", document.getElementById("container-id").value);
             formData.append("pickup_number", document.getElementById("pickup-number").value);
             
+            // 添加 PLTS 字段
+            formData.append("plts", document.getElementById("plts").value);
+        
             // 添加日期字段
             const dateFields = ["railway-date", "pickup-date", "delivery-date", "empty-date"];
             dateFields.forEach(field => {

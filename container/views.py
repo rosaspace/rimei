@@ -1,6 +1,6 @@
 
 from django.shortcuts import render, redirect
-from .models import Container, RMOrder
+from .models import Container, RMOrder,RMCustomer
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .models import UserAndPermission
@@ -23,12 +23,28 @@ def invoice_view(request):
 
 def payment_view(request):
     template = "container/payment.html"
-    return render(request, template)
+    context = {
+        "recipient": "someone@example.com",
+        "subject": "Invoice Details",
+        "body": "Hello,\n\nPlease find the invoice details attached.\n\nBest regards."
+    }
+    return render(request, template, context)
 
 def rimeiorder_view(request):
     template = "container/rmorder.html"
     # orders = RMOrder.objects.all()
     orders = RMOrder.objects.all().annotate(image_count=Count('images'))
-    return render(request, template, {'rimeiorders': orders})
+    customers = RMCustomer.objects.all()
+
+    # 创建年份和月份的选项
+    years = [str(year) for year in range(2024, 2026)] 
+    months = [f"{month:02d}" for month in range(1, 13)]  # 01到12月
+
+    return render(request, template, {
+        'rimeiorders': orders,
+        'customers': customers,
+        'years': years,
+        'months': months
+        })
 
 

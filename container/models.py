@@ -6,7 +6,7 @@ class Container(models.Model):
     content = models.TextField(blank=True, null=True)  # 解析出的内容
     created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
     created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
-    
+    plts = models.IntegerField()  # 托盘数量
     railway_date = models.DateField(blank=True, null=True)  # 铁路日期
     pickup_date = models.DateField(blank=True, null=True)  # 提货日期
     delivery_date = models.DateField(blank=True, null=True)  # 交货日期
@@ -63,3 +63,24 @@ class OrderImage(models.Model):
     order = models.ForeignKey(RMOrder, related_name='images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='order_images/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+class InvoiceCustomer(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
+    description = models.TextField(blank=True, null=True)  # 客户描述
+
+    def __str__(self):
+        return self.name
+
+class RMProduct(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
+    description = models.TextField(blank=True, null=True)  # 客户描述
+
+    def __str__(self):
+        return self.name
+
+class RMInventory(models.Model):
+    product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联产品
+    quantity = models.IntegerField()  # 产品数量
+
+    def __str__(self):
+        return f"{self.product.name} - {self.quantity}"  # 返回产品
