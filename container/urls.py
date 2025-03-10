@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 from . import views
-from .pyviews import container, invoice, rmorder
+from .pyviews import container, invoice, rmorder, inventory
 from .pyviews import user
 
 urlpatterns = [
@@ -40,5 +40,10 @@ urlpatterns = [
     path('upload_images/<int:order_id>/', rmorder.upload_images, name='upload_images'),
     path('export_pallet/',rmorder.export_pallet,name='export_pallet'),
     path("import_excel/", rmorder.import_excel, name="import_excel"),  
+
+    # Inventory
+    path("inventory/", inventory.inventory_view, name="inventory"),
+    path("add_stock/", inventory.add_stock_view, name="add_stock"),  # 入库路径
+    path("remove_stock/", inventory.remove_stock_view, name="remove_stock"),  # 出库路径
     
 ]

@@ -68,11 +68,18 @@
             <!-- 侧边栏 -->
             <nav class="col-md-2 d-md-block sidebar">
                 <div class="position-sticky">
-                    <a href="{% url 'container' %}">📦 Container</a>
+                    <!-- <a href="{% url 'container' %}">📦 Container</a>
                     <a href="{% url 'invoice' %}">📜 Invoice</a>
                     <a href="{% url 'payment' %}">💰 Payment</a>
                     <a href="{% url 'permission' %}">🔑 Permission</a> 
-                    <a href="{% url 'rimeiorder' %}"><i class="fa-regular fa-file"></i> Rimei Order</a> 
+                    <a href="{% url 'rimeiorder' %}"> Rimei Order</a> 
+                    <a href="{% url 'inventory' %}"> Rimei Inventory</a>  -->
+                    <a href="{% url 'container' %}"><i class="fas fa-box"></i> Container</a>
+                    <a href="{% url 'invoice' %}"><i class="fas fa-file-invoice"></i> Invoice</a>
+                    <a href="{% url 'payment' %}"><i class="fas fa-money-bill-wave"></i> Payment</a>
+                    <a href="{% url 'permission' %}"><i class="fas fa-key"></i> Permission</a> 
+                    <a href="{% url 'rimeiorder' %}"><i class="fas fa-exchange-alt"></i> Rimei Order</a> 
+                    <a href="{% url 'inventory' %}"><i class="fas fa-warehouse"></i> Rimei Inventory</a> 
                 </div>
             </nav>
 
