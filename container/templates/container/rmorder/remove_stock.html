@@ -7,38 +7,36 @@
 <div class="alert alert-danger">{{ error }}</div>
 {% endif %}
 
-<form method="post">
-    {% csrf_token %}
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label for="product_id" class="form-label">Select Product:</label>
-            <select id="product_id" name="product_id" class="form-select" required>
-                <option value="">-- Select Product --</option>
-                {% for product in products %}
-                    <option value="{{ product.id }}">{{ product.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-4 mb-3">
-            <label for="quantity" class="form-label">Quantity:</label>
-            <input type="number" id="quantity" name="quantity" class="form-control" required min="1">
-        </div>
-        <div class="col-md-2 mb-3">
-            <label for="addItem" class="form-label">Operate:</label>
-            <button type="submit" class="btn btn-danger w-100">Remove</button>
-        </div>
+{% csrf_token %}
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label for="product_id" class="form-label">Select Product:</label>
+        <select id="product_id" name="product_id" class="form-select" required>
+            <option value="">-- Select Product --</option>
+            {% for product in products %}
+                <option value="{{ product.id }}">{{ product.name }}</option>
+            {% endfor %}
+        </select>
     </div>
-</form>
+    <div class="col-md-4 mb-3">
+        <label for="quantity" class="form-label">Quantity:</label>
+        <input type="number" id="quantity" name="quantity" class="form-control" required min="1">
+    </div>
+    <div class="col-md-2 mb-3">
+        <label for="addItem" class="form-label">Operate:</label>
+        <button name ="addItem" onclick="addItem()" class="btn btn-primary w-100">Add</button>
+    </div>
+</div>
 
 <h3>Current Stock</h3>
 <div class="mb-3">
     <button onclick="saveOrder()" class="btn btn-primary">Save</button>
     <a href="{% url 'inventory' %}" class="btn btn-secondary ms-2">Back</a>
 </div>
-<table class="table">
+<table class="table" id="orderTable">
     <thead>
         <tr>
-            <th>Product Name</th>
+            <th>Product Name</th> 
             <th>Quantity</th>
             <th>Operate</th>
         </tr>
@@ -47,4 +45,82 @@
     </tbody>
 </table>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let orderItems = [];
+
+    function addItem() {
+        console.log("-----------------addItem")
+        let productSelect = document.getElementById("product_id");
+        let productId = productSelect.value;
+        let productName = productSelect.options[productSelect.selectedIndex].text;
+        // let productPrice = parseFloat(productSelect.options[productSelect.selectedIndex].getAttribute("data-price"));
+        let quantity = parseInt(document.getElementById("quantity").value);
+
+        if (quantity <= 0) {
+            alert("Quantity must be at least 1");
+            return;
+        }
+
+        // let totalPrice = (productPrice * quantity).toFixed(2);
+        console.log("-----------", productId,productName, quantity)
+        orderItems.push({ product_id: productId, product_name:productName, quantity: quantity });
+
+        updateTable();
+    }
+
+    function updateTable() {
+        let tableBody = document.querySelector("#orderTable tbody");
+        tableBody.innerHTML = "";
+
+        orderItems.forEach((item, index) => {
+            let row = `<tr>
+                <td>${item.product_name}</td>
+                <td>${item.quantity}</td>
+                <td><button onclick="removeItem(${index})" class="btn btn-danger btn-sm">Remove</button></td>
+            </tr>`;
+            tableBody.innerHTML += row;
+        });
+    }
+
+    function removeItem(index) {
+        orderItems.splice(index, 1);
+        updateTable();
+    }
+
+    function saveOrder() {
+        if (orderItems.length === 0) {
+            alert("No items to save!");
+            return;
+        }
+
+        fetch("/remove_stock/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ items: orderItems })
+        })
+        .then(response => {
+            console.log("Response status:", response.status);
+            return response.text();
+        })
+        .then(text => {
+            console.log("Response text:", text); // Log the response text
+            try {
+                const data = JSON.parse(text); // Try to parse the text as JSON
+                alert(data.message);
+                orderItems = [];
+                updateTable();
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+                alert("Failed to parse server response.");
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    }
+</script>
 {% endblock %}

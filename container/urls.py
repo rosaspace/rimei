@@ -12,6 +12,8 @@ urlpatterns = [
     path("invoice/", views.invoice_view, name="invoice"),
     path("payment/", views.payment_view, name="payment"),
     path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
+    path("temporary/", views.temporary_view, name="temporary"),
+    path("preview_email/<int:number>/", views.preview_email,name="preview_email"),
    
 
     # container

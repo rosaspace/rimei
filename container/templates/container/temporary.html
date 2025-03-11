@@ -1,0 +1,85 @@
+{% extends "container/base.html" %}
+{% block content %}
+<h2>💰 Temporary Page</h2>
+<p>This is Temporary information</p>
+
+<div class="mb-3">
+    <h4>Import Excel -> Upload Inventory</h2>
+    <!-- Import Inventory -->
+    <form action="/import_excel/" method="post" enctype="multipart/form-data">
+        <div class="input-group">
+            {% csrf_token %}
+            <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
+            <button type="submit" class="btn btn-primary">Upload Excel</button>
+        </div>
+    </form>
+</div>
+
+<div class="mb-3">
+    <h4>Export Inventory -> Download</h2>
+    <form method="GET" action="{% url 'export_pallet' %}" class="mb-3">
+        <div class="input-group">
+            <select name="year" class="form-control" required>
+                <option value="">Select Year</option>
+                {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                {% endfor %}
+            </select>
+            <select name="month" class="form-control" required>
+                <option value="">Select Month</option>
+                {% for month in months %}
+                    <option value="{{ month }}">{{ month }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Export Pallets</button>
+        </div>
+    </form>
+</div>
+
+<div class="mb-3">
+    <!-- <a href="mailto:{{ recipient }}?subject={{ subject|urlencode }}&body={{ body|urlencode }}" class="btn btn-primary">
+        Open Outlook
+    </a> -->
+    <!-- <a href="mailto:recipient1@example.com,recipient2@example.com?cc=ccperson@example.com&bcc=bccperson@example.com&subject=Meeting%20Request&body=Hi,%0D%0APlease%20confirm%20our%20meeting%20time.%0D%0AThanks."
+        class="btn btn-primary">
+        Open Outlook with CC & BCC
+    </a> -->
+    <h4>Email Content Preview:</h2>
+    <div class="row">
+        <div class="mb-3">
+            <a href="{% url 'preview_email' number=1 %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send Inventory Email
+            </a>
+            <a href="{% url 'preview_email' number=2 %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send Shipped out Email
+            </a>
+            <a href="{% url 'preview_email' number=3 %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send Received Container Email
+            </a>
+            <a href="{% url 'preview_email' number=4 %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send Office Depot Email
+            </a>
+            <a href="{% url 'preview_email' number=5 %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send Received Order Email
+            </a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="mb-3">
+                <div class="container-id-display">{{ recipient }}</div>
+                <div class="container-id-display">{{ subject }}</div>
+                <textarea id="emailContent" class="form-control" rows="6" readonly>
+{{ body }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <a href="mailto:{{ recipient }}?subject={{ subject|urlencode }}&body={{ body|urlencode }}" 
+                    class="btn btn-primary">
+                    <i class="fas fa-envelope"></i> Open in Outlook
+                </a>
+            </div>
+        </div>
+</div>
+
+{% endblock %}

@@ -3,47 +3,6 @@
 <h2>💰 Payment Page</h2>
 <p>This is Payment Information</p>
 
-<div class="mb-3">
-    <h4>Import Excel -> Upload Inventory</h2>
-    <!-- Import Inventory -->
-    <form action="/import_excel/" method="post" enctype="multipart/form-data">
-        <div class="input-group">
-            {% csrf_token %}
-            <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
-            <button type="submit" class="btn btn-primary">Upload Excel</button>
-        </div>
-    </form>
-</div>
 
-<div class="mb-3">
-    <h4>Export Inventory -> Download</h2>
-    <form method="GET" action="{% url 'export_pallet' %}" class="mb-3">
-        <div class="input-group">
-            <select name="year" class="form-control" required>
-                <option value="">Select Year</option>
-                {% for year in years %}
-                    <option value="{{ year }}">{{ year }}</option>
-                {% endfor %}
-            </select>
-            <select name="month" class="form-control" required>
-                <option value="">Select Month</option>
-                {% for month in months %}
-                    <option value="{{ month }}">{{ month }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="btn btn-primary">Export Pallets</button>
-        </div>
-    </form>
-</div>
-
-<div class="mb-3">
-    <a href="mailto:{{ recipient }}?subject={{ subject|urlencode }}&body={{ body|urlencode }}" class="btn btn-primary">
-        Open Outlook
-    </a>
-    <!-- <a href="mailto:recipient1@example.com,recipient2@example.com?cc=ccperson@example.com&bcc=bccperson@example.com&subject=Meeting%20Request&body=Hi,%0D%0APlease%20confirm%20our%20meeting%20time.%0D%0AThanks."
-        class="btn btn-primary">
-        Open Outlook with CC & BCC
-    </a> -->
-</div>
 
 {% endblock %}
