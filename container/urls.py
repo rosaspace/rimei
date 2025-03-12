@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 from . import views
-from .pyviews import container, invoice, rmorder, inventory
+from .pyviews import container, invoice, rmorder, inventory,pdfprocess
 from .pyviews import user
 
 urlpatterns = [
@@ -13,11 +13,9 @@ urlpatterns = [
     path("payment/", views.payment_view, name="payment"),
     path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
     path("temporary/", views.temporary_view, name="temporary"),
-    path("preview_email/<int:number>/", views.preview_email,name="preview_email"),
-   
+    path("preview_email/<int:number>/", views.preview_email,name="preview_email"),   
 
     # container
-    path("upload_pdf/", container.upload_pdf, name="upload_pdf"),
     path("save_container/", container.save_container, name="save_container"),
 
     path('add_container/', container.add_container, name='add_container'), 
@@ -48,4 +46,7 @@ urlpatterns = [
     path("add_stock/", inventory.add_stock_view, name="add_stock"),  # 入库路径
     path("remove_stock/", inventory.remove_stock_view, name="remove_stock"),  # 出库路径
     
+    # pdf
+    path("upload_pdf/", pdfprocess.upload_pdf, name="upload_pdf"),
+    path("upload_orderpdf/", pdfprocess.upload_orderpdf, name="upload_orderpdf"),
 ]

@@ -9,6 +9,7 @@ from datetime import datetime
 from django.http import HttpResponse
 import pandas as pd
 
+
 @require_http_methods(["GET", "POST"])
 def add_order(request):
     if request.method == "POST":
@@ -215,3 +216,4 @@ def import_excel(request):
         return JsonResponse({"message": "Excel data imported successfully!"})
     
     return JsonResponse({"error": "No file uploaded"}, status=400)
+
