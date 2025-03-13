@@ -16,8 +16,6 @@ urlpatterns = [
     path("preview_email/<int:number>/", views.preview_email,name="preview_email"),   
 
     # container
-    path("save_container/", container.save_container, name="save_container"),
-
     path('add_container/', container.add_container, name='add_container'), 
     path('add_container_view/', container.add_container_view, name='add_container_view'),
     path("edit_container/<str:container_id>/", container.edit_container, name="edit_container"), 

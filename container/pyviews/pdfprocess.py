@@ -6,7 +6,7 @@ import fitz  # PyMuPDF 解析 PDF
 from django.shortcuts import render
 import re
 from ..models import RMCustomer
-from datetime import datetime
+from datetime import datetime,date
 
 UPLOAD_DIR = "uploads/"
 UPLOAD_DIR_order = "orders/"
@@ -33,11 +33,21 @@ def upload_orderpdf(request):
         extracted_text = extract_text_from_pdf(file_path)
         print(extracted_text)
         so_no, order_date, po_no, pickup_date, bill_to, ship_to, items, quantities = extract_info(extracted_text)
-        # print("SO Number:", so_no)
-        # print("Order Date:", order_date)
-        # print("PO Number:", po_no)
-        # print("Pickup Date:", pickup_date)
-        customers = RMCustomer.objects.all()
+
+        # Convert to a datetime object
+        if isinstance(order_date, str):
+            order_date = datetime.strptime(order_date, "%Y-%m-%d").date()  # Convert to date
+        elif isinstance(order_date, datetime):
+            order_date = order_date.date()  # Convert datetime to date
+        elif not isinstance(order_date, date):
+            order_date = date.today()  # Default fallback if somehow not a date
+        if isinstance(pickup_date, str):
+            pickup_date = datetime.strptime(pickup_date, "%Y-%m-%d").date()  # Convert to date
+        elif isinstance(order_date, datetime):
+            pickup_date = pickup_date.date()  # Convert datetime to date
+        elif not isinstance(order_date, date):
+            pickup_date = date.today()  # Default fallback if somehow not a date
+
         context = {
             "so_no": so_no,
             "order_date": order_date,
@@ -47,8 +57,8 @@ def upload_orderpdf(request):
             "ship_to":ship_to,
             "items":items,
             "quantities":quantities,
-            'customers': customers,
-        }
+            'customers': RMCustomer.objects.all(),
+        }        
         
         return render(request, 'container/rmorder/add_order.html',context)
 
@@ -101,6 +111,7 @@ def extract_text_from_pdf(pdf_path):
     doc.close()
     return text.strip()
 
+# 提取订单信息
 def extract_info(text):
     so_no = None
     order_date = None
@@ -178,9 +189,11 @@ def extract_info(text):
 
 def convert_to_yyyy_mm_dd(date_str):
     # 尝试解析日期字符串并转换为 YYYY-MM-DD 格式
+    print("--------convert_to_yyyy_mm_dd-------",date_str)
     for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%d/%m/%Y"):  # 添加您需要支持的日期格式
         try:
             date_obj = datetime.strptime(date_str, fmt)
+            print("--------convert_to_yyyy_mm_dd-------",date_obj.strftime("%Y-%m-%d"))
             return date_obj.strftime("%Y-%m-%d")  # 转换为 YYYY-MM-DD 格式
         except ValueError:
             continue  # 如果格式不匹配，继续尝试下一个格式

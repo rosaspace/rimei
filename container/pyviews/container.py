@@ -57,40 +57,6 @@ def add_container(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 # 修改Container
-def save_container(request):
-    print("----------save_container-----------")
-    if request.method == 'POST':
-        try:
-            container_id = request.POST.get('container_id')
-            pickup_number = request.POST.get('pickup_number')
-            
-            # 创建新的 Container 记录
-            container = Container(
-                container_id=container_id,
-                pickup_number=pickup_number,
-                created_at=timezone.now()
-            )
-            
-            # 如果上传了 PDF 文件
-            if 'container_pdf' in request.FILES:
-                container.container_pdf = request.FILES['container_pdf']
-                container.container_pdfname = request.FILES['container_pdf'].name
-            
-            container.save()
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Container saved successfully'
-            })
-            
-        except Exception as e:
-            return JsonResponse({
-                'error': str(e)
-            }, status=400)
-    
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
-
-# 修改Container
 def edit_container(request, container_id):
     """处理编辑Container的API请求"""
     container = get_object_or_404(Container, container_id=container_id)

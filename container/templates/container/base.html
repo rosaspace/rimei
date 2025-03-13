@@ -53,6 +53,12 @@
             height: calc(100vh - 200px); /* 适应剩余高度 */
             overflow-y: auto;
         }
+
+        .required-label::after {
+            content: " *";
+            color: red;
+            font-weight: bold;
+    }
     </style>
 
     {% block head %}
