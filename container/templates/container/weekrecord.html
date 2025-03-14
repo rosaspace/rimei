@@ -1,0 +1,64 @@
+{% extends 'container/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<h2 class="mb-4">Work Records</h2>
+
+<div class="mb-3">
+    <a href="{% url 'add_week_records' %}" class="btn btn-primary">Add Weekly Records</a>
+</div>
+
+<div class="mb-3">
+    <form method="get" class="mb-3">
+        <div class="input-group">
+            <select name="year" action="{% url 'week_record' %}" class="form-control">
+                {% for year in weekly_summary.years %}
+                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}年</option>
+                {% endfor %}
+            </select>
+            <select name="week" class="form-control">
+                {% for week in weekly_summary.weeks %}
+                    <option value="{{ week }}" {% if selected_week == week %}selected{% endif %}>第{{ week }}周</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">筛选</button>
+        </div>
+    </form>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Date Range</th>
+            <th>Hours</th>
+            <th>hour/day</th>
+            <th>Rate/week</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for employee_record in weekly_summary.employee_records %}
+        <tr>
+            <td>
+                <a href="{% url 'edit_week_records' employee_record.id %}">{{ employee_record.name }}</a>
+            </td>
+            <td>{{ employee_record.period_start|date:"Y-m-d" }} To {{ employee_record.period_end|date:"Y-m-d" }}</td>
+            <td>{{ employee_record.total_hours }}</td>
+            <td>{{ employee_record.average_hours }}</td>
+            <td>{{ employee_record.attendance_rate }}%</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% if weekly_summary %}
+<div class="mt-4">
+    <h3>Weekly Work Hours Summary</h3>
+    <p>Total: {{ weekly_summary.total }} hours</p>
+    <p>Daily Average: {{ weekly_summary.average }} hours</p>
+</div>
+{% endif %}
+
+{% endblock %} 

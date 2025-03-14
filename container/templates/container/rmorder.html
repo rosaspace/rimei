@@ -131,7 +131,7 @@ function uploadImages() {
     const formData = new FormData(document.getElementById('upload-form'));
     const orderId = document.getElementById('order_id').value;
 
-    fetch(`/upload_images/${orderId}/`, {  // 确保 URL 正确
+    fetch(`/order_images/${orderId}/`, {  // 确保 URL 正确
         method: 'POST',
         body: formData,
         headers: {

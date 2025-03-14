@@ -132,7 +132,7 @@ def search_order(request):
     })
 
 @require_http_methods(["POST"])
-def upload_images(request, order_id):
+def order_images(request, order_id):
     try:
         order = RMOrder.objects.get(id=order_id)
         images = request.FILES.getlist('images')  # 获取上传的图片

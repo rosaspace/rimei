@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 from . import views
-from .pyviews import container, invoice, rmorder, inventory,pdfprocess
+from .pyviews import container, invoice, rmorder, inventory,pdfprocess,weekrecord
 from .pyviews import user
 
 urlpatterns = [
@@ -35,7 +35,7 @@ urlpatterns = [
     path('add_order/', rmorder.add_order, name='add_order'),
     path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
     path("search_order/", rmorder.search_order, name="search_order"),
-    path('upload_images/<int:order_id>/', rmorder.upload_images, name='upload_images'),
+    path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('export_pallet/',rmorder.export_pallet,name='export_pallet'),
     path("import_excel/", rmorder.import_excel, name="import_excel"),  
 
@@ -47,4 +47,9 @@ urlpatterns = [
     # pdf
     path("upload_pdf/", pdfprocess.upload_pdf, name="upload_pdf"),
     path("upload_orderpdf/", pdfprocess.upload_orderpdf, name="upload_orderpdf"),
+
+    # 打卡记录
+    path('week_record/', weekrecord.week_record, name='week_record'),
+    path('add_week_records/', weekrecord.add_week_records, name='add_week_records'),
+    path('edit_week_records/<int:employee_id>/', weekrecord.edit_week_records, name='edit_week_records'),
 ]

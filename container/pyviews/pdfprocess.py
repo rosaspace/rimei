@@ -43,9 +43,9 @@ def upload_orderpdf(request):
             order_date = date.today()  # Default fallback if somehow not a date
         if isinstance(pickup_date, str):
             pickup_date = datetime.strptime(pickup_date, "%Y-%m-%d").date()  # Convert to date
-        elif isinstance(order_date, datetime):
+        elif isinstance(pickup_date, datetime):
             pickup_date = pickup_date.date()  # Convert datetime to date
-        elif not isinstance(order_date, date):
+        elif not isinstance(pickup_date, date):
             pickup_date = date.today()  # Default fallback if somehow not a date
 
         context = {

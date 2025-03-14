@@ -1,4 +1,3 @@
-
 from django.shortcuts import render, redirect
 from .models import Container, RMOrder,RMCustomer
 from django.http import JsonResponse
