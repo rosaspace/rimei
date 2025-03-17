@@ -5,7 +5,7 @@
 
 <h2 class="mb-4">Add Weekly Work Records</h2>  
 
-<form method="post" class="needs-validation" action="{% url 'add_week_records' %}" novalidate>
+<form method="POST" class="needs-validation" action="{% url 'add_week_records' %}" novalidate>
     {% csrf_token %}
 
     <div class="row">

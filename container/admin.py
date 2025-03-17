@@ -24,6 +24,9 @@ class ClockRecordAdmin(admin.ModelAdmin):
 class RMProductdAdmin(admin.ModelAdmin):
     list_display = ('name', 'id','shortname',"description")
 
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'id')
+
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
 admin.site.register(Permission)
@@ -35,6 +38,6 @@ admin.site.register(InvoiceCustomer)
 admin.site.register(RMProduct, RMProductdAdmin)
 admin.site.register(RMInventory, RMInventoryAdmin)
 admin.site.register(ClockRecord,ClockRecordAdmin)
-admin.site.register(Employee)
+admin.site.register(Employee,EmployeeAdmin)
 admin.site.register(LogisticsCompany)
 admin.site.register(OrderItem)
