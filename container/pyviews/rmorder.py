@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct,RMInventory
+from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct,RMInventory, OrderItem
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from django.http import JsonResponse
@@ -8,6 +8,7 @@ from django.db.models import Count
 from datetime import datetime
 from django.http import HttpResponse
 import pandas as pd
+import json
 
 
 @require_http_methods(["GET", "POST"])
@@ -20,7 +21,7 @@ def add_order(request):
                 messages.error(request, f'创建订单失败：SO号 {so_num} 已存在')
                 customers = RMCustomer.objects.all()
                 return render(request, 'container/rmorder/add_order.html', {
-                    'so_no': request.POST.get('so_num'),
+                    'so_no': so_num,
                     'po_no': request.POST.get('po_num'),
                     'plts': request.POST.get('plts'),
                     'bill_to': request.POST.get('bill_to'),
@@ -33,19 +34,32 @@ def add_order(request):
                     'is_sendemail': request.POST.get('is_sendemail') == 'on',
                     'is_updateInventory': request.POST.get('is_updateInventory') == 'on'
                 })
-
+            print("------hello1-----")
             customer = RMCustomer.objects.get(id=request.POST.get('customer_name'))
             order = RMOrder(
                 so_num=request.POST.get('so_num'),
                 po_num=request.POST.get('po_num'),
                 plts=request.POST.get('plts'),
                 customer_name=customer,
+                order_date = request.POST.get('order_date') or None,
                 pickup_date=request.POST.get('pickup_date') or None,
                 outbound_date=request.POST.get('outbound_date') or None,
                 is_sendemail=request.POST.get('is_sendemail') == 'on',
                 is_updateInventory=request.POST.get('is_updateInventory') == 'on'
             )
             order.save()
+            print("------hello2-----")
+
+            # 假设您从 PDF 中提取的产品信息存储在一个字典中
+            order_items_data = request.POST.getlist('order_items')  # 获取产品信息
+            for item_data in order_items_data:
+                print("------hello-----",item_data)
+                item = json.parse(item_data)
+                product_name = item.item
+                quantity = item.qty
+                product = RMProduct.objects.filter(shortname__icontains=product_name).first()
+                OrderItem.objects.create(order=order, product=product, quantity=int(quantity))
+            print("------hello3-----")
             messages.success(request, '订单创建成功！')
             return redirect('rimeiorder')
         except Exception as e:

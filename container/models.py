@@ -68,7 +68,7 @@ class OrderImage(models.Model):
     order = models.ForeignKey(RMOrder, related_name='images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='order_images/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
-
+    
 class InvoiceCustomer(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
     description = models.TextField(blank=True, null=True)  # 客户描述
@@ -78,10 +78,19 @@ class InvoiceCustomer(models.Model):
 
 class RMProduct(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
+    shortname = models.CharField(max_length=255, null=True)  # 客户名称，唯一
     description = models.TextField(blank=True, null=True)  # 客户描述
 
     def __str__(self):
         return self.name
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(RMOrder, related_name='order_items', on_delete=models.CASCADE)  # 关联到 RMOrder
+    product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联到 RMProduct
+    quantity = models.IntegerField()  # 产品数量
+
+    def __str__(self):
+        return f"{self.product.name} - {self.quantity} pcs"
 
 class RMInventory(models.Model):
     product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联产品

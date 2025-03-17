@@ -32,7 +32,8 @@ def upload_orderpdf(request):
         # 解析 PDF
         extracted_text = extract_text_from_pdf(file_path)
         print(extracted_text)
-        so_no, order_date, po_no, pickup_date, bill_to, ship_to, items, quantities = extract_info(extracted_text)
+        so_no, order_date, po_no, pickup_date, bill_to, ship_to, items, quantities = extract_order_info(extracted_text)
+        orderitems = extract_items_from_pdf(extracted_text)
 
         # Convert to a datetime object
         if isinstance(order_date, str):
@@ -57,6 +58,7 @@ def upload_orderpdf(request):
             "ship_to":ship_to,
             "items":items,
             "quantities":quantities,
+            "orderitems":orderitems,
             'customers': RMCustomer.objects.all(),
         }        
         
@@ -112,7 +114,7 @@ def extract_text_from_pdf(pdf_path):
     return text.strip()
 
 # 提取订单信息
-def extract_info(text):
+def extract_order_info(text):
     so_no = None
     order_date = None
     po_no = None
@@ -187,6 +189,46 @@ def extract_info(text):
 
     return so_no, order_date, po_no, pickup_date, bill_to, ship_to, items, quantities
 
+# 提取订单条目
+def extract_items_from_pdf(text):
+    # 1️⃣ Extract product lines between "Item Number / Name" and "Qty"
+    pattern = re.compile(r'Item Number / Name(.*?)Qty(.*?)Unit', re.S)
+    match = pattern.search(text)
+
+    if match:
+        items_part = match.group(1).strip()
+        qty_part = match.group(2).strip()
+
+    # 2️⃣ Combine item names that span multiple lines
+    items = []
+    current_item = ""
+
+    for line in items_part.split("\n"):
+        line = line.strip()
+        if re.search(r'\d{2,}', line) or "/" in line:  # This line is part of item name
+            if current_item:
+                items.append(current_item)
+            current_item = line
+        else:  # If it's the second line, add it to previous item
+            current_item += " " + line
+
+    # Add the last item
+    if current_item:
+        items.append(current_item)
+
+    # 3️⃣ Extract qtys
+    qtys = qty_part.split("\n")
+
+    # 4️⃣ Combine item with qty
+    product_qty_list = list(zip(items, qtys))
+
+    # ✅ Output the result
+    for item, qty in product_qty_list:
+        print(item.strip(), "-->", qty.strip())
+    
+    return product_qty_list
+
+# 转换日期
 def convert_to_yyyy_mm_dd(date_str):
     # 尝试解析日期字符串并转换为 YYYY-MM-DD 格式
     print("--------convert_to_yyyy_mm_dd-------",date_str)

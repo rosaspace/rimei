@@ -58,15 +58,20 @@
             content: " *";
             color: red;
             font-weight: bold;
-
-    }
+        }
+        
+        .bg-custom-dark {
+            background-color: rgba(255, 255, 255, 0.4); /* 通过设置透明度来调暗 */
+        }
     </style>
 
     {% block head %}
     {% endblock %}  <!-- Allow child templates to insert styles -->
 </head>
 
-<body>
+<body class="bg-light">
+<!-- <body class="bg-secondary">
+<body class="bg-custom-dark"> -->
     <header class="bg-dark text-white text-center py-3">
         <h1>Rimei</h1>
     </header>

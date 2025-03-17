@@ -70,11 +70,13 @@ def week_record(request):
 
 def add_week_records(request):
     today = timezone.now().date()
-    week_start = today - timedelta(days=today.weekday())
+    current_week_start = today - timedelta(days=today.weekday())
+    # 获取上周的周一日期
+    last_week_start = current_week_start - timedelta(days=7)
     
     weekdays = []
     for i in range(7):  # Get all days of the week
-        weekday_date = week_start + timedelta(days=i)
+        weekday_date = last_week_start + timedelta(days=i)
         weekdays.append({
             'weekday': i,
             'name': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i],
