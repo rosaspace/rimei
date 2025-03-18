@@ -109,6 +109,7 @@ class ClockRecord(models.Model):
         (5, 'Saturday'),
         (6, 'Sunday'),
     ]
+    # id = models.AutoField(primary_key=True)  # Make sure PK exists
     employee_name = models.ForeignKey('Employee', on_delete=models.CASCADE)  # 关联客户表
     date = models.DateField(verbose_name='Date')
     weekday = models.IntegerField(verbose_name='Weekday', choices=WEEKDAY_CHOICES)
@@ -158,11 +159,26 @@ class ClockRecord(models.Model):
 
     def save(self, *args, **kwargs):
         old_total_hours = self.total_hours
+        
+        # 转换所有时间字段为time对象
+        time_fields = ['morning_in', 'morning_out', 
+                      'afternoon_in', 'afternoon_out',
+                      'evening_in', 'evening_out']
+        
+        for field in time_fields:
+            value = getattr(self, field)
+            if isinstance(value, str):
+                try:
+                    time_obj = datetime.strptime(value, "%H:%M").time()
+                    setattr(self, field, time_obj)
+                except (ValueError, TypeError):
+                    pass
+        
         self.calculate_total_hours()
 
-        # 强制触发 Django 检测 total_hours 字段的变化
-        if self.total_hours != old_total_hours:
-            kwargs['update_fields'] = ['total_hours']
+        # 只在更新现有记录时使用update_fields
+        if self.pk and self.total_hours != old_total_hours:
+            kwargs['update_fields'] = time_fields + ['total_hours']
 
         super().save(*args, **kwargs)
 

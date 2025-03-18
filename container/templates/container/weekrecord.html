@@ -13,12 +13,12 @@
     <form method="get" class="mb-3">
         <div class="input-group">
             <select name="year" action="{% url 'week_record' %}" class="form-control">
-                {% for year in weekly_summary.years %}
+                {% for year in years %}
                     <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}年</option>
                 {% endfor %}
             </select>
             <select name="week" class="form-control">
-                {% for week in weekly_summary.weeks %}
+                {% for week in weeks %}
                     <option value="{{ week }}" {% if selected_week == week %}selected{% endif %}>第{{ week }}周</option>
                 {% endfor %}
             </select>

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta,date,time
-from ..models import ClockRecord,Employee, ClockRecord
+from ..models import ClockRecord,Employee
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.shortcuts import get_object_or_404
@@ -10,19 +10,35 @@ def week_record(request):
     current_date = timezone.now().date()
     current_year = current_date.year
     current_week = current_date.isocalendar()[1]
+    last_week = current_week -1;
 
-    # 从请求中获取选择的年份和周数
-    selected_year = int(request.GET.get('year', current_year))
-    selected_week = int(request.GET.get('week', current_week))
-
-    # 根据选择的年份和周数计算日期范围
-    first_day_of_week = datetime.strptime(f'{selected_year}-W{selected_week}-1', '%Y-W%W-%w').date()
-    last_day_of_week = first_day_of_week + timedelta(days=6)
+    # 计算上周的开始和结束日期
+    last_week_start = current_date - timedelta(days=current_date.weekday() + 7)  # 上周的周一
+    last_week_end = last_week_start + timedelta(days=6)  # 上周的周日
+    print("hello: ",last_week_start,last_week_end)
+    print("hello: ",last_week_start.year,last_week)
+    print("hello: ",current_week)
 
     # 获取选定周的打卡记录
     weekly_records = ClockRecord.objects.filter(
-        date__range=[first_day_of_week, last_day_of_week]
+        date__range=[last_week_start, last_week_end]
     )
+
+    # 生成年份和周数选项
+    current_year = timezone.now().year
+    years = list(range(current_year, current_year + 1))  # 当前年份及前两年
+    weeks = list(range(1, 53))  # 1-52周
+
+    # 如果没有记录，返回空页面或消息
+    if not weekly_records.exists():
+        return render(request, 'container/weekrecord.html', {
+            'records': [],
+            'weekly_summary': None,  # 或者可以返回一个空的字典
+            'years': years,
+            'weeks': weeks,
+            'selected_year': last_week_start.year,
+            'selected_week': last_week
+        })
     
     # 计算总工作时长
     total_hours = sum(record.total_hours for record in weekly_records)
@@ -38,41 +54,41 @@ def week_record(request):
         employee_avg_hours = round(employee_total_hours / 5, 2) if employee_weekly_records else 0
         employee_attendance_rate = round((employee_total_hours / 40) * 100, 2)
         
-        employee_records.append({
-            'id':employee.id,
-            'name': employee.name,
-            'period_start': first_day_of_week,
-            'period_end': last_day_of_week,
-            'total_hours': employee_total_hours,
-            'average_hours': employee_avg_hours,
-            "attendance_rate":employee_attendance_rate
-        })
+        # 只有当员工有打卡记录时才添加到列表中
+        if employee_weekly_records.exists():
+            employee_records.append({
+                'id':employee.id,
+                'name': employee.name,
+                'period_start': last_week_start,
+                'period_end': last_week_end,
+                'total_hours': employee_total_hours,
+                'average_hours': employee_avg_hours,
+                "attendance_rate":employee_attendance_rate
+            })   
     
-    # 生成年份和周数选项
-    current_year = timezone.now().year
-    years = list(range(current_year - 2, current_year + 1))  # 当前年份及前两年
-    weeks = list(range(1, 53))  # 1-52周
 
     weekly_summary = {
         'total': total_hours,
-        'average': avg_hours,
-        'years': years,
-        'weeks': weeks,
+        'average': avg_hours,        
         'employee_records': employee_records
     }
     
     return render(request, 'container/weekrecord.html', {
         'records': weekly_records,
         'weekly_summary': weekly_summary,
-        'selected_year': selected_year,
-        'selected_week': selected_week
+        'years': years,
+        'weeks': weeks,
+        'selected_year': last_week_start.year,
+        'selected_week': last_week_start.isocalendar()[1]
     })
 
 def add_week_records(request):
     today = timezone.now().date()
     current_week_start = today - timedelta(days=today.weekday())
     # 获取上周的周一日期
-    last_week_start = current_week_start - timedelta(days=7)
+    last_week_start = current_week_start - timedelta(days=7)  # 上周的周一
+    last_week_end = last_week_start + timedelta(days=6)  # 上周的周日
+    print("hello: ",last_week_start,last_week_end)
     
     weekdays = []
     for i in range(7):  # Get all days of the week
@@ -89,36 +105,56 @@ def add_week_records(request):
         print(f"Selected Employee Name: {name}")
         employee = Employee.objects.get(id=name)
         print(f"Selected Employee Name: {employee.name}")
+
+        # 创建新的打卡记录
+        clock_record = ClockRecord(
+            employee_name=employee,
+            date=date.today(),  # 今天的日期
+            weekday=date.today().weekday(),  # 自动获取星期几（0-6）
+            morning_in="09:00",  # 可以直接使用字符串，save方法会自动转换
+            morning_out="12:00",
+            afternoon_in="13:00",
+            afternoon_out="18:00"
+            # evening_in 和 evening_out 是可选的，可以不填
+        )
+
+        # 保存到数据库
+        clock_record.save()
         
-        for day in weekdays:
-            weekday = day['weekday']
-            date = day['date']            
+        # for day in weekdays:
+        #     # weekday = "Monday"
+        #     weekdayname = day['name']
+        #     weekday = day['weekday']
+        #     date = day['date']            
             
-            # 获取表单数据
-            morning_in = request.POST.get(f'morning_in_{weekday}')
-            morning_out = request.POST.get(f'morning_out_{weekday}')
-            afternoon_in = request.POST.get(f'afternoon_in_{weekday}')
-            afternoon_out = request.POST.get(f'afternoon_out_{weekday}')
-            evening_in = request.POST.get(f'evening_in_{weekday}')
-            evening_out = request.POST.get(f'evening_out_{weekday}')
-            print("I am ok now")
+        #     # 获取表单数据
+        #     morning_in = request.POST.get(f'morning_in_{weekday}')
+        #     morning_out = request.POST.get(f'morning_out_{weekday}')
+        #     afternoon_in = request.POST.get(f'afternoon_in_{weekday}')
+        #     afternoon_out = request.POST.get(f'afternoon_out_{weekday}')
+        #     evening_in = request.POST.get(f'evening_in_{weekday}')
+        #     evening_out = request.POST.get(f'evening_out_{weekday}')
+        #     print("I am ok now\n", employee.name,date, weekdayname)
+        #     print("Time: ",morning_in, morning_out, afternoon_in, afternoon_out, evening_in, evening_out )
             
-            # 创建记录
-            existing_record = ClockRecord.objects.filter(date=date, employee_name=employee).exists()
-            if not existing_record and any([morning_in, morning_out, afternoon_in, afternoon_out, evening_in, evening_out]):
-                ClockRecord.objects.create(
-                    date=date,
-                    weekday=weekday,
-                    employee_name=employee,
-                    morning_in=morning_in or None,
-                    morning_out=morning_out or None,
-                    afternoon_in=afternoon_in or None,
-                    afternoon_out=afternoon_out or None,
-                    evening_in=evening_in or None,
-                    evening_out=evening_out or None
-                )
+        #     # 创建记录
+        #     if any([morning_in, morning_out, afternoon_in, afternoon_out, evening_in, evening_out]):
+        #         ClockRecord.objects.create(
+        #             date=date,
+        #             weekday=weekday,
+        #             employee_name=employee,
+        #             morning_in=morning_in or None,
+        #             morning_out=morning_out or None,
+        #             afternoon_in=afternoon_in or None,
+        #             afternoon_out=afternoon_out or None,
+        #             evening_in=evening_in or None,
+        #             evening_out=evening_out or None
+        #         )
+        #         # print("hello: ",type(wordrecord))
+        #         # wordrecord.save()
+        #         return JsonResponse({"status": "success", "message": "Record added!"})
         
-        return redirect('week_record')
+        # return redirect('week_record')
     
     employees = Employee.objects.all()
     return render(request, 'container/weekrecord/add_record.html', {
@@ -154,21 +190,39 @@ def edit_week_records(request, employee_id=None):
 
             # Get weekday value from weekdays list
             weekday = weekdays[i]['weekday']
+            date = last_week_start + timedelta(days=i)  # Calculate the date for the current weekday    
+            print("hello: ",employee.name, weekdays[i]['name'], date)
+            print("hello: ",morning_in,morning_out,afternoon_in,afternoon_out,evening_in,evening_out)
             
             # Save or update work records
-            ClockRecord.objects.update_or_create(
-                employee_name = employee,
-                date = last_week_start + timedelta(days=i),
-                weekday=weekday,
-                defaults={
-                    'morning_in': morning_in or None,
-                    'morning_out': morning_out or None,
-                    'afternoon_in': afternoon_in or None,
-                    'afternoon_out': afternoon_out or None,
-                    'evening_in': evening_in or None,
-                    'evening_out': evening_out or None,
-                }
+            # ClockRecord.objects.update_or_create(
+            #     employee_name = employee,
+            #     date = date,
+            #     defaults={
+            #         'weekday': weekday,
+            #         'morning_in': morning_in or None,
+            #         'morning_out': morning_out or None,
+            #         'afternoon_in': afternoon_in or None,
+            #         'afternoon_out': afternoon_out or None,
+            #         'evening_in': evening_in or None,
+            #         'evening_out': evening_out or None,
+            #     }
+            # )
+            # 先检查是否存在记录
+            record, created = ClockRecord.objects.get_or_create(
+                employee_name=employee,
+                date=date,
             )
+            
+            # 直接更新字段
+            record.weekday = weekday
+            record.morning_in = morning_in if morning_in else record.morning_in
+            record.morning_out = morning_out if morning_out else record.morning_out
+            record.afternoon_in = afternoon_in if afternoon_in else record.afternoon_in
+            record.afternoon_out = afternoon_out if afternoon_out else record.afternoon_out
+            record.evening_in = evening_in if evening_in else record.evening_in
+            record.evening_out = evening_out if evening_out else record.evening_out
+            record.save()
         return redirect('week_record')
 
     current_employee = None

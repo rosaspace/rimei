@@ -3,7 +3,7 @@ from .models import Container,Permission,UserAndPermission  # 导入 Container �
 from .models import RMOrder, RMCustomer,OrderImage
 from .forms import OrderForm
 from .models import InvoiceCustomer,RMProduct,RMInventory
-from .models import Employee, ClockRecord,LogisticsCompany,OrderItem
+from .models import Employee, LogisticsCompany,OrderItem,ClockRecord
 
 class ContainerAdmin(admin.ModelAdmin):
     list_display = ('container_id', 'railway_date', 'pickup_date', 'delivery_date','empty_date','pickup_number')  # Updated field name
