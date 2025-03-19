@@ -184,6 +184,7 @@ class ClockRecord(models.Model):
 
 class Employee(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 员工名称，唯一
+    belongTo = models.CharField(max_length=255, default="GoldenFeather")
 
     def __str__(self):
         return self.name 

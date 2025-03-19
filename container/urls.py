@@ -52,4 +52,5 @@ urlpatterns = [
     path('week_record/', weekrecord.week_record, name='week_record'),
     path('add_week_records/', weekrecord.add_week_records, name='add_week_records'),
     path('edit_week_records/<int:employee_id>/', weekrecord.edit_week_records, name='edit_week_records'),
+    path("export_week_records", weekrecord.export_week_records,name="export_week_records"),
 ]

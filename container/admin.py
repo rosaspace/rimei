@@ -25,7 +25,7 @@ class RMProductdAdmin(admin.ModelAdmin):
     list_display = ('name', 'id','shortname',"description")
 
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'id')
+    list_display = ('name', 'id','belongTo')
 
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
