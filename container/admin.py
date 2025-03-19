@@ -27,6 +27,9 @@ class RMProductdAdmin(admin.ModelAdmin):
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'id','belongTo')
 
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ('order', 'product','quantity')
+
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
 admin.site.register(Permission)
@@ -40,4 +43,4 @@ admin.site.register(RMInventory, RMInventoryAdmin)
 admin.site.register(ClockRecord,ClockRecordAdmin)
 admin.site.register(Employee,EmployeeAdmin)
 admin.site.register(LogisticsCompany)
-admin.site.register(OrderItem)
+admin.site.register(OrderItem,OrderItemAdmin)

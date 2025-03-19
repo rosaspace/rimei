@@ -260,32 +260,39 @@ def export_week_records(request):
     # 获取所有员工
     employees = Employee.objects.all()
 
-    # 创建一个 Pandas Excel writer
-    filename = f'Working_Hours_{last_week_start.strftime("%Y-%m-%d")}_to_{last_week_end.strftime("%Y-%m-%d")}.xlsx'
-    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-        # 按照 belongTo 字段分组员工
-        grouped_employees = {}
-        for employee in employees:
-            group = employee.belongTo  # 假设 belongTo 是一个字符串，表示员工所属的组
-            if group not in grouped_employees:
-                grouped_employees[group] = []
-            grouped_employees[group].append(employee)
 
-        # 定义颜色列表
-        colors = ["FFFF99", "FFCCFF", "CCFFCC", "FFCCCC", "CCCCFF"]
-        color_map = {}  # 用于存储每个员工的颜色
+    # 按照 belongTo 字段分组员工
+    grouped_employees = {}
+    for employee in employees:
+        group = employee.belongTo  # 假设 belongTo 是一个字符串，表示员工所属的组
+        if group not in grouped_employees:
+            grouped_employees[group] = []
+        grouped_employees[group].append(employee)
 
-        # 为每个员工分配颜色
-        for index, employee in enumerate(employees):
-            color_map[employee.name] = colors[index % len(colors)]  # 循环使用颜色
-            print("color: ", employee.name, colors[index % len(colors)])
+    # 定义颜色列表
+    colors = ["FFFF99", "FFCCFF", "CCFFCC", "FFCCCC", "CCCCFF"]
+    color_map = {}  # 用于存储每个员工的颜色
 
-        # 为每个组创建一个工作表
-        for group, group_employees in grouped_employees.items():
+    # 为每个员工分配颜色
+    for index, employee in enumerate(employees):
+        color_map[employee.name] = colors[index % len(colors)]  # 循环使用颜色
+        # print("color: ", employee.name, colors[index % len(colors)])
+
+    # 存储所有响应
+    responses = []
+
+    # 为每个组创建一个工作表
+    for group, group_employees in grouped_employees.items():
+        print("---group: ",group)
+        filename = f'Working_Hours_{group}_{last_week_start.strftime("%m.%d")}-{last_week_end.strftime("%m.%d")}.2025.xlsx'
+        
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+
             data = []            
 
             for employee in group_employees:
                 total_hours_weekly = 0
+                employee_records = []
                 # 获取该员工的上周打卡记录
                 records = ClockRecord.objects.filter(employee_name=employee, date__range=[last_week_start, last_week_end])
 
@@ -323,7 +330,7 @@ def export_week_records(request):
                     evening_in_str = evening_in.strftime('%H:%M') if evening_in else ''
                     evening_out_str = evening_out.strftime('%H:%M') if evening_out else ''
 
-                    data.append({
+                    employee_records.append({
                         'Name': employee.name,
                         'Date': record.date,
                         'Weekday': weekday_str,
@@ -334,48 +341,82 @@ def export_week_records(request):
                         'In Time3': evening_in_str,
                         'Out Time3': evening_out_str,
                         'Total Hours Daily': total_hours,
-                        "Total Hours Weekly": total_hours_weekly,
-                    })            
+                        "Total Hours Weekly": '',
+                    })     
+                # 在最后一条记录中添加周总时间
+                if employee_records:
+                    employee_records[-1]['Total Hours Weekly'] = total_hours_weekly 
 
-            # 创建 DataFrame
-            df = pd.DataFrame(data)
+                # 将该员工的所有记录添加到主数据列表
+                data.extend(employee_records)                  
+            if data:
+                # 创建 DataFrame
+                df = pd.DataFrame(data)
 
-            # 将 DataFrame 写入 Excel 的一个工作表
-            df.to_excel(writer, sheet_name=group, index=False)
+                # 将 DataFrame 写入 Excel 的一个工作表
+                df.to_excel(writer, sheet_name=group, index=False)
 
-            # 获取当前工作表
-            worksheet = writer.sheets[group]
+                # 获取当前工作表
+                worksheet = writer.sheets[group]
 
-            # 设置列宽以适应内容
-            for column in worksheet.columns:
-                max_length = 0
-                column = [cell for cell in column]
-                for cell in column:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except:
-                        pass
-                adjusted_width = (max_length + 2)
-                worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
+                # 设置列宽以适应内容
+                for column in worksheet.columns:
+                    max_length = 0
+                    column = [cell for cell in column]
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = (max_length + 2)
+                    worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
 
-            # 设置不同颜色和边框
-            thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-            for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row, min_col=1, max_col=len(data[0])):
-                for cell in row:
-                    # 使用当前行员工的颜色
-                    employee_id = data[row[0].row - 2]['Name']  # 获取当前行的员工名称
-                    employee_color = color_map.get(employee_id)  # 获取该员工的颜色
-                    print("color2: ",employee_id, employee_color)
-                    cell.fill = PatternFill(start_color=employee_color, end_color=employee_color, fill_type="solid")
-                    cell.border = thin_border  # 添加边框
-                    cell.alignment = Alignment(horizontal='center', vertical='center')  # 设置居中对齐
+                # 设置不同颜色和边框
+                thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+                for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row, min_col=1, max_col=len(data[0])):
+                    for cell in row:
+                        # 使用当前行员工的颜色
+                        employee_id = data[row[0].row - 2]['Name']  # 获取当前行的员工名称
+                        employee_color = color_map.get(employee_id)  # 获取该员工的颜色
+                        # print("color2: ",employee_id, employee_color)
+                        cell.fill = PatternFill(start_color=employee_color, end_color=employee_color, fill_type="solid")
+                        cell.border = thin_border  # 添加边框
+                        cell.alignment = Alignment(horizontal='center', vertical='center')  # 设置居中对齐
 
-    # 返回 Excel 文件作为响应
-    with open(filename, 'rb') as f:
-        response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename={filename}'
-        return response
+        # 返回 Excel 文件作为响应
+        with open(filename, 'rb') as f:
+            file_data = f.read()
+            responses.append({
+                'filename': filename,
+                'data': file_data,
+                'group': group
+            })
+    
+    # 在循环结束后，根据请求参数返回特定的Excel文件
+    group_param = request.GET.get('group')
+    if group_param and responses:
+        # 如果指定了组，返回该组的Excel
+        for response in responses:
+            if response['group'] == group_param:
+                excel_response = HttpResponse(
+                    response['data'],
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                excel_response['Content-Disposition'] = f'attachment; filename="{response["filename"]}"'
+                return excel_response
+    
+    # 如果没有指定组或找不到指定组，返回第一个Excel
+    if responses:
+        excel_response = HttpResponse(
+            responses[0]['data'],
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        excel_response['Content-Disposition'] = f'attachment; filename="{responses[0]["filename"]}"'
+        return excel_response
+    
+    # 如果没有数据，返回空响应
+    return HttpResponse("No data available for export.")
 
 def convertToTime(workTime):
     if isinstance(workTime, str):

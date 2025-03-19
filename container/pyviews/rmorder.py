@@ -11,7 +11,6 @@ import pandas as pd
 import json
 
 
-@require_http_methods(["GET", "POST"])
 def add_order(request):
     if request.method == "POST":
         try:
@@ -19,6 +18,7 @@ def add_order(request):
             so_num = request.POST.get('so_num')
             if RMOrder.objects.filter(so_num=so_num).exists():
                 messages.error(request, f'创建订单失败：SO号 {so_num} 已存在')
+
                 customers = RMCustomer.objects.all()
                 return render(request, 'container/rmorder/add_order.html', {
                     'so_no': so_num,
@@ -34,6 +34,7 @@ def add_order(request):
                     'is_sendemail': request.POST.get('is_sendemail') == 'on',
                     'is_updateInventory': request.POST.get('is_updateInventory') == 'on'
                 })
+            
             print("------hello1-----")
             customer = RMCustomer.objects.get(id=request.POST.get('customer_name'))
             order = RMOrder(
@@ -41,6 +42,8 @@ def add_order(request):
                 po_num=request.POST.get('po_num'),
                 plts=request.POST.get('plts'),
                 customer_name=customer,
+                bill_to=request.POST.get('bill_to'),
+                ship_to=request.POST.get('ship_to'),
                 order_date = request.POST.get('order_date') or None,
                 pickup_date=request.POST.get('pickup_date') or None,
                 outbound_date=request.POST.get('outbound_date') or None,
@@ -51,20 +54,32 @@ def add_order(request):
             print("------hello2-----")
 
             # 假设您从 PDF 中提取的产品信息存储在一个字典中
-            order_items_data = request.POST.getlist('order_items')  # 获取产品信息
-            for item_data in order_items_data:
-                print("------hello-----",item_data)
-                item = json.parse(item_data)
-                product_name = item.item
-                quantity = item.qty
-                product = RMProduct.objects.filter(shortname__icontains=product_name).first()
-                OrderItem.objects.create(order=order, product=product, quantity=int(quantity))
+            order_items_json = request.POST.get('orderitems')  # 获取产品信息
+            print("订单项目JSON:", order_items_json)
+            if order_items_json:
+                order_items = json.loads(order_items_json)  # 解析JSON
+                print("解析后的订单项目:", order_items)
+                for item in order_items:
+                    product_name = item['item']
+                    quantity = item['qty']
+                    print(f"处理商品: {product_name}, 数量: {quantity}")
+                    products = RMProduct.objects.all()
+                    product = None
+                    for p in products:
+                        if (p.shortname and p.shortname.strip() in product_name) or (p.name in product_name):
+                            product = p
+                            break
+                    if product:
+                        OrderItem.objects.create(order=order, product=product, quantity=int(quantity))
+                    else:
+                        print(f"警告: 未找到匹配的产品 '{product_name}'")
+            
             print("------hello3-----")
             messages.success(request, '订单创建成功！')
             return redirect('rimeiorder')
         except Exception as e:
             messages.error(request, f'创建订单失败：{str(e)}')
-    
+    # GET请求处理
     customers = RMCustomer.objects.all()
     return render(request, 'container/rmorder/add_order.html', {'customers': customers})
 
@@ -102,9 +117,11 @@ def edit_order(request, so_num):
                 messages.error(request, f'更新订单失败：{str(e)}')
         
         customers = RMCustomer.objects.all()
+        order_items = OrderItem.objects.filter(order=order)
         return render(request, 'container/rmorder/edit_order.html', {
             'order': order,
-            'customers': customers
+            'customers': customers,
+            'order_items': order_items
         })
     except RMOrder.DoesNotExist:
         messages.error(request, '订单不存在')

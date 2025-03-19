@@ -148,42 +148,18 @@
             <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
         </div>
     </form>
-
-    {% if order_date %}
-    <div class="mt-4">
-        <h4>Order Date:</h4>
-        <pre>{{ order_date }}</pre>
-    </div>
-    {% endif %}
-
-    {% if pickup_date %}
-    <div class="mt-4">
-        <h4>Pickup Date:</h4>
-        <pre>{{ pickup_date }}</pre>
-    </div>
-    {% endif %}
-
-    {% if bill_to %}
-    <div class="mt-4">
-        <h4>Bill To:</h4>
-        <pre>{{ bill_to }}</pre>
-    </div>
-    {% endif %}
-
-    {% if ship_to %}
-    <div class="mt-4">
-        <h4>Ship To:</h4>
-        <pre>{{ ship_to }}</pre>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.getElementById('saveOrder').addEventListener('click', function() {
+    document.getElementById('saveOrder').addEventListener('click', function(e) {
+        e.preventDefault(); // 阻止表单默认提交
+
         const rows = document.querySelectorAll('tbody tr');
         let orderitems = [];
+
+        console.log("表格行数:", rows.length);
 
         rows.forEach(row => {
             const itemName = row.children[0].textContent.trim();
@@ -196,26 +172,36 @@
             });
         });
 
-        // 收集其他订单信息
-        const soNum = document.getElementById('so_num').value;
-        const poNum = document.getElementById('po_num').value;
-        const plts = document.getElementById('plts').value;
-        const customerName = document.getElementById('customer_name').value;
-        const orderDate = document.getElementById('order_date').value;
-        const pickupDate = document.getElementById('pickup_date').value;
-        const outboundDate = document.getElementById('outbound_date').value;
-        const isSendEmail = document.getElementById('is_sendemail').checked;
-        const isUpdateInventory = document.getElementById('is_updateInventory').checked;
+        console.log("订单项目:", orderitems);
+        console.log("订单项目JSON:", JSON.stringify(orderitems));
 
+        // 创建FormData对象
+        const formData = new FormData();
+        formData.append('so_num', document.getElementById('so_num').value);
+        formData.append('po_num', document.getElementById('po_num').value);
+        formData.append('plts', document.getElementById('plts').value);
+        formData.append('customer_name', document.getElementById('customer_name').value);
+        formData.append('order_date', document.getElementById('order_date').value);
+        formData.append('pickup_date', document.getElementById('pickup_date').value);
+        formData.append('outbound_date', document.getElementById('outbound_date').value);
+        formData.append('is_sendemail', document.getElementById('is_sendemail').checked);
+        formData.append('is_updateInventory', document.getElementById('is_updateInventory').checked);
+        formData.append('bill_to', document.getElementById('bill_to').value);
+        formData.append('ship_to', document.getElementById('ship_to').value);
+        formData.append('orderitems', JSON.stringify(orderitems));
+
+        // 检查FormData内容
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
 
         // 发送数据到后端
         fetch('/add_order/', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
                 'X-CSRFToken': '{{ csrf_token }}'
             },
-            body: `so_num=${soNum}&po_num=${poNum}&plts=${plts}&customer_name=${customerName}&order_date=${orderDate}&pickup_date=${pickupDate}&outbound_date=${outboundDate}&is_sendemail=${isSendEmail}&is_updateInventory=${isUpdateInventory}&orderitems=${JSON.stringify(orderitems)}`
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
@@ -224,7 +210,11 @@
             } else {
                 alert('Failed to save order!');
             }
-        });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while saving the order');
+        });;
     });
 </script>
 {% endblock %}

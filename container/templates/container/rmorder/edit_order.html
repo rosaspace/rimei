@@ -34,7 +34,7 @@
                 <select class="form-select" id="customer_name" name="customer_name" required>
                     <option value="">Select Customer...</option>
                     {% for customer in customers %}
-                    <option value="{{ customer.id }}">
+                    <option value="{{ customer.id }}" {% if customer.id == order.customer_name.id %}selected{% endif %}>
                         {{ customer.name }}
                     </option>
                     {% endfor %}
@@ -94,6 +94,29 @@
                         {% if order.is_updateInventory %} checked {% endif %}>
                     <label class="form-check-label" for="is_updateInventory">Update Inventory</label>
                 </div>
+            </div>
+        </div>
+
+        <!-- 添加订单项目表格 -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h5>Order Items</h5>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order_items %}
+                        <tr>
+                            <td>{{ item.product.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
 

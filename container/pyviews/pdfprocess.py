@@ -31,7 +31,7 @@ def upload_orderpdf(request):
 
         # 解析 PDF
         extracted_text = extract_text_from_pdf(file_path)
-        print(extracted_text)
+        # print(extracted_text)
         so_no, order_date, po_no, pickup_date, bill_to, ship_to, items, quantities = extract_order_info(extracted_text)
         orderitems = extract_items_from_pdf(extracted_text)
 
@@ -205,19 +205,21 @@ def extract_items_from_pdf(text):
 
     for line in items_part.split("\n"):
         line = line.strip()
-        if re.search(r'\d{2,}', line) or "/" in line:  # This line is part of item name
+        # 判断是否是新的一行（以数字、CAN、KLT、T 开头）
+        if re.match(r'^\d+', line) or re.match(r'^(CAN|KLT|T)(\s|-|$)', line):
             if current_item:
                 items.append(current_item)
-            current_item = line
+            current_item = line # 开始新的产品名称
         else:  # If it's the second line, add it to previous item
-            current_item += " " + line
+            current_item += " " + line # 追加到上一行
 
     # Add the last item
     if current_item:
         items.append(current_item)
 
     # 3️⃣ Extract qtys
-    qtys = qty_part.split("\n")
+    # qtys = qty_part.split("\n")
+    qtys = [q.strip() for q in qty_part.split("\n")]
 
     # 4️⃣ Combine item with qty
     product_qty_list = list(zip(items, qtys))
@@ -231,11 +233,11 @@ def extract_items_from_pdf(text):
 # 转换日期
 def convert_to_yyyy_mm_dd(date_str):
     # 尝试解析日期字符串并转换为 YYYY-MM-DD 格式
-    print("--------convert_to_yyyy_mm_dd-------",date_str)
+    # print("--------convert_to_yyyy_mm_dd-------",date_str)
     for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%d/%m/%Y"):  # 添加您需要支持的日期格式
         try:
             date_obj = datetime.strptime(date_str, fmt)
-            print("--------convert_to_yyyy_mm_dd-------",date_obj.strftime("%Y-%m-%d"))
+            # print("--------convert_to_yyyy_mm_dd-------",date_obj.strftime("%Y-%m-%d"))
             return date_obj.strftime("%Y-%m-%d")  # 转换为 YYYY-MM-DD 格式
         except ValueError:
             continue  # 如果格式不匹配，继续尝试下一个格式
