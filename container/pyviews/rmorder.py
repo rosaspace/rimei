@@ -32,11 +32,13 @@ def add_order(request):
                     'customers':customers,
                     'customer_name': RMCustomer.objects.get(id=request.POST.get('customer_name')),
                     'is_sendemail': request.POST.get('is_sendemail') == 'on',
-                    'is_updateInventory': request.POST.get('is_updateInventory') == 'on'
+                    'is_updateInventory': request.POST.get('is_updateInventory') == 'on',
+                    'order_pdfname':request.POST.get('order_pdfname')  # 添加这一行
                 })
             
             print("------hello1-----")
             customer = RMCustomer.objects.get(id=request.POST.get('customer_name'))
+            print("---,",request.POST.get('order_pdfname'))
             order = RMOrder(
                 so_num=request.POST.get('so_num'),
                 po_num=request.POST.get('po_num'),
@@ -44,11 +46,12 @@ def add_order(request):
                 customer_name=customer,
                 bill_to=request.POST.get('bill_to'),
                 ship_to=request.POST.get('ship_to'),
+                order_pdfname = request.POST.get('order_pdfname'),
                 order_date = request.POST.get('order_date') or None,
                 pickup_date=request.POST.get('pickup_date') or None,
                 outbound_date=request.POST.get('outbound_date') or None,
                 is_sendemail=request.POST.get('is_sendemail') == 'on',
-                is_updateInventory=request.POST.get('is_updateInventory') == 'on'
+                is_updateInventory=request.POST.get('is_updateInventory') == 'on',                
             )
             order.save()
             print("------hello2-----")
@@ -109,7 +112,7 @@ def edit_order(request, so_num):
                 order.pickup_date = request.POST.get('pickup_date') or None
                 order.outbound_date = request.POST.get('outbound_date') or None
                 order.is_sendemail = request.POST.get('is_sendemail') == 'on'
-                order.is_updateInventory = request.POST.get('is_updateInventory') == 'on'                
+                order.is_updateInventory = request.POST.get('is_updateInventory') == 'on'                             
                 order.save()
                 messages.success(request, '订单更新成功！')
                 return redirect('rimeiorder')
@@ -251,4 +254,3 @@ def import_excel(request):
         return JsonResponse({"message": "Excel data imported successfully!"})
     
     return JsonResponse({"error": "No file uploaded"}, status=400)
-

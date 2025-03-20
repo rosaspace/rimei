@@ -3,6 +3,23 @@
 
 {% block content %}
 <div class="container mt-4">
+    <h4 class="mb-4">Print Order</h4>
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <button class="btn btn-primary  w-100" id="printOrder">Print Original Order</a>
+        </div>
+        <div class="col-md-3 mb-3">
+            <button class="btn btn-primary  w-100" id="printConvertedOrder">Print Converted Order</a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <button class="btn btn-primary  w-100" id="printLabel">Print Label</a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <button class="btn btn-primary  w-100" id="printBOL">Print BOL</a>
+        </div>
+    </div>
+
+    <hr class="my-4 border-2 opacity-100">
 
    <h4 class="mb-4">Edit Order</h4>    
     <form method="POST" action="{% url 'edit_order' order.so_num %}" class="needs-validation" novalidate>
@@ -19,6 +36,7 @@
                 <label for="po_num" class="form-label required-label">PO Number</label>
                 <input type="text" class="form-control" id="po_num" name="po_num" 
                        value="{{ order.po_num|default:'' }}" required>
+                <input type="hidden" name="order_pdfname" value="{{ order.order_pdfname|default:'' }}">
             </div>
         </div>
 
@@ -135,4 +153,32 @@
             <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
         </div>
     </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const soNum = '{{ order.so_num }}';
+    
+    // 打印原始订单
+    document.getElementById('printOrder').addEventListener('click', function() {
+        window.open(`/print_original_order/${soNum}/`, '_blank');
+    });
+
+    // 打印转换后的订单
+    document.getElementById('printConvertedOrder').addEventListener('click', function() {
+        window.open(`/print_converted_order/${soNum}/`, '_blank');
+    });
+
+    // 打印标签
+    document.getElementById('printLabel').addEventListener('click', function() {
+        window.open(`/print_label/${soNum}/`, '_blank');
+    });
+
+    // 打印BOL
+    document.getElementById('printBOL').addEventListener('click', function() {
+        window.open(`/print_bol/${soNum}/`, '_blank');
+    });
+});
+</script>
 {% endblock %}

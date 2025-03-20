@@ -43,6 +43,7 @@ class RMOrder(models.Model):
     po_num = models.CharField(max_length=255)  # 采购订单号
     plts = models.IntegerField()  # 托盘数量
     customer_name = models.ForeignKey('RMCustomer', on_delete=models.CASCADE)  # 关联客户表
+    order_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Order的PDF文件名
     bol_pdfname = models.CharField(max_length=255, blank=True, null=True)  # BOL的PDF文件名
     bill_to = models.CharField(max_length=255, blank=True, null=True) # 账单地址
     ship_to = models.CharField(max_length=255, blank=True, null=True) # 邮寄地址

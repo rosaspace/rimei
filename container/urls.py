@@ -38,7 +38,7 @@ urlpatterns = [
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('export_pallet/',rmorder.export_pallet,name='export_pallet'),
     path("import_excel/", rmorder.import_excel, name="import_excel"),  
-
+  
     # Inventory
     path("inventory/", inventory.inventory_view, name="inventory"),
     path("add_stock/", inventory.add_stock_view, name="add_stock"),  # 入库路径
@@ -47,6 +47,11 @@ urlpatterns = [
     # pdf
     path("upload_pdf/", pdfprocess.upload_pdf, name="upload_pdf"),
     path("upload_orderpdf/", pdfprocess.upload_orderpdf, name="upload_orderpdf"),
+
+    path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),
+    path('print_converted_order/<str:so_num>/', pdfprocess.print_converted_order, name='print_converted_order'),
+    path('print_label/<str:so_num>/', pdfprocess.print_label, name='print_label'),
+    path('print_bol/<str:so_num>/', pdfprocess.print_bol, name='print_bol'),
 
     # 打卡记录
     path('week_record/', weekrecord.week_record, name='week_record'),

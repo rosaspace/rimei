@@ -11,9 +11,13 @@ class ContainerAdmin(admin.ModelAdmin):
 class RMOrderAdmin(admin.ModelAdmin):
     form = OrderForm
     list_display = ('so_num', 'po_num', 'plts', 'customer_name', 'order_date','pickup_date', 
-                   'outbound_date', 'is_sendemail', 'is_updateInventory')
+                   'outbound_date', 'is_sendemail', 'is_updateInventory',
+                   'order_pdfname')
     search_fields = ('so_num', 'po_num', 'customer_name__name')
     list_filter = ('is_sendemail', 'is_updateInventory', 'pickup_date', 'outbound_date')
+    fields = ('so_num', 'po_num', 'plts', 'customer_name', 'order_date', 
+              'pickup_date', 'outbound_date', 'is_sendemail', 'is_updateInventory',
+              'order_pdfname')
 
 class RMInventoryAdmin(admin.ModelAdmin):
     list_display = ('product', 'quantity')

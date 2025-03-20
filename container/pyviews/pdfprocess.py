@@ -7,9 +7,34 @@ from django.shortcuts import render
 import re
 from ..models import RMCustomer
 from datetime import datetime,date
+from django.shortcuts import get_object_or_404
+from ..models import RMOrder
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 UPLOAD_DIR = "uploads/"
 UPLOAD_DIR_order = "orders/"
+
+# 替换文本 & 插入图片
+NEW_ADDRESS = """RIMEI INTERNATION INC
+1285 101st St
+Lemont, IL 60439"""
+NEW_TITLE = "Packing Slip"
+NEW_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/remei.jpg')
+
+# Label
+PAGE_WIDTH, PAGE_HEIGHT = letter  # Letter size (8.5 x 11 inches)
+MARGIN_TOP = 25  # Top margin
+MARGIN_LEFT = 5  # Left margin
+LABEL_WIDTH = (PAGE_WIDTH - MARGIN_LEFT * 2) / 2  # Two labels per row
+LABEL_HEIGHT = (PAGE_HEIGHT - MARGIN_TOP * 2) / 5  # Five rows per page
+
+FONT_SIZE = 60  # Larger font size
+DRAW_BORDERS = False  # Set to True to draw borders, False to hide them
+
+LABEL_FOLDER = "label"
+os.makedirs(LABEL_FOLDER, exist_ok=True)
 
 def upload_orderpdf(request):
     print("------upload_orderpdf--------\n")
@@ -23,6 +48,7 @@ def upload_orderpdf(request):
             os.makedirs(upload_dir)
 
         file_path = os.path.join(UPLOAD_DIR_order, pdf_file.name)
+        print("--- ",pdf_file.name)
 
         # 保存文件
         with default_storage.open(file_path, "wb+") as destination:
@@ -60,6 +86,7 @@ def upload_orderpdf(request):
             "quantities":quantities,
             "orderitems":orderitems,
             'customers': RMCustomer.objects.all(),
+            'order_pdfname': pdf_file.name
         }        
         
         return render(request, 'container/rmorder/add_order.html',context)
@@ -244,3 +271,136 @@ def convert_to_yyyy_mm_dd(date_str):
         except ValueError:
             continue  # 如果格式不匹配，继续尝试下一个格式
     return None  # 如果没有匹配的格式，返回 None
+
+def print_original_order(request, so_num):
+    order = get_object_or_404(RMOrder, so_num=so_num)
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, order.order_pdfname)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+    
+    # 打开并读取PDF文件
+    with open(pdf_path, 'rb') as pdf:
+        response = HttpResponse(pdf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{order.order_pdfname}"'
+        return response
+
+def print_converted_order(request, so_num):
+    order = get_object_or_404(RMOrder, so_num=so_num)
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, order.order_pdfname)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+    
+    base_name, ext = os.path.splitext(pdf_path)
+    updated_pdf = f"{base_name}_updated.pdf"
+    doc = fitz.open(pdf_path)
+
+    for page in doc:
+        x, y = 40, 28  
+        erase_width, erase_height = 250, 150  
+        rect = fitz.Rect(x, y, x + erase_width, y + erase_height)
+        page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))  
+
+        # 添加新 LOGO
+        logo_width, logo_height = 130, 65  
+        page.insert_image(fitz.Rect(x, y, x + logo_width, y + logo_height), filename=NEW_LOGO_PATH)
+
+        # 添加新地址
+        address_x, address_y = x, y + logo_height + 20  
+        page.insert_text((address_x, address_y), NEW_ADDRESS, fontsize=12, color=(0, 0, 0), fontfile="helvB")
+
+        # 修改右上角的 Packing Slip 文字
+        page_width = page.rect.width  
+        packing_slip_x = page_width - 180  
+        packing_slip_y = 50  
+
+        erase_title_width, erase_title_height = 280, 30  
+        erase_rect = fitz.Rect(page_width - erase_title_width, 30, page_width, 30 + erase_title_height)
+        page.draw_rect(erase_rect, color=(1, 1, 1), fill=(1, 1, 1))
+
+        page.insert_text((packing_slip_x, packing_slip_y), NEW_TITLE, fontsize=18, color=(0, 0, 0), fontfile="helvB")
+
+    doc.save(updated_pdf)
+    doc.close()
+    
+    with open(updated_pdf, 'rb') as pdf_file:
+            response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="{os.path.basename(updated_pdf)}"'
+            return response
+
+def print_label(request, so_num):
+    order = get_object_or_404(RMOrder, so_num=so_num)
+    label_count = order.plts
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+
+    filename = os.path.join(pdf_path, f"{so_num}.pdf")  # Save inside "label" folder
+    c = canvas.Canvas(filename, pagesize=letter)
+
+    # Set font
+    c.setFont("Helvetica-Bold", FONT_SIZE)
+    
+    y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
+    labels_on_page = 0  # Track labels per page
+    first_page = True
+
+    while label_count > 0:
+        if not first_page:  
+            c.showPage()  # Create a new page *only if necessary*
+            c.setFont("Helvetica-Bold", FONT_SIZE)  # Reset font on new page
+            y_position = PAGE_HEIGHT - MARGIN_TOP  # Reset y position
+            labels_on_page = 0  # Reset row counter
+
+        first_page = False 
+
+        for _ in range(5):  # Max 5 rows per page
+            if label_count <= 0:
+                break  # Stop when all labels are printed
+    
+            # Two labels per row, calculate positions
+            x_positions = [MARGIN_LEFT, MARGIN_LEFT + LABEL_WIDTH]
+
+            for x in x_positions:
+                if label_count <= 0:  
+                    break  # Stop if all labels are printed
+    
+                # Center text in each label
+                text_x = x + (LABEL_WIDTH / 2)
+                text_y = y_position  - (LABEL_HEIGHT / 2) - 20
+                
+                # Set font and draw text
+                c.setFont("Helvetica-Bold", FONT_SIZE)
+                c.drawCentredString(text_x, text_y, so_num)
+    
+                # Draw label borders (for testing)
+                if DRAW_BORDERS:
+                    c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
+    
+                label_count -= 1  # Reduce remaining label count
+
+            y_position -= LABEL_HEIGHT  # Move to next row
+            labels_on_page += 2  # Two labels per row
+
+    c.save()
+    
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+
+def print_bol(request, so_num):
+    order = get_object_or_404(RMOrder, so_num=so_num)
+    # 实现打印BOL的逻辑
+    return HttpResponse("打印BOL")

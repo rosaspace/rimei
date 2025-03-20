@@ -208,6 +208,7 @@
 
         console.log("订单项目:", orderitems);
         console.log("订单项目JSON:", JSON.stringify(orderitems));
+        console.log("订单原始文件:", '{{ order_pdfname|escapejs }}');
 
         // 创建FormData对象
         const formData = new FormData();
@@ -222,7 +223,8 @@
         formData.append('is_updateInventory', document.getElementById('is_updateInventory').checked);
         formData.append('bill_to', document.getElementById('bill_to').value);
         formData.append('ship_to', document.getElementById('ship_to').value);
-        formData.append('orderitems', JSON.stringify(orderitems));
+        formData.append('order_pdfname', '{{ order_pdfname|escapejs }}');
+        formData.append('orderitems', JSON.stringify(orderitems));        
 
         // 检查FormData内容
         for (let pair of formData.entries()) {
