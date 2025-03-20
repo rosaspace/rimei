@@ -195,3 +195,11 @@ class LogisticsCompany(models.Model):
 
     def __str__(self):
         return self.name
+    
+class ContainerItem(models.Model):
+    container = models.ForeignKey(Container, related_name='container_items', on_delete=models.CASCADE)  # 关联到 RMOrder
+    product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联到 RMProduct
+    quantity = models.IntegerField()  # 产品数量
+
+    def __str__(self):
+        return f"{self.product.name} - {self.quantity} pcs"

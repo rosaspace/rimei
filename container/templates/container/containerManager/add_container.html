@@ -67,6 +67,10 @@
             let formData = new FormData();
             formData.append("container_id", document.getElementById("container-id").value);
             formData.append("pickup_number", document.getElementById("pickup-number").value);
+            formData.append("railway_date", document.getElementById("railway-date").value);
+            formData.append("pickup_date", document.getElementById("pickup-date").value);
+            formData.append("delivery_date", document.getElementById("delivery-date").value);
+            formData.append("empty_date", document.getElementById("empty-date").value);
             formData.append("plts", document.getElementById("plts").value);
             
             const containerPdf = document.getElementById("container-pdf").files[0];

@@ -3,7 +3,7 @@ from .models import Container,Permission,UserAndPermission  # 导入 Container �
 from .models import RMOrder, RMCustomer,OrderImage
 from .forms import OrderForm
 from .models import InvoiceCustomer,RMProduct,RMInventory
-from .models import Employee, LogisticsCompany,OrderItem,ClockRecord
+from .models import Employee, LogisticsCompany,OrderItem,ClockRecord,ContainerItem
 
 class ContainerAdmin(admin.ModelAdmin):
     list_display = ('container_id', 'railway_date', 'pickup_date', 'delivery_date','empty_date','pickup_number')  # Updated field name
@@ -34,6 +34,9 @@ class EmployeeAdmin(admin.ModelAdmin):
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ('order', 'product','quantity')
 
+class ContainerItemAdmin(admin.ModelAdmin):
+    list_display = ('container', 'product','quantity')
+
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
 admin.site.register(Permission)
@@ -48,3 +51,4 @@ admin.site.register(ClockRecord,ClockRecordAdmin)
 admin.site.register(Employee,EmployeeAdmin)
 admin.site.register(LogisticsCompany)
 admin.site.register(OrderItem,OrderItemAdmin)
+admin.site.register(ContainerItem,ContainerItemAdmin)

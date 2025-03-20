@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 
-from ..models import Container
+from ..models import Container,RMProduct
 from django.utils import timezone
 from datetime import datetime
 
@@ -29,17 +29,18 @@ def add_container(request):
                 created_at=timezone.now()
             )
             
-            # 处理日期字段
+            # 更新日期字段
             date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']
             for field in date_fields:
                 value = request.POST.get(field)
                 if value:
                     parsed_date = datetime.strptime(value, '%Y-%m-%d').date()
                     setattr(container, field, parsed_date)
+                else:
+                    setattr(container, field, None)
             
             # 处理PDF文件
             if 'container_pdf' in request.FILES:
-                container.container_pdf = request.FILES['container_pdf']
                 container.container_pdfname = request.FILES['container_pdf'].name
             
             container.save()
@@ -62,8 +63,9 @@ def edit_container(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
     
     if request.method == 'GET':
+        products = RMProduct.objects.all()
         # 显示编辑页面
-        return render(request, 'container/containerManager/edit_container.html', {'container': container})
+        return render(request, 'container/containerManager/edit_container.html', {'container': container,"products":products})
         
     elif request.method == 'POST':
         try:
@@ -86,12 +88,13 @@ def edit_container(request, container_id):
                     setattr(container, field, parsed_date)
                 else:
                     setattr(container, field, None)
+
             # 处理PDF文件
             if 'container_pdf' in request.FILES:
-                container.container_pdfname = request.FILES['container_pdf']
-                
+                container.container_pdfname = request.FILES['container_pdf']                
                 # 打印 PDF 文件名
                 print(f"Uploaded PDF file name: {container.container_pdfname}")
+
             container.save()
             
             return JsonResponse({
@@ -105,3 +108,10 @@ def edit_container(request, container_id):
             }, status=400)
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+def save_containeritems(request, container_id):
+    print("----------save_containeritems-------------",container_id)
+    return JsonResponse({
+                'success': True,
+                'message': 'Container updated successfully'
+            })

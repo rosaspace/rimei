@@ -8,7 +8,7 @@ import re
 from ..models import RMCustomer
 from datetime import datetime,date
 from django.shortcuts import get_object_or_404
-from ..models import RMOrder
+from ..models import RMOrder,Container
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -31,6 +31,8 @@ LABEL_WIDTH = (PAGE_WIDTH - MARGIN_LEFT * 2) / 2  # Two labels per row
 LABEL_HEIGHT = (PAGE_HEIGHT - MARGIN_TOP * 2) / 5  # Five rows per page
 
 FONT_SIZE = 60  # Larger font size
+FONT_SIZE_Container = 36  # Larger font size
+LINE_SPACING = 40
 DRAW_BORDERS = False  # Set to True to draw borders, False to hide them
 
 LABEL_FOLDER = "label"
@@ -337,7 +339,7 @@ def print_converted_order(request, so_num):
 
 def print_label(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
-    label_count = order.plts
+    label_count = 50
 
     # 构建PDF文件路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
@@ -404,3 +406,74 @@ def print_bol(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
     # 实现打印BOL的逻辑
     return HttpResponse("打印BOL")
+
+def print_container_label(request, container_num):
+    container = get_object_or_404(Container, container_id=container_num)
+    label_count = container.plts
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+
+    today_date = datetime.today().strftime("%m/%d/%Y").replace("/0", "/")  # Fix for Windows
+    filename = os.path.join(pdf_path, f"{container_num}.pdf")  # Save inside "label" folder
+    c = canvas.Canvas(filename, pagesize=letter)
+
+    # Set font
+    c.setFont("Helvetica-Bold", FONT_SIZE_Container)
+    
+    y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
+    labels_on_page = 0  # Track labels per page
+    first_page = True
+
+    while label_count > 0:
+        if not first_page:  
+            c.showPage()  # Create a new page *only if necessary*
+            c.setFont("Helvetica-Bold", FONT_SIZE_Container)  # Reset font on new page
+            y_position = PAGE_HEIGHT - MARGIN_TOP  # Reset y position
+            labels_on_page = 0  # Reset row counter
+
+        first_page = False 
+
+        for _ in range(5):  # Max 5 rows per page
+            if label_count <= 0:
+                break  # Stop when all labels are printed
+    
+            # Two labels per row, calculate positions
+            x_positions = [MARGIN_LEFT, MARGIN_LEFT + LABEL_WIDTH]
+
+            for x in x_positions:
+                if label_count <= 0:  
+                    break  # Stop if all labels are printed
+    
+                # Center text in each label
+                text_x = x + (LABEL_WIDTH / 2)
+                text_y = y_position  - (LABEL_HEIGHT / 2) - 10
+                
+                # Print first line (custom text) and second line (today's date)
+                c.drawCentredString(text_x, text_y + (LINE_SPACING / 2), container_num)  # First line (higher)
+                c.drawCentredString(text_x, text_y - (LINE_SPACING / 2), today_date)  # Second line (lower)
+    
+                # Draw label borders (for testing)
+                if DRAW_BORDERS:
+                    c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
+    
+                label_count -= 1  # Reduce remaining label count
+
+            y_position -= LABEL_HEIGHT  # Move to next row
+            labels_on_page += 2  # Two labels per row
+
+    c.save()
+    
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+
+def print_container_detail(request, container_num):
+    # order = get_object_or_404(RMOrder, so_num=so_num)
+    # 实现打印BOL的逻辑
+    return HttpResponse("打印详单")
