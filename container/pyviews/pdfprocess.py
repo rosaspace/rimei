@@ -64,7 +64,7 @@ def upload_orderpdf(request):
         
         return render(request, 'container/rmorder/add_order.html',context)
 
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    return render(request, 'container/rmorder.html')
 
 # 处理上传
 def upload_pdf(request):

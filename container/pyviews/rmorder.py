@@ -75,7 +75,7 @@ def add_order(request):
                         print(f"警告: 未找到匹配的产品 '{product_name}'")
             
             print("------hello3-----")
-            messages.success(request, '订单创建成功！')
+            # messages.success(request, '订单创建成功！')
             return redirect('rimeiorder')
         except Exception as e:
             messages.error(request, f'创建订单失败：{str(e)}')

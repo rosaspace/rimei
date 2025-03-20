@@ -12,7 +12,7 @@
                 <input type="file" class="form-control" id="pdf_file" name="pdf_file" accept=".pdf">
             </div>
             <div class="col-md-2 mb-3">
-                <button type="submit" class="btn btn-primary  w-100">Upload PDF</a>
+                <button type="submit" class="btn btn-primary  w-100" id="uploadPdf">Upload PDF</a>
             </div>
         </div>
     </form>
@@ -153,6 +153,40 @@
 
 {% block scripts %}
 <script>
+    // 处理上传 PDF 的表单提交
+    document.getElementById('uploadPdf').addEventListener('submit', function(e) {
+        e.preventDefault(); // 阻止表单默认提交
+
+        const formData = new FormData(this); // 获取表单数据
+
+        // 发送数据到后端
+        fetch('/upload_orderpdf/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.text(); // 返回 HTML 文本
+            } else {
+                throw new Error('Failed to upload PDF!');
+            }
+        })
+        .then(html => {
+            // 将返回的 HTML 插入到页面中
+            document.open();
+            document.write(html);
+            document.close();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while uploading the PDF');
+        });
+    });
+
+    // 处理添加订单的表单提交
     document.getElementById('saveOrder').addEventListener('click', function(e) {
         e.preventDefault(); // 阻止表单默认提交
 
@@ -203,13 +237,18 @@
             },
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('Order saved successfully!');
-            } else {
-                alert('Failed to save order!');
+        .then(response => {
+            // Check if the response is OK (status in the range 200-299)
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
+            return response.text(); // Parse the JSON response
+        })
+        .then(html => {
+            // 将返回的 HTML 插入到页面中
+            document.open();
+            document.write(html);
+            document.close();
         })
         .catch(error => {
             console.error('Error:', error);
