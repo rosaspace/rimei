@@ -195,9 +195,11 @@ def extract_items_from_pdf(text):
     pattern = re.compile(r'Item Number / Name(.*?)Qty(.*?)Unit', re.S)
     match = pattern.search(text)
 
-    if match:
-        items_part = match.group(1).strip()
-        qty_part = match.group(2).strip()
+    if not match:
+        return []
+    
+    items_part = match.group(1).strip()
+    qty_part = match.group(2).strip()
 
     # 2️⃣ Combine item names that span multiple lines
     items = []
@@ -206,16 +208,16 @@ def extract_items_from_pdf(text):
     for line in items_part.split("\n"):
         line = line.strip()
         # 判断是否是新的一行（以数字、CAN、KLT、T 开头）
-        if re.match(r'^\d+', line) or re.match(r'^(CAN|KLT|T)(\s|-|$)', line):
+        if re.match(r'^\s*(\d{4,}|CAN|KLT|TC|TCL|TLESIM)(?!x)', line, re.IGNORECASE):
             if current_item:
-                items.append(current_item)
+                items.append(current_item.strip())
             current_item = line # 开始新的产品名称
         else:  # If it's the second line, add it to previous item
             current_item += " " + line # 追加到上一行
 
     # Add the last item
     if current_item:
-        items.append(current_item)
+        items.append(current_item.strip())
 
     # 3️⃣ Extract qtys
     # qtys = qty_part.split("\n")
@@ -226,7 +228,7 @@ def extract_items_from_pdf(text):
 
     # ✅ Output the result
     for item, qty in product_qty_list:
-        print(item.strip(), "-->", qty.strip())
+        print("item: ",item.strip(), "-->", qty.strip())
     
     return product_qty_list
 
