@@ -26,7 +26,7 @@ def payment_view(request):
     return render(request, template)
 
 def rimeiorder_view(request):
-    template = "container/rmorder.html"
+    template = "container/rmorder2.html"
     # orders = RMOrder.objects.all()
     orders = RMOrder.objects.all().annotate(image_count=Count('images'))
     customers = RMCustomer.objects.all()

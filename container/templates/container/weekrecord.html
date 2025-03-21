@@ -40,7 +40,7 @@
         </tr>
     </thead>
     <tbody>
-    {% for employee_record in weekly_summary.employee_records %}
+    {% for employee_record in employee_records %}
         <tr>
             <td>{{ employee_record.id }}</td>
             <td>
@@ -55,13 +55,5 @@
     </tbody>
 </table>
 </div>
-
-{% if weekly_summary %}
-<div class="mt-4">
-    <h3>Weekly Work Hours Summary</h3>
-    <p>Total: {{ weekly_summary.total }} hours</p>
-    <p>Daily Average: {{ weekly_summary.average }} hours</p>
-</div>
-{% endif %}
 
 {% endblock %} 

@@ -36,16 +36,12 @@ def week_record(request):
     if not weekly_records.exists():
         return render(request, 'container/weekrecord.html', {
             'records': [],
-            'weekly_summary': None,  # 或者可以返回一个空的字典
+            'employee_records': None,  # 或者可以返回一个空的字典
             'years': years,
             'weeks': weeks,
             'selected_year': last_week_start.year,
             'selected_week': last_week
         })
-    
-    # 计算总工作时长
-    total_hours = sum(record.total_hours for record in weekly_records)
-    avg_hours = round(total_hours / 7, 2) if weekly_records else 0
     
     # 获取所有员工的周统计数据
     employees = Employee.objects.all()
@@ -67,18 +63,11 @@ def week_record(request):
                 'total_hours': employee_total_hours,
                 'average_hours': employee_avg_hours,
                 "attendance_rate":employee_attendance_rate
-            })   
-    
-
-    weekly_summary = {
-        'total': total_hours,
-        'average': avg_hours,        
-        'employee_records': employee_records
-    }
+            })
     
     return render(request, 'container/weekrecord.html', {
         'records': weekly_records,
-        'weekly_summary': weekly_summary,
+        'employee_records': employee_records,
         'years': years,
         'weeks': weeks,
         'selected_year': last_week_start.year,
