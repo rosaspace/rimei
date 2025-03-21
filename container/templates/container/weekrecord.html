@@ -31,6 +31,7 @@
 <table class="table table-striped">
     <thead>
         <tr>
+            <th>ID</th>
             <th>Name</th>
             <th>Date Range</th>
             <th>Hours</th>
@@ -41,6 +42,7 @@
     <tbody>
     {% for employee_record in weekly_summary.employee_records %}
         <tr>
+            <td>{{ employee_record.id }}</td>
             <td>
                 <a href="{% url 'edit_week_records' employee_record.id %}">{{ employee_record.name }}</a>
             </td>

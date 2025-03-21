@@ -93,14 +93,7 @@ def add_week_records(request):
     last_week_end = last_week_start + timedelta(days=6)  # 上周的周日
     print("hello: ",last_week_start,last_week_end)
     
-    weekdays = []
-    for i in range(7):  # Get all days of the week
-        weekday_date = last_week_start + timedelta(days=i)
-        weekdays.append({
-            'weekday': i,
-            'name': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i],
-            'date': weekday_date
-        })
+    weekdays = getWeek(last_week_start)
     
     if request.method == 'POST':
         # 获取选择的员工名称
@@ -172,18 +165,11 @@ def edit_week_records(request, employee_id=None):
     last_week_start = current_week_start - timedelta(days=7)
     employee = Employee.objects.get(id=employee_id)  
     
-    weekdays = []
-    for i in range(7):  # Get all days of the week
-        weekday_date = last_week_start + timedelta(days=i)
-        weekdays.append({
-            'weekday': i,
-            'name': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i],
-            'date': weekday_date
-        })
+    weekdays = getWeek(last_week_start)
 
     if request.method == 'POST':
         # Handle form submission to save work records
-        for i in range(7):
+        for i in range(6):
             morning_in = request.POST.get(f'morning_in_{i}')
             morning_out = request.POST.get(f'morning_out_{i}')
             afternoon_in = request.POST.get(f'afternoon_in_{i}')
@@ -248,14 +234,7 @@ def export_week_records(request):
     last_week_end = last_week_start + timedelta(days=6)  # 上周的周日
     print("export working hours:", last_week_start, last_week_end)
 
-    weekdays = []
-    for i in range(7):  # Get all days of the week
-        weekday_date = last_week_start + timedelta(days=i)
-        weekdays.append({
-            'weekday': i,
-            'name': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i],
-            'date': weekday_date
-        })
+    weekdays = getWeek(last_week_start)
 
     # 获取所有员工
     employees = Employee.objects.all()
@@ -432,3 +411,14 @@ def convertToTime(workTime):
         workTime = time(8, 0)  # Default to 8:00 AM if invalid
 
     return workTime
+
+def getWeek(last_week_start):
+    weekdays = []
+    for i in range(6):  # Get all days of the week
+        weekday_date = last_week_start + timedelta(days=i)
+        weekdays.append({
+            'weekday': i,
+            'name': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i],
+            'date': weekday_date
+        })
+    return weekdays

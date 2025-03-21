@@ -10,11 +10,9 @@
             <button class="btn btn-primary  w-100" id="printLabel">Print Label</a>
         </div>
     </div>
-
 <hr class="my-4 border-2 opacity-100">
 
 <h4>🧾 Edit Container</h4>
-
 <div class="container-form">
     <form id="edit-container-form">
         <div class="row">
@@ -82,7 +80,7 @@
 <!-- 添加Container项目表格 -->
 <div class="row mt-4">
     <div class="col-12">
-        <h5>Order Items</h5>
+        <h5>Container Items</h5>
         <table class="table table-bordered"  id="orderTable">
             <thead>
                 <tr>
@@ -92,7 +90,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in order_items %}
+                {% for item in container_items %}
                 <tr>
                     <td>
                         <select class="form-control product-select">
@@ -181,33 +179,33 @@
             e.preventDefault(); // 阻止表单默认提交
 
             const rows = document.querySelectorAll('tbody tr');
-            let orderitems = [];
+            let containeritems = [];
 
             console.log("表格行数:", rows.length);
             console.log("Container ID:", containerID);
 
             rows.forEach(row => {
-                const itemName = row.children[0].textContent.trim();
-                const quantity = parseInt(row.children[1].textContent.trim()) || 0;
-                console.log("--- ", itemName, quantity);
+                // Get the selected product name from the select dropdown
+                const productName = row.querySelector('.product-select').selectedOptions[0].textContent.trim();
+                
+                // Get the quantity from the input field
+                const quantity = parseInt(row.querySelector('.quantity-input').value.trim()) || 0;
 
-                orderitems.push({
-                    item: itemName,
+                console.log("--- Product Name: ", productName, " Quantity: ", quantity);
+
+                // Push the item and quantity to the orderitems array
+                containeritems.push({
+                    item: productName,
                     qty: quantity
                 });
             });
 
             // 创建FormData对象
             const formData = new FormData();
-            formData.append('orderitems', JSON.stringify(orderitems));        
-
-            // 检查FormData内容
-            for (let pair of formData.entries()) {
-                // console.log(pair[0] + ': ' + pair[1]);
-            }
+            formData.append('containeritems', JSON.stringify(containeritems));        
 
             // 发送数据到后端
-            fetch('/save_containeritems/${containerID}/', {
+            fetch(`/save_containeritems/${containerID}/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'

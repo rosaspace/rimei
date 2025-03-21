@@ -18,7 +18,7 @@ class Container(models.Model):
     invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 发票PDF文件名
 
     def __str__(self):
-        return self.container_pdfname
+        return f"{self.container_id} - {self.empty_date}"
 
 class Permission(models.Model):
     index = models.AutoField(primary_key=True)  # 自动生成的主键

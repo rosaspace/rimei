@@ -6,7 +6,8 @@ from .models import InvoiceCustomer,RMProduct,RMInventory
 from .models import Employee, LogisticsCompany,OrderItem,ClockRecord,ContainerItem
 
 class ContainerAdmin(admin.ModelAdmin):
-    list_display = ('container_id', 'railway_date', 'pickup_date', 'delivery_date','empty_date','pickup_number')  # Updated field name
+    list_display = ('container_id', 'railway_date', 'pickup_date', 'delivery_date','empty_date','pickup_number')
+    fields = ('container_id', 'railway_date', 'pickup_date', 'delivery_date','empty_date','pickup_number')
 
 class RMOrderAdmin(admin.ModelAdmin):
     form = OrderForm

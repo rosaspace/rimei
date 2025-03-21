@@ -3,67 +3,66 @@
 {% load inventory_tags %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Edit Weekly Work Records for {{ current_employee.name }}</h2>
-    
-    <form method="POST" action="{% url 'edit_week_records' current_employee.id %}" class="needs-validation" novalidate>
-        {% csrf_token %}
+<h2>Edit Weekly Work Records for {{ current_employee.name }}</h2>
+
+<form method="POST" action="{% url 'edit_week_records' current_employee.id %}" class="needs-validation" novalidate>
+    {% csrf_token %}
+    <div class="row">
         {% for day in weekdays %}
-        <div class="card bg-light mb-4">
-            <div class="card-header">
-                {{ day.name }} ({{ day.date|date:"Y-m-d" }})
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <h5>Morning</h5>
-                        <div class="form-group">
-                            <label>Clock In</label>
-                            <input type="time" name="morning_in_{{ day.weekday }}" class="form-control"
-                            value="{{ work_records|get_item:day.date|default:''|attr:'morning_in'|time:'H:i' }}">
+        <div class="col-md-4">
+            <div class="card bg-light mb-4 px-2">
+                <div class="card-header">
+                    {{ day.name }} ({{ day.date|date:"Y-m-d" }})
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Clock In</label>
+                                <input type="time" name="morning_in_{{ day.weekday }}" class="form-control"
+                                value="{{ work_records|get_item:day.date|default:''|attr:'morning_in'|time:'H:i' }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Clock Out</label>
+                                <input type="time" name="morning_out_{{ day.weekday }}" class="form-control"
+                                value="{{ work_records|get_item:day.date|default:''|attr:'morning_out'|time:'H:i' }}">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Clock Out</label>
-                            <input type="time" name="morning_out_{{ day.weekday }}" class="form-control"
-                            value="{{ work_records|get_item:day.date|default:''|attr:'morning_out'|time:'H:i' }}">
+                        
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Clock In</label>
+                                <input type="time" name="afternoon_in_{{ day.weekday }}" class="form-control"
+                                value="{{ work_records|get_item:day.date|default:''|attr:'afternoon_in'|time:'H:i' }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Clock Out</label>
+                                <input type="time" name="afternoon_out_{{ day.weekday }}" class="form-control"
+                                value="{{ work_records|get_item:day.date|default:''|attr:'afternoon_out'|time:'H:i' }}">
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <h5>Afternoon</h5>
-                        <div class="form-group">
-                            <label>Clock In</label>
-                            <input type="time" name="afternoon_in_{{ day.weekday }}" class="form-control"
-                            value="{{ work_records|get_item:day.date|default:''|attr:'afternoon_in'|time:'H:i' }}">
-                        </div>
-                        <div class="form-group">
-                            <label>Clock Out</label>
-                            <input type="time" name="afternoon_out_{{ day.weekday }}" class="form-control"
-                            value="{{ work_records|get_item:day.date|default:''|attr:'afternoon_out'|time:'H:i' }}">
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <h5>Evening</h5>
-                        <div class="form-group">
-                            <label>Clock In</label>
-                            <input type="time" name="evening_in_{{ day.weekday }}" class="form-control"
-                            value="{{ work_records|get_item:day.date|default:''|attr:'evening_in'|time:'H:i' }}">
-                        </div>
-                        <div class="form-group">
-                            <label>Clock Out</label>
-                            <input type="time" name="evening_out_{{ day.weekday }}" class="form-control"
-                            value="{{ work_records|get_item:day.date|default:''|attr:'evening_out'|time:'H:i' }}">
+                        
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Clock In</label>
+                                <input type="time" name="evening_in_{{ day.weekday }}" class="form-control"
+                                value="{{ work_records|get_item:day.date|default:''|attr:'evening_in'|time:'H:i' }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Clock Out</label>
+                                <input type="time" name="evening_out_{{ day.weekday }}" class="form-control"
+                                value="{{ work_records|get_item:day.date|default:''|attr:'evening_out'|time:'H:i' }}">
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         {% endfor %}
-        <div class="mt-3">
-            <button type="submit" class="btn btn-primary">Save Records</button>
-            <a href="{% url 'week_record' %}" class="btn btn-secondary">Back to List</a>
-        </div>
-    </form>
-</div>
+    </div>
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Save Records</button>
+        <a href="{% url 'week_record' %}" class="btn btn-secondary">Back to List</a>
+    </div>
+</form>
 {% endblock %} 
