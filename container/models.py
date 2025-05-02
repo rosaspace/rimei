@@ -2,24 +2,6 @@ from django.db import models
 from django.utils import timezone
 from datetime import datetime
 
-class Container(models.Model):
-    container_id = models.CharField(max_length=255)  # Container ID
-    container_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
-    content = models.TextField(blank=True, null=True)  # 解析出的内容
-    created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
-    created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
-    plts = models.IntegerField()  # 托盘数量
-    railway_date = models.DateField(blank=True, null=True)  # 铁路日期
-    pickup_date = models.DateField(blank=True, null=True)  # 提货日期
-    delivery_date = models.DateField(blank=True, null=True)  # 交货日期
-    empty_date = models.DateField(blank=True, null=True)  # 空箱日期
-    pickup_number = models.CharField(max_length=255, blank=True, null=True)  # 提货编号
-    invoice_id = models.CharField(max_length=255, blank=True, null=True)  # 发票ID
-    invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 发票PDF文件名
-
-    def __str__(self):
-        return f"{self.container_id} - {self.empty_date}"
-
 class Permission(models.Model):
     index = models.AutoField(primary_key=True)  # 自动生成的主键
     name = models.CharField(max_length=255, unique=True)  # 权限名称，唯一
@@ -51,7 +33,9 @@ class RMOrder(models.Model):
     pickup_date = models.DateField(blank=True, null=True)  # 提货日期
     outbound_date = models.DateField(blank=True, null=True)  # 出库日期
     is_sendemail = models.BooleanField(default=False) # 是否发送邮件
+    is_allocated_to_stock = models.BooleanField(default=False) # 是否放入备货区
     is_updateInventory = models.BooleanField(default=False) # 是否更新库存
+    is_canceled = models.BooleanField(default=False) # 是否被取消
     created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
     created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
 
@@ -78,8 +62,15 @@ class InvoiceCustomer(models.Model):
         return self.name
 
 class RMProduct(models.Model):
-    name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
-    shortname = models.CharField(max_length=255, null=True)  # 客户名称，唯一
+    name = models.CharField(max_length=255, unique=True)  # 产品名称，唯一
+    shortname = models.CharField(max_length=255, blank=True, null=True)  # 短名称，唯一
+    size = models.CharField(max_length=255, blank=True, null=True) # 产品尺寸
+    TI = models.IntegerField(default=0) # 一层数量
+    HI = models.IntegerField(default=0) # 层数
+    Pallet = models.IntegerField(default=0) # 一个托盘数量
+    Color = models.CharField(max_length=255, default='Red')
+    Location = models.CharField(max_length=255, blank=True, null=True, default='')
+    ShelfRecord = models.CharField(max_length=255, blank=True, null=True, default='')
     description = models.TextField(blank=True, null=True)  # 客户描述
 
     def __str__(self):
@@ -95,7 +86,17 @@ class OrderItem(models.Model):
 
 class RMInventory(models.Model):
     product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联产品
-    quantity = models.IntegerField()  # 产品数量
+    quantity_init =  models.IntegerField(blank=True, null=True)  # 初始数量
+    quantity_diff =  models.IntegerField(default=0)  # 初始差异
+    quantity = models.IntegerField()  # 已完成的出库（物流发货/交付给客户）
+    quantity_for_neworder = models.IntegerField(default=0)  # 因新订单预定而预留的库存，还未出库
+    quantity_to_stock = models.IntegerField(default=0)  # 放入备货区（内部使用、备货用途）所减少的库存
+
+    def save(self, *args, **kwargs):
+        # 如果 quantity_init 还没设置，默认等于 quantity
+        if self.quantity_init is None:
+            self.quantity_init = self.quantity
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.product.name} - {self.quantity}"  # 返回产品
@@ -195,11 +196,70 @@ class LogisticsCompany(models.Model):
 
     def __str__(self):
         return self.name
+
+class Carrier(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 公司名称
+
+    def __str__(self):
+        return self.name
+    
+class InboundCategory(models.Model):
+    Type = models.CharField(max_length=255, default='')
+    Name = models.CharField(max_length=255, default='')
+    Manufacturer = models.CharField(max_length=255, default='')
+    Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.Type}"
+    
+def get_default_inbound_category():
+    first = InboundCategory.objects.first()
+    return first.id if first else None  # 避免为空时报错
+
+class Container(models.Model):
+    container_id = models.CharField(max_length=255)  # Container ID
+    container_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
+    content = models.TextField(blank=True, null=True)  # 解析出的内容
+    created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
+    created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
+    plts = models.IntegerField()  # 托盘数量
+    railway_date = models.DateField(blank=True, null=True)  # 铁路日期
+    pickup_date = models.DateField(blank=True, null=True)  # 提货日期
+    delivery_date = models.DateField(blank=True, null=True)  # 交货日期
+    empty_date = models.DateField(blank=True, null=True)  # 空箱日期
+    pickup_number = models.CharField(max_length=255, blank=True, null=True)  # 提货编号
+    invoice_id = models.CharField(max_length=255, blank=True, null=True)  # 发票ID
+    invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 发票PDF文件名
+    customer = models.ForeignKey(InvoiceCustomer, on_delete=models.CASCADE, default=3)  # 关联到 InvoiceCustomer
+    logistics = models.ForeignKey(LogisticsCompany, on_delete=models.CASCADE, default=1)  # 关联到 LogisticsCompany
+    is_updateInventory = models.BooleanField(default=False) # 是否更新库存
+    inboundCategory = models.ForeignKey(InboundCategory, on_delete=models.CASCADE,default=get_default_inbound_category)
+    lot = models.CharField(max_length=255, blank=True, default="")
+    
+    class Meta:
+        ordering = ['delivery_date']  # 默认按 delivery_date 升序排序
+
+    def __str__(self):
+        return f"{self.container_id}（交货: {self.delivery_date or 'N/A'}，空箱: {self.empty_date or 'N/A'}）"
     
 class ContainerItem(models.Model):
-    container = models.ForeignKey(Container, related_name='container_items', on_delete=models.CASCADE)  # 关联到 RMOrder
+    container = models.ForeignKey(Container, on_delete=models.CASCADE)  # 关联到 RMOrder
     product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联到 RMProduct
     quantity = models.IntegerField()  # 产品数量
 
     def __str__(self):
         return f"{self.product.name} - {self.quantity} pcs"
+
+
+
+class AlineOrderRecord(models.Model):
+    document_number = models.CharField(max_length=255)  # 文档编号
+    order_number = models.CharField(max_length=255)  # 订单编号
+    po_number = models.CharField(max_length=255)  # PO编号
+    invoice_date = models.DateField(blank=True, null=True)  # 发票日期
+    due_date = models.DateField(blank=True, null=True)  # 截止日期
+    pdf_name = models.CharField(max_length=255)  # 文档名称
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.order_number} - {self.po_number} - {self.price}"

@@ -1,9 +1,7 @@
 {% extends "container/base.html" %}
 {% block content %}
 
-    <h2>📦 Container Page</h2>
-    <p>This is Container Information</p>
-    
+   
     <div class="mb-3">
         <a href="{% url 'add_container_view' %}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Add Container
@@ -15,13 +13,16 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Container ID</th>
+                    <th>Container#</th>
+                    <th>Customer</th>
+                    <th>Logistics</th>
+                    <th>PU#</th>
                     <th>PLTS</th>
-                    <th>Railway Date</th>
-                    <th>Pickup Date</th>
-                    <th>Delivery Date</th>
-                    <th>Empty Date</th>
-                    <th>Pickup Number</th>
+                    <th>RailwayDate</th>
+                    <th>PickupDate</th>
+                    <th>DeliveryDate</th>
+                    <th>EmptyDate</th>  
+                    <th>Stocked</th>
                 </tr>
             </thead>
             <tbody>
@@ -31,12 +32,21 @@
                     <td>
                         <a href="{% url 'edit_container' container.container_id %}">{{ container.container_id }}</a>
                     </td>
+                    <td>{{ container.customer.name }}</td>
+                    <td>{{ container.logistics.name }}</td>
+                    <td>{{ container.pickup_number }}</td>
                     <td>{{ container.plts }}</td>
                     <td>{{ container.railway_date |date:"m/d/Y" }}</td>
                     <td>{{ container.pickup_date |date:"m/d/Y" }}</td>
                     <td>{{ container.delivery_date |date:"m/d/Y" }}</td>
                     <td>{{ container.empty_date |date:"m/d/Y" }}</td>
-                    <td>{{ container.pickup_number }}</td>
+                    <td class="text-center">
+                        {% if container.is_updateInventory %}
+                        <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
+                        {% else %}
+                        <i class="far fa-circle text-muted"></i>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

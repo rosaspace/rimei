@@ -8,18 +8,21 @@
 
         <div class="row">
             <h4>Add Order</h4>
-            <div class="col-md-10 mb-3">
+            <div class="col-md-8 mb-3">
                 <input type="file" class="form-control" id="pdf_file" name="pdf_file" accept=".pdf">
             </div>
             <div class="col-md-2 mb-3">
                 <button type="submit" class="btn btn-primary  w-100" id="uploadPdf">Upload PDF</a>
+            </div>
+            <div class="col-md-2 mb-3">                
+                <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
             </div>
         </div>
     </form>
 
     <hr class="my-4 border-2 opacity-100">
 
-    <h4 style="text-align: center;">Order Detaisa</h4>
+    <h4>Order Detail</h4>
     <form method="POST" class="needs-validation" action="{% url 'add_order' %}" novalidate>
         {% csrf_token %}
         
@@ -41,7 +44,7 @@
             <div class="col-md-6 mb-3">
                 <label for="plts" class="form-label required-label">Pallets</label>
                 <input type="number" class="form-control" id="plts" name="plts" 
-                    value="{{ plts|default:'' }}"required>
+                    value="{{ plts|default:'1' }}" min="1" required>
             </div>
             
             <div class="col-md-6 mb-3">
@@ -70,41 +73,41 @@
         </div>
 
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="order_date" class="form-label  required-label">Order Date</label>
                 <input type="date" class="form-control" id="order_date" name="order_date" required
                        value="{{ order_date|date:'Y-m-d' }}">
-                <!-- <p>Debug Order Date: {{ order_date }}</p>
-                <p>Formatted Order Date: {{ order_date|date:'Y-m-d' }}</p>
-                <p>Type: {{ order_date|default:"None" }}</p> -->
             </div>
 
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="pickup_date" class="form-label required-label">Pickup Date</label>
                 <input type="date" class="form-control" id="pickup_date" name="pickup_date" required
-                       value="{{ pickup_date|date:'Y-m-d' }}">
-                
+                       value="{{ pickup_date|date:'Y-m-d' }}">                
             </div>
             
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="outbound_date" class="form-label">Outbound Date</label>
                 <input type="date" class="form-control" id="outbound_date" name="outbound_date">
             </div>
-        </div>
-
-        <!-- 添加复选框 -->
+        </div>   
+                 
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" id="is_sendemail" name="is_sendemail">
                     <label class="form-check-label" for="is_sendemail">Send Email</label>
                 </div>
             </div>
-            
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" id="is_updateInventory" name="is_updateInventory">
                     <label class="form-check-label" for="is_updateInventory">Update Inventory</label>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_allocated_to_stock" name="is_allocated_to_stock">
+                    <label class="form-check-label" for="is_allocated_to_stock">To Stock</label>
                 </div>
             </div>
         </div>
@@ -117,25 +120,27 @@
         </div>
         {% endif %}   
 
-        <h4 style="text-align: center;">Order List</h4>
+        <h4>Order List</h4>
         <table class="table table-bordered">
             <thead class="sticky-top bg-white">
                 <tr>
                     <th>Item Number / Name</th>
                     <th>Qty</th>
+                    <th>Inventory Qty</th>
                     <th>Unit</th>
                 </tr>
             </thead>
             <tbody>
-                {% for item, qty in orderitems %}
+                {% for item, qty, inventory_qty in orderitems %}
                 <tr>
                     <td>{{ item }}</td>
                     <td>{{ qty }}</td>
+                    <td>{{ inventory_qty }}</td>
                     <td>case</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3">No items found.</td>
+                    <td colspan="4">No items found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -145,7 +150,6 @@
             <button type="submit" class="btn btn-primary" id="saveOrder">
                 Add Order
             </button>
-            <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
         </div>
     </form>
 </div>
@@ -195,16 +199,18 @@
 
         console.log("表格行数:", rows.length);
 
-        rows.forEach(row => {
-            const itemName = row.children[0].textContent.trim();
-            const quantity = parseInt(row.children[1].textContent.trim()) || 0;
-            console.log("--- ", itemName,quantity);
+        if(rows.length > 0){
+            rows.forEach(row => {
+                const itemName = row.children[0].textContent.trim();
+                const quantity = parseInt(row.children[1].textContent.trim()) || 0;
+                console.log("--- ", itemName,quantity);
 
-            orderitems.push({
-                item: itemName,
-                qty: quantity
+                orderitems.push({
+                    item: itemName,
+                    qty: quantity
+                });
             });
-        });
+        }
 
         console.log("订单项目:", orderitems);
         console.log("订单项目JSON:", JSON.stringify(orderitems));
@@ -221,6 +227,7 @@
         formData.append('outbound_date', document.getElementById('outbound_date').value);
         formData.append('is_sendemail', document.getElementById('is_sendemail').checked);
         formData.append('is_updateInventory', document.getElementById('is_updateInventory').checked);
+        formData.append('is_allocated_to_stock', document.getElementById('is_allocated_to_stock').checked);        
         formData.append('bill_to', document.getElementById('bill_to').value);
         formData.append('ship_to', document.getElementById('ship_to').value);
         formData.append('order_pdfname', '{{ order_pdfname|escapejs }}');

@@ -2,13 +2,12 @@
 {% load static %}
 
 {% block content %}
-<h2>📦 Rimei Order Page</h2>
-<p>This is Rimei Order Information</p>
-
 <div class="mb-3">
-    <a href="{% url 'add_order' %}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Add Order
-    </a>
+    <div class="input-group">
+        <a href="{% url 'add_order' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Order
+        </a>
+    </div>
 </div>
 
 <!-- 订单列表 -->
@@ -20,20 +19,13 @@
                 <th>SO#</th>
                 <th>PO#</th>
                 <th>PLTS</th>
-                <th>Customer Name</th>
+                <th>Customer</th>
                 <th>BOL</th>
-                <th>Pickup Date</th>
-                <th>Outbound Date</th>
-                <th>Image Count</th> <!-- 新增列 -->
-                <th>Upload Images</th>
-                <th>
-                    <i class="fas fa-envelope" title="Send Email"></i>
-                    Email
-                </th>
-                <th>
-                    <i class="fas fa-box" title="Update Inventory"></i>
-                    Inventory
-                </th>
+                <th>OrderDate</th>
+                <th>PickupDate</th>
+                <th>ShippedOutDate</th>
+                <th>InPreparation</th>
+                <th>Shipped</th>
             </tr>
         </thead>
         <tbody>
@@ -47,14 +39,11 @@
                 <td>{{ order.plts }}</td>
                 <td>{{ order.customer_name }}</td>
                 <td>{{ order.bol_pdfname }}</td>
+                <td>{{ order.order_date |date:"m/d/Y" }}</td>
                 <td>{{ order.pickup_date |date:"m/d/Y" }}</td>
-                <td>{{ order.outbound_date |date:"m/d/Y"}}</td>
-                <td>{{ order.image_count }}</td> <!-- 显示图片数量 -->
-                <td>
-                    <button class="btn btn-secondary btn-sm" onclick="openUploadModal('{{ order.id }}')">Upload</button>
-                </td>
+                <td>{{ order.outbound_date |date:"m/d/Y" }}</td>
                 <td class="text-center">
-                    {% if order.is_sendemail %}
+                    {% if order.is_allocated_to_stock %}
                     <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
                     {% else %}
                     <i class="far fa-circle text-muted"></i>

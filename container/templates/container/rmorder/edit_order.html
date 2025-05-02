@@ -5,24 +5,38 @@
 <div class="container mt-4">
     <h4 class="mb-4">Print Order</h4>
     <div class="row">
-        <div class="col-md-3 mb-3">
-            <button class="btn btn-primary  w-100" id="printOrder">Print Original Order</a>
-        </div>
-        <div class="col-md-3 mb-3">
-            <button class="btn btn-primary  w-100" id="printConvertedOrder">Print Converted Order</a>
+        <div class="col-md-2 mb-3">
+            <button class="btn btn-primary  w-100" id="printOrder">Original Order</a>
         </div>
         <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printLabel">Print Label</a>
+            <button class="btn btn-primary  w-100" id="printConvertedOrder">Converted Order</a>
         </div>
         <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printBOL">Print BOL</a>
+            <button class="btn btn-primary  w-100" id="printLabel">Label</a>
         </div>
+        <div class="col-md-2 mb-3">
+            <button class="btn btn-primary  w-100" id="printBOL">BOL</a>
+        </div>        
     </div>
 
     <hr class="my-4 border-2 opacity-100">
 
-   <h4 class="mb-4">Edit Order</h4>    
-    <form method="POST" action="{% url 'edit_order' order.so_num %}" class="needs-validation" novalidate>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- 左侧：标题和取消订单按钮 -->
+        <div class="d-flex align-items-center">
+            <h4 class="mb-0 mr-3">Edit Order</h4>
+        </div>
+        <div class="ml-auto">
+            <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
+        </div>
+    </div>
+
+    <!-- {% if order.is_updateInventory %}
+    <div class="alert alert-warning">
+        This order has already been shipped (outbound date: {{ order.outbound_date|date:"Y-m-d" }}), so editing is disabled.
+    </div>
+    {% endif %} -->
+    <form id="edit-order-form" method="POST" action="{% url 'edit_order' order.so_num %}" class="needs-validation" novalidate>
         {% csrf_token %}
         
         <div class="row">
@@ -73,64 +87,97 @@
         </div>
 
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="order_date" class="form-label  required-label">Order Date</label>
                 <input type="date" class="form-control" id="order_date" name="order_date" required
                        value="{{ order.order_date|date:'Y-m-d' }}">
-                <!-- <p>Debug Order Date: {{ order_date }}</p>
-                <p>Formatted Order Date: {{ order_date|date:'Y-m-d' }}</p>
-                <p>Type: {{ order_date|default:"None" }}</p> -->
             </div>
 
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="pickup_date" class="form-label required-label">Pickup Date</label>
                 <input type="date" class="form-control" id="pickup_date" name="pickup_date" required
-                       value="{{ order.pickup_date|date:'Y-m-d' }}">
-                
+                       value="{{ order.pickup_date|date:'Y-m-d' }}">                
             </div>
             
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="outbound_date" class="form-label">Outbound Date</label>
                 <input type="date" class="form-control" id="outbound_date" name="outbound_date"
                     value="{{ order.outbound_date|date:'Y-m-d' }}">
             </div>
+            
         </div>
 
-        <!-- 添加复选框 -->
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" id="is_sendemail" name="is_sendemail"
                         {% if order.is_sendemail %} checked {% endif %}>
                     <label class="form-check-label" for="is_sendemail">Send Email</label>
                 </div>
             </div>
-            
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" id="is_updateInventory" name="is_updateInventory"
                         {% if order.is_updateInventory %} checked {% endif %}>
-                    <label class="form-check-label" for="is_updateInventory">Update Inventory</label>
+                    <label class="form-check-label" for="is_sendemail">Update Inventory</label>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_canceled" name="is_canceled"
+                        {% if order.is_canceled %} checked {% endif %}>
+                    <label class="form-check-label" for="is_sendemail">Cancel Order</label>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_allocated_to_stock" name="is_allocated_to_stock"
+                        {% if order.is_allocated_to_stock %} checked {% endif %}>
+                    <label class="form-check-label" for="is_sendemail">Allocated To Stock</label>
                 </div>
             </div>
         </div>
 
         <!-- 添加订单项目表格 -->
         <div class="row mt-4">
-            <div class="col-12">
-                <h5>Order Items</h5>
-                <table class="table table-bordered">
+            <div class="col-12">                
+                <div class="row align-items-center mb-2">
+                    <div class="col d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Order Items</h5>
+                        <button type="button" class="btn btn-primary" id="addRow">
+                            ➕ Add New Line
+                        </button>
+                        <input type="hidden" name="orderitems" id="orderitems-field">
+                    </div>
+                </div>
+                <table class="table table-bordered" id="orderTable">
                     <thead>
                         <tr>
                             <th>Product Name</th>
                             <th>Quantity</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in order_items %}
                         <tr>
-                            <td>{{ item.product.name }}</td>
-                            <td>{{ item.quantity }}</td>
+                            <td>
+                                <select class="form-control product-select">
+                                    <option value="">-- Select Product --</option>
+                                    {% for product in products %}
+                                    <option value="{{ product.id }}"
+                                        {% if product.id == item.product.id %}selected{% endif %}>
+                                        {{ product.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" class="form-control quantity-input" value="{{ item.quantity }}" min="1">
+                            </td>
+                            <td>
+                                <button class="btn btn-danger btn-sm remove-row">Remove</button>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -146,12 +193,13 @@
         </div>
         {% endif %}
 
-        <div class="mt-3">            
+        <div class="mt-3">
+                           
             <button type="submit" class="btn btn-primary">
-                Edit Order
+                Save Order
             </button>
-            <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
-        </div>
+                     
+        </div>        
     </form>
 {% endblock %}
 
@@ -178,6 +226,60 @@ document.addEventListener('DOMContentLoaded', function() {
     // 打印BOL
     document.getElementById('printBOL').addEventListener('click', function() {
         window.open(`/print_bol/${soNum}/`, '_blank');
+    });
+    // 编辑订单条目
+    const form = document.getElementById('edit-order-form');
+    const itemsField = document.getElementById('orderitems-field');
+
+    form.addEventListener('submit', function (e) {
+        const rows = document.querySelectorAll('#orderTable tbody tr');
+        let items = [];
+
+        rows.forEach(row => {
+            const productId = row.querySelector('.product-select').value;
+            const quantity = row.querySelector('.quantity-input').value;
+            console.log("---:",productId,quantity)
+
+            if (productId && quantity) {
+                items.push({
+                    product_id: productId,
+                    quantity: quantity
+                });
+            }
+        });
+
+        // 将 items 转为 JSON 字符串写入隐藏 input
+        itemsField.value = JSON.stringify(items);
+    });
+
+    // 添加新行
+    document.getElementById('addRow').addEventListener('click', function () {
+        const newRow = `
+            <tr>
+                <td>
+                    <select class="form-control product-select">
+                        <option value="">Select Product</option>
+                        {% for product in products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control quantity-input" value="1" min="1">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-row">Remove</button>
+                </td>
+            </tr>
+        `;
+        document.querySelector('#orderTable tbody').insertAdjacentHTML('beforeend', newRow);
+    });
+
+    // 删除行
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('remove-row')) {
+            e.target.closest('tr').remove();
+        }
     });
 });
 </script>

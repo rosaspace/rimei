@@ -14,32 +14,58 @@
                 <input type="text" class="form-control" id="pickup-number" name="pickup_number">
             </div>
         </div>
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="railway-date" class="form-label">Railway Date</label>
-                <input type="date" class="form-control" id="railway-date" name="railway_date">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="pickup-date" class="form-label">Pickup Date</label>
-                <input type="date" class="form-control" id="pickup-date" name="pickup_date">
-            </div>
-        </div>
 
         <div class="row">
             <div class="col-md-6 mb-3">
+                <label for="customer_name" class="form-label">Customer</label>
+                <select class="form-select" id="customer_name" name="customer_name" required>
+                    <option value="">Select Customer...</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}">
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="pickup-logistics_name" class="form-label">Logistics</label>
+                <select class="form-select" id="logistics_name" name="logistics_name" required>
+                    <option value="">Select Logistics...</option>
+                    {% for customer in logistics %}
+                    <option value="{{ customer.id }}">
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label for="railway-date" class="form-label">Railway Date</label>
+                <input type="date" class="form-control" id="railway-date" name="railway_date">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="pickup-date" class="form-label">Pickup Date</label>
+                <input type="date" class="form-control" id="pickup-date" name="pickup_date">
+            </div>
+            <div class="col-md-3 mb-3">
                 <label for="delivery-date" class="form-label">Delivery Date</label>
                 <input type="date" class="form-control" id="delivery-date" name="delivery_date">
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="empty-date" class="form-label">Empty Date</label>
                 <input type="date" class="form-control" id="empty-date" name="empty_date">
             </div>
         </div>
+
+        <div class="row">
+            
+        </div>
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label for="plts" class="form-label">PLTS</label>
-                <input type="number" class="form-control" id="plts" name="plts" required>
+                <input type="number" class="form-control" id="plts" name="plts" value="{{ plts|default:'1' }}" min="1" required>
             </div>
             <div class="col-md-6 mb-3">
                 <label for="container-pdf" class="form-label">Container PDF</label>
@@ -72,12 +98,14 @@
             formData.append("delivery_date", document.getElementById("delivery-date").value);
             formData.append("empty_date", document.getElementById("empty-date").value);
             formData.append("plts", document.getElementById("plts").value);
-            
+            formData.append('customer_name', document.getElementById('customer_name').value);
+            formData.append('logistics_name', document.getElementById('logistics_name').value);
+            console.log("----------Save Container1-----------")
             const containerPdf = document.getElementById("container-pdf").files[0];
             if (containerPdf) {
                 formData.append("container_pdf", containerPdf);
             }
-
+            console.log("----------Save Container2-----------")
             fetch("{% url 'add_container' %}", {
                 method: "POST",
                 body: formData,
@@ -88,7 +116,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    alert("❌ Save failed: " + data.error);
+                    alert("❌ Save failed: " + data.message);
                 } else {
                     // alert("✅ Container saved successfully!");
                     // 可以选择是否重置表单

@@ -15,44 +15,33 @@
                     {{ day.name }} ({{ day.date|date:"Y-m-d" }})
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Clock In</label>
-                                <input type="time" name="morning_in_{{ day.weekday }}" class="form-control"
+                    <div class="form-group">
+                        <label>Morning</label>
+                        <div class="d-flex">
+                            <input type="time" name="morning_in_{{ day.weekday }}" class="form-control me-2"
                                 value="{{ work_records|get_item:day.date|default:''|attr:'morning_in'|time:'H:i' }}">
-                            </div>
-                            <div class="form-group">
-                                <label>Clock Out</label>
-                                <input type="time" name="morning_out_{{ day.weekday }}" class="form-control"
+                            <input type="time" name="morning_out_{{ day.weekday }}" class="form-control"
                                 value="{{ work_records|get_item:day.date|default:''|attr:'morning_out'|time:'H:i' }}">
-                            </div>
                         </div>
-                        
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Clock In</label>
-                                <input type="time" name="afternoon_in_{{ day.weekday }}" class="form-control"
+                    </div>
+    
+                    <div class="form-group">
+                        <label>Afternoon</label>
+                        <div class="d-flex">
+                            <input type="time" name="afternoon_in_{{ day.weekday }}" class="form-control me-2"
                                 value="{{ work_records|get_item:day.date|default:''|attr:'afternoon_in'|time:'H:i' }}">
-                            </div>
-                            <div class="form-group">
-                                <label>Clock Out</label>
-                                <input type="time" name="afternoon_out_{{ day.weekday }}" class="form-control"
+                            <input type="time" name="afternoon_out_{{ day.weekday }}" class="form-control"
                                 value="{{ work_records|get_item:day.date|default:''|attr:'afternoon_out'|time:'H:i' }}">
-                            </div>
                         </div>
-                        
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Clock In</label>
-                                <input type="time" name="evening_in_{{ day.weekday }}" class="form-control"
+                    </div>
+    
+                    <div class="form-group">
+                        <label>Evening</label>
+                        <div class="d-flex">
+                            <input type="time" name="evening_in_{{ day.weekday }}" class="form-control me-2"
                                 value="{{ work_records|get_item:day.date|default:''|attr:'evening_in'|time:'H:i' }}">
-                            </div>
-                            <div class="form-group">
-                                <label>Clock Out</label>
-                                <input type="time" name="evening_out_{{ day.weekday }}" class="form-control"
+                            <input type="time" name="evening_out_{{ day.weekday }}" class="form-control"
                                 value="{{ work_records|get_item:day.date|default:''|attr:'evening_out'|time:'H:i' }}">
-                            </div>
                         </div>
                     </div>
                 </div>

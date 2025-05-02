@@ -1,84 +1,154 @@
 from django.shortcuts import render, redirect
-from .models import Container, RMOrder,RMCustomer
+from .models import Container, RMOrder,RMCustomer,RMInventory
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .models import UserAndPermission
 from django.db.models import Count
-from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q, F
 
-# Create your views here.
+@login_required
+def home(request):
+    return render(request, "container/login/login.html")
+
+@login_required
 def index(request):
-    template = "container/base.html"
-    return render(request, template)
+    template = "container/base.html"  
+    user_permissions = get_user_permissions(request.user)
+    return render(request, template,{'user_permissions': user_permissions})
+
+def invoice_view(request):
+    template = "container/invoice.html"
+    containers = Container.objects.all().order_by('-delivery_date')
+    user_permissions = get_user_permissions(request.user)
+    return render(request, template, {'containers': containers,'user_permissions': user_permissions})
+
+def payment_view(request):
+    template = "container/payment.html"  
+    user_permissions = get_user_permissions(request.user)  
+    return render(request, template,{'user_permissions': user_permissions})
 
 def container_view(request):
     template = "container/container.html"
     containers = Container.objects.all()
-    return render(request, template, {'containers': containers})
+    user_permissions = get_user_permissions(request.user) 
+    unfinished_containers = containers.filter(
+         is_updateInventory=False, 
+    )    
+    print("unfinished_containers, ",len(unfinished_containers))
 
-def invoice_view(request):
-    template = "container/invoice.html"
-    containers = Container.objects.all()
-    return render(request, template, {'containers': containers})
+    return render(request, template, {'containers': unfinished_containers,'user_permissions': user_permissions})
 
-def payment_view(request):
-    template = "container/payment.html"    
-    return render(request, template)
+def container_view_finished(request):
+    template = "container/container.html"
+    containers = Container.objects.all().order_by('-delivery_date')
+    user_permissions = get_user_permissions(request.user) 
+    finished_containers = containers.exclude(
+        is_updateInventory=False, 
+    )
+    print("finished_containers, ",len(finished_containers))
+
+    return render(request, template, {'containers': finished_containers,'user_permissions': user_permissions})
 
 def rimeiorder_view(request):
     template = "container/rmorder2.html"
-    # orders = RMOrder.objects.all()
-    orders = RMOrder.objects.all().annotate(image_count=Count('images'))
-    customers = RMCustomer.objects.all()
-
-    # 创建年份和月份的选项
-    years = [str(year) for year in range(2024, 2026)] 
-    months = [f"{month:02d}" for month in range(1, 13)]  # 01到12月
+    orders = RMOrder.objects.exclude(customer_name='4').annotate(image_count=Count('images')).order_by('pickup_date')
+    user_permissions = get_user_permissions(request.user) 
+    unfinished_orders = orders.filter(
+        is_updateInventory=False, 
+        is_canceled=False
+    )
+    print("unfinished_orders, ",len(unfinished_orders))
 
     return render(request, template, {
-        'rimeiorders': orders,
-        'customers': customers,
-        'years': years,
-        'months': months
+        'rimeiorders': unfinished_orders,
+        'user_permissions': user_permissions
         })
+
+def rimeiorder_view_finished(request):
+    template = "container/rmorder2.html"
+    orders = RMOrder.objects.all().annotate(image_count=Count('images')).order_by('-pickup_date')
+    user_permissions = get_user_permissions(request.user) 
+    finished_orders = orders.exclude(
+        is_updateInventory=False, 
+        is_canceled=False
+    )
+    print("finished_orders, ",len(finished_orders))
+
+    return render(request, template, {
+        'rimeiorders': finished_orders,
+        'user_permissions': user_permissions
+        })
+
+def rimeiorder_officedepot(request):
+    template = "container/rmorder2.html"
+    orders = RMOrder.objects.filter(customer_name='4').annotate(image_count=Count('images')).order_by('pickup_date')
+    user_permissions = get_user_permissions(request.user) 
+    finished_orders = orders.filter(
+        is_updateInventory=False, 
+        is_canceled=False
+    )
+    print("finished_orders, ",len(finished_orders))
+
+    return render(request, template, {
+        'rimeiorders': finished_orders,
+        'user_permissions': user_permissions
+        })
+
+def rimeiorder_cancel(request):
+    template = "container/rmorder2.html"
+    orders = RMOrder.objects.filter(is_canceled=True).annotate(image_count=Count('images')).order_by('pickup_date')
+    user_permissions = get_user_permissions(request.user) 
+    finished_orders = orders.exclude(
+        is_updateInventory=False, 
+        is_canceled=False
+    )
+    print("finished_orders, ",len(finished_orders))
+
+    return render(request, template, {
+        'rimeiorders': finished_orders,
+        'user_permissions': user_permissions
+        })
+
+def inventory_view(request):
+    inventory_items = RMInventory.objects.all()  # 获取所有库存信息
+    user_permissions = get_user_permissions(request.user)
+    return render(request, "container/inventory.html", {"inventory_items": inventory_items,'user_permissions': user_permissions})
+
+def inventory_diff_view(request):
+    inventory_items = RMInventory.objects.filter(
+        ~Q(quantity=F('quantity_for_neworder'))
+    ).order_by('quantity_for_neworder')
+    user_permissions = get_user_permissions(request.user)
+    return render(request, "container/inventory.html", {"inventory_items": inventory_items,'user_permissions': user_permissions})
+
+def permission_view(request):
+    # 查询所有用户及其权限
+    users_with_permissions = []
+    users = User.objects.all()  # 获取所有用户
+
+    for user in users:
+        permissions = user.userandpermission_set.all()  # 获取用户的所有权限
+        user_permissions = {
+            'username': user.username,
+            'permissions': [permission.permissionIndex.name for permission in permissions]  # 获取权限名称
+        }
+        users_with_permissions.append(user_permissions)
+
+    template = "container/permission.html"
+    user_permissions = get_user_permissions(request.user)
+    return render(request, template, {'users_with_permissions': users_with_permissions,'user_permissions': user_permissions})
 
 def temporary_view(request):
     template = "container/temporary.html"
-    return render(request, template)
+    user_permissions = get_user_permissions(request.user)
+    return render(request, template,{'user_permissions': user_permissions})
 
-def preview_email(request, number, so_number=None, po_number=None, container_id=None, officedepot_id=None):
-    template = "container/temporary.html"
-    recipient = "omarorders@omarllc.com,omarwarehouse@rimeius.com"
-    current_date = timezone.now().strftime("%m/%d/%Y")
-    if number == 1:
-        context = {
-            "recipient": recipient,
-            "subject": f"INVENTORY {current_date}",
-            "body": f"Hello,\n\nINVENTORY SUMMARY {current_date}. Paperwork attached.\n\nJing"
-        }
-    elif number == 2:
-        context = {
-            "recipient": recipient,
-            "subject": "Shipped out Email",
-            "body": f"Hello,\n\nSO #{so_number} PO #{po_number}  has been shipped out. Paperwork is attached.\n\nThank you!\nJing"
-        }
-    elif number == 3:
-        context = {
-            "recipient": recipient,
-            "subject": f"{container_id} RECEIVED IN",
-            "body": f"Hello,\n\n{container_id}  has received in. Paperwork is attached.\n\nThank you!\nJing"
-        }
-    elif number == 4:
-        context = {
-            "recipient": recipient,
-            "subject": f"OFFICE DEPOT #{officedepot_id}",
-            "body": f"Hello,\n\nOffice Depot order #{officedepot_id} shipped out. Paperwork is attached.\n\nThank you!\nJing"
-        }
-    else:
-        context = {
-            "recipient": recipient,
-            "subject": "Received Order Email",
-            "body": "Well Received.\n\nThank you!\nJing"
-        }
-    return render(request, template, context)
-
+def get_user_permissions(user):
+    # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance
+    permissions = UserAndPermission.objects.filter(username=user).values_list('permissionIndex__name', flat=True)
+    
+    # Print the length of the permissions list (or log it)
+    print("permissions: ", len(permissions))
+    
+    return permissions

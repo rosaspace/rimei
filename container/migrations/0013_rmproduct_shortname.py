@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="rmproduct",
             name="shortname",
-            field=models.CharField(max_length=255, null=True),
+            field=models.TextField(max_length=255, null=True),
         ),
     ]

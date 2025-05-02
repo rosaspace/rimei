@@ -3,11 +3,10 @@
 
 {% block content %}
 
-<h2 class="mb-4">Work Records</h2>
-
 <div class="mb-3">
     <a href="{% url 'add_week_records' %}" class="btn btn-primary">Add Weekly Records</a>
-    <a href="{% url 'export_week_records' %}" class="btn btn-primary">Export Weekly Records</a>
+    <a href="{% url 'export_week_records' %}?brand=CabinetsDepot" class="btn btn-primary">CabinetsDepot Weekly Records</a>
+    <a href="{% url 'export_week_records' %}?brand=Aline" class="btn btn-primary">Aline Weekly Records</a>
 </div>
 
 <div class="mb-3">

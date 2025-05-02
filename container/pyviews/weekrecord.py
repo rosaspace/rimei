@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta,date,time
-from ..models import ClockRecord,Employee
+from datetime import date, datetime, timedelta,time
+from ..models import ClockRecord,Employee,UserAndPermission
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.shortcuts import get_object_or_404
@@ -9,38 +9,48 @@ from django.http import HttpResponse
 from openpyxl.styles import Border, Side, PatternFill, Alignment
 
 def week_record(request):
-    # 获取当前年份和周数
-    current_date = timezone.now().date()
-    current_year = current_date.year
-    current_week = current_date.isocalendar()[1]
-    last_week = current_week -1;
+    # 获取当前年份和周数（ISO标准）
+    current_year, current_week, _ = date.today().isocalendar()
+    print("current_week:", current_year, current_week)
 
-    # 计算上周的开始和结束日期
-    last_week_start = current_date - timedelta(days=current_date.weekday() + 7)  # 上周的周一
-    last_week_end = last_week_start + timedelta(days=6)  # 上周的周日
-    print("hello: ",last_week_start,last_week_end)
-    print("hello: ",last_week_start.year,last_week)
-    print("hello: ",current_week)
+    # 本周的开始（周一）和结束（周日）日期
+    current_week_start = date.fromisocalendar(current_year, current_week, 1)
+    current_week_end = current_week_start + timedelta(days=6)
+    print("Week Range:", current_week_start, current_week_end)
+
+    # 上一周的周数和年份（注意处理跨年情况）
+    last_week_date = current_week_start - timedelta(days=7)
+    last_week_year, last_week_number, _ = last_week_date.isocalendar()
+
+    # 获取前端传入的 year 和 week，默认值为当前年的上一周
+    selected_year = int(request.GET.get("year", last_week_year))
+    selected_week = int(request.GET.get("week", last_week_number))
+
+    # 获取选定周的起止日期
+    selected_week_start = date.fromisocalendar(selected_year, selected_week, 1)
+    selected_week_end = selected_week_start + timedelta(days=6)
+
+    print("Selected Week:", selected_year, selected_week)
+    print("Week Range:", selected_week_start, selected_week_end)
 
     # 获取选定周的打卡记录
-    weekly_records = ClockRecord.objects.filter(
-        date__range=[last_week_start, last_week_end]
-    )
+    weekly_records = ClockRecord.objects.filter(date__range=[selected_week_start, selected_week_end])
 
     # 生成年份和周数选项
-    current_year = timezone.now().year
     years = list(range(current_year, current_year + 1))  # 当前年份及前两年
     weeks = list(range(1, 53))  # 1-52周
+
+    user_permissions = get_user_permissions(request.user)
 
     # 如果没有记录，返回空页面或消息
     if not weekly_records.exists():
         return render(request, 'container/weekrecord.html', {
-            'records': [],
             'employee_records': None,  # 或者可以返回一个空的字典
             'years': years,
             'weeks': weeks,
-            'selected_year': last_week_start.year,
-            'selected_week': last_week
+            'selected_year': selected_year,
+            'selected_week': selected_week,
+            'user_permissions': user_permissions
         })
     
     # 获取所有员工的周统计数据
@@ -58,20 +68,30 @@ def week_record(request):
             employee_records.append({
                 'id':employee.id,
                 'name': employee.name,
-                'period_start': last_week_start,
-                'period_end': last_week_end,
+                'period_start': selected_week_start,
+                'period_end': selected_week_end,
                 'total_hours': employee_total_hours,
                 'average_hours': employee_avg_hours,
                 "attendance_rate":employee_attendance_rate
             })
+        else:
+            employee_records.append({
+                'id':employee.id,
+                'name': employee.name,
+                'period_start': selected_week_start,
+                'period_end': selected_week_end,
+                'total_hours': 0,
+                'average_hours': 0,
+                "attendance_rate":0
+            })
     
     return render(request, 'container/weekrecord.html', {
-        'records': weekly_records,
         'employee_records': employee_records,
         'years': years,
         'weeks': weeks,
-        'selected_year': last_week_start.year,
-        'selected_week': last_week_start.isocalendar()[1]
+        'selected_year': selected_year,
+        'selected_week': selected_week,
+        'user_permissions': user_permissions
     })
 
 def add_week_records(request):
@@ -158,7 +178,7 @@ def edit_week_records(request, employee_id=None):
 
     if request.method == 'POST':
         # Handle form submission to save work records
-        for i in range(6):
+        for i in range(7):
             morning_in = request.POST.get(f'morning_in_{i}')
             morning_out = request.POST.get(f'morning_out_{i}')
             afternoon_in = request.POST.get(f'afternoon_in_{i}')
@@ -218,6 +238,7 @@ def edit_week_records(request, employee_id=None):
     })
 
 def export_week_records(request):
+
     today = timezone.now().date()
     last_week_start = today - timedelta(days=today.weekday() + 7)  # 上周的周一
     last_week_end = last_week_start + timedelta(days=6)  # 上周的周日
@@ -228,6 +249,9 @@ def export_week_records(request):
     # 获取所有员工
     employees = Employee.objects.all()
 
+    # 获取前端传来的 group 参数，例如 Aline 或 CabinetsDepot
+    group_param = request.GET.get('brand')
+    print("export_week_records:",group_param)
 
     # 按照 belongTo 字段分组员工
     grouped_employees = {}
@@ -235,7 +259,11 @@ def export_week_records(request):
         group = employee.belongTo  # 假设 belongTo 是一个字符串，表示员工所属的组
         if group not in grouped_employees:
             grouped_employees[group] = []
-        grouped_employees[group].append(employee)
+        grouped_employees[group].append(employee)    
+    
+    if group_param:
+        # 只保留匹配组的员工
+        grouped_employees = {group_param: grouped_employees.get(group_param, [])}
 
     # 定义颜色列表
     colors = ["FFFF99", "FFCCFF", "CCFFCC", "FFCCCC", "CCCCFF"]
@@ -244,7 +272,6 @@ def export_week_records(request):
     # 为每个员工分配颜色
     for index, employee in enumerate(employees):
         color_map[employee.name] = colors[index % len(colors)]  # 循环使用颜色
-        # print("color: ", employee.name, colors[index % len(colors)])
 
     # 存储所有响应
     responses = []
@@ -254,28 +281,15 @@ def export_week_records(request):
         print("---group: ",group)
         filename = f'Working_Hours_{group}_{last_week_start.strftime("%m.%d")}-{last_week_end.strftime("%m.%d")}.2025.xlsx'
         
-        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-
-            data = []            
-
+        data = []        
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer: 
             for employee in group_employees:
                 total_hours_weekly = 0
                 employee_records = []
+
                 # 获取该员工的上周打卡记录
-                records = ClockRecord.objects.filter(employee_name=employee, date__range=[last_week_start, last_week_end])
+                records = ClockRecord.objects.filter(employee_name=employee, date__range=[last_week_start, last_week_end]).order_by('date')
 
-                # 如果没有记录，跳过
-                # if not records.exists():
-                #     continue
-
-                # 对记录按时间排序
-                records = sorted(records, key=lambda r: (
-                    r.date,  # 首先按日期排序
-                    r.morning_in if r.morning_in else time(0, 0),  # 早上打卡时间
-                    r.afternoon_in if r.afternoon_in else time(0, 0),  # 下午打卡时间
-                    r.evening_in if r.evening_in else time(0, 0)  # 晚上打卡时间
-                ))
-                
                 for record in records:
                     # 计算每天的工作时长
                     morning_in = record.morning_in
@@ -290,33 +304,24 @@ def export_week_records(request):
                     # 将 weekday 数字转换为字符串
                     weekday_str = weekdays[record.weekday]['name']
 
-                    # 格式化时间，去掉秒
-                    morning_in_str = morning_in.strftime('%H:%M') if morning_in else ''
-                    morning_out_str = morning_out.strftime('%H:%M') if morning_out else ''
-                    afternoon_in_str = afternoon_in.strftime('%H:%M') if afternoon_in else ''
-                    afternoon_out_str = afternoon_out.strftime('%H:%M') if afternoon_out else ''
-                    evening_in_str = evening_in.strftime('%H:%M') if evening_in else ''
-                    evening_out_str = evening_out.strftime('%H:%M') if evening_out else ''
-
                     employee_records.append({
-                        'Name': employee.name,
-                        'Date': record.date,
-                        'Weekday': weekday_str,
-                        'In Time1': morning_in_str,
-                        'Out Time1': morning_out_str,
-                        'In Time2': afternoon_in_str,
-                        'Out Time2': afternoon_out_str,
-                        'In Time3': evening_in_str,
-                        'Out Time3': evening_out_str,
-                        'Total Hours Daily': total_hours,
-                        "Total Hours Weekly": '',
-                    })     
+                    'Name': employee.name,
+                    'Date': record.date,
+                    'Weekday': weekday_str,
+                    'In Time1': morning_in.strftime('%H:%M') if morning_in else '',
+                    'Out Time1': morning_out.strftime('%H:%M') if morning_out else '',
+                    'In Time2': afternoon_in.strftime('%H:%M') if afternoon_in else '',
+                    'Out Time2': afternoon_out.strftime('%H:%M') if afternoon_out else '',
+                    'In Time3': evening_in.strftime('%H:%M') if evening_in else '',
+                    'Out Time3': evening_out.strftime('%H:%M') if evening_out else '',
+                    'Total Hours Daily': total_hours,
+                    'Total Hours Weekly': ''
+                    })  
+
                 # 在最后一条记录中添加周总时间
                 if employee_records:
                     employee_records[-1]['Total Hours Weekly'] = total_hours_weekly 
-
-                # 将该员工的所有记录添加到主数据列表
-                data.extend(employee_records)                  
+                    data.extend(employee_records)                  
             if data:
                 # 创建 DataFrame
                 df = pd.DataFrame(data)
@@ -355,36 +360,15 @@ def export_week_records(request):
         # 返回 Excel 文件作为响应
         with open(filename, 'rb') as f:
             file_data = f.read()
-            responses.append({
-                'filename': filename,
-                'data': file_data,
-                'group': group
-            })
-    
-    # 在循环结束后，根据请求参数返回特定的Excel文件
-    group_param = request.GET.get('group')
-    if group_param and responses:
-        # 如果指定了组，返回该组的Excel
-        for response in responses:
-            if response['group'] == group_param:
-                excel_response = HttpResponse(
-                    response['data'],
-                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                )
-                excel_response['Content-Disposition'] = f'attachment; filename="{response["filename"]}"'
-                return excel_response
-    
-    # 如果没有指定组或找不到指定组，返回第一个Excel
-    if responses:
-        excel_response = HttpResponse(
-            responses[0]['data'],
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        excel_response['Content-Disposition'] = f'attachment; filename="{responses[0]["filename"]}"'
-        return excel_response
+            response = HttpResponse(
+                file_data,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
     
     # 如果没有数据，返回空响应
-    return HttpResponse("No data available for export.")
+    return HttpResponse("No data available for the selected group.")
 
 def convertToTime(workTime):
     if isinstance(workTime, str):
@@ -403,11 +387,20 @@ def convertToTime(workTime):
 
 def getWeek(last_week_start):
     weekdays = []
-    for i in range(6):  # Get all days of the week
+    for i in range(7):  # Get all days of the week
         weekday_date = last_week_start + timedelta(days=i)
         weekdays.append({
             'weekday': i,
-            'name': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i],
+            'name': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i],
             'date': weekday_date
         })
     return weekdays
+
+def get_user_permissions(user):
+    # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance
+    permissions = UserAndPermission.objects.filter(username=user).values_list('permissionIndex__name', flat=True)
+    
+    # Print the length of the permissions list (or log it)
+    print("permissions: ", len(permissions))
+    
+    return permissions

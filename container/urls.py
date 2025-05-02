@@ -3,23 +3,38 @@ from django.views.generic import TemplateView
 
 from . import views
 from .pyviews import container, invoice, rmorder, inventory,pdfprocess,weekrecord
-from .pyviews import user
+from .pyviews import user, login
 
 urlpatterns = [
     # main page
-    path("", views.index, name="index"),
-    path("container/", views.container_view, name="container"),
+    path("", views.home, name="home"),
+    path("index/", views.index, name="index"),    
     path("invoice/", views.invoice_view, name="invoice"),
-    path("payment/", views.payment_view, name="payment"),
+    path("payment/", views.payment_view, name="payment"),    
+    path("inventory/", rmorder.inventory_view, name="inventory"),
+    path("inventory_diff/", rmorder.inventory_diff_view, name="inventory_diff"),
+    path("export_stock/", rmorder.export_stock, name="export_stock"),    
+    path("order_history/<int:product_id>/", rmorder.order_history, name="order_history"),
+    path("permission/", views.permission_view, name ="permission"),
+    path("temporary/", views.temporary_view, name="temporary"),    
+
+    path("container/", views.container_view, name="container"),    
+    path("container_finished/", views.container_view_finished, name="container_finished"),
     path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
-    path("temporary/", views.temporary_view, name="temporary"),
-    path("preview_email/<int:number>/", views.preview_email,name="preview_email"),   
+    path("rimeiorder_finished/", views.rimeiorder_view_finished, name="rimeiorder_finished"),
+    path("rimeiorder_officedepot/", views.rimeiorder_officedepot, name="rimeiorder_officedepot"),
+    path("rimeiorder_cancel/", views.rimeiorder_cancel, name="rimeiorder_cancel"),    
+
+    # login
+    path('login/', login.login_view, name='login'),
+    path('register/', login.register_view, name='register'),
+    path("logout", login.logout_view, name="logout"),
 
     # container
     path('add_container/', container.add_container, name='add_container'), 
     path('add_container_view/', container.add_container_view, name='add_container_view'),
     path("edit_container/<str:container_id>/", container.edit_container, name="edit_container"), 
-    path("save_containeritems/<str:container_id>/", container.save_containeritems, name="save_containeritems"),
+    path("receivedin_inventory/<str:container_id>/", container.receivedin_inventory, name="receivedin_inventory"), 
 
     # Invoice    
     path('add_invoice/', invoice.add_invoice, name='add_invoice'),
@@ -30,18 +45,20 @@ urlpatterns = [
     path('add_user/', user.add_user_view, name='add_user'),
     path('assign_permission/', user.assign_permission_view, name='assign_permission'),
     path('update_user_permissions/<str:user_id>/', user.update_user_permissions, name='update_user_permissions'),
-    path("permission/", user.permission_view, name ="permission"),
-
+    
     # rimei order
     path('add_order/', rmorder.add_order, name='add_order'),
     path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
-    path("search_order/", rmorder.search_order, name="search_order"),
-    path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
+    path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),    
+
+    # Temporary
+    path("import_inventory/", rmorder.import_inventory, name="import_inventory"), 
+    path("import_aline/", rmorder.import_aline, name="import_aline"), 
     path('export_pallet/',rmorder.export_pallet,name='export_pallet'),
-    path("import_excel/", rmorder.import_excel, name="import_excel"),  
+    path("preview_email/<int:number>/", rmorder.preview_email,name="preview_email"), 
+    path('print_label_only/', pdfprocess.print_label_only, name='print_label_only'),  
   
-    # Inventory
-    path("inventory/", inventory.inventory_view, name="inventory"),
+    # Inventory    
     path("add_stock/", inventory.add_stock_view, name="add_stock"),  # 入库路径
     path("remove_stock/", inventory.remove_stock_view, name="remove_stock"),  # 出库路径
     
@@ -51,7 +68,7 @@ urlpatterns = [
 
     path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),
     path('print_converted_order/<str:so_num>/', pdfprocess.print_converted_order, name='print_converted_order'),
-    path('print_label/<str:so_num>/', pdfprocess.print_label, name='print_label'),
+    path('print_label/<str:so_num>/', pdfprocess.print_label, name='print_label'),    
     path('print_bol/<str:so_num>/', pdfprocess.print_bol, name='print_bol'),
     path('print_container_detail/<str:container_num>/', pdfprocess.print_container_detail, name='print_container_detail'),
     path('print_container_label/<str:container_num>/', pdfprocess.print_container_label, name='print_container_label'),

@@ -8,13 +8,18 @@ import re
 from ..models import RMCustomer
 from datetime import datetime,date
 from django.shortcuts import get_object_or_404
-from ..models import RMOrder,Container
+from ..models import RMOrder,Container,RMInventory,RMProduct,ContainerItem
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from datetime import datetime
+import math
+import textwrap
 
 UPLOAD_DIR = "uploads/"
 UPLOAD_DIR_order = "orders/"
+UPLOAD_DIR_container = "containers/"
+CHECKLIST_FOLDER = "checklist/"
 
 # 替换文本 & 插入图片
 NEW_ADDRESS = """RIMEI INTERNATION INC
@@ -35,6 +40,9 @@ FONT_SIZE_Container = 36  # Larger font size
 LINE_SPACING = 40
 DRAW_BORDERS = False  # Set to True to draw borders, False to hide them
 
+# 一行的文字长度
+max_line_width = 90  # 根据页面宽度大致估算字符数
+
 LABEL_FOLDER = "label"
 os.makedirs(LABEL_FOLDER, exist_ok=True)
 
@@ -50,7 +58,6 @@ def upload_orderpdf(request):
             os.makedirs(upload_dir)
 
         file_path = os.path.join(UPLOAD_DIR_order, pdf_file.name)
-        print("--- ",pdf_file.name)
 
         # 保存文件
         with default_storage.open(file_path, "wb+") as destination:
@@ -62,6 +69,7 @@ def upload_orderpdf(request):
         # print(extracted_text)
         so_no, order_date, po_no, pickup_date, bill_to, ship_to, items, quantities = extract_order_info(extracted_text)
         orderitems = extract_items_from_pdf(extracted_text)
+        orderitems_new = get_product_qty_with_inventory(orderitems)
 
         # Convert to a datetime object
         if isinstance(order_date, str):
@@ -86,7 +94,7 @@ def upload_orderpdf(request):
             "ship_to":ship_to,
             "items":items,
             "quantities":quantities,
-            "orderitems":orderitems,
+            "orderitems":orderitems_new,
             'customers': RMCustomer.objects.all(),
             'order_pdfname': pdf_file.name
         }        
@@ -133,7 +141,6 @@ def extract_text_from_pdf(pdf_path):
     # ✅ 检查文件是否存在
     if not os.path.exists(full_path):
         raise FileNotFoundError(f"PDF 文件未找到: {full_path}")
-    print("hello: ",  full_path)
 
     doc = fitz.open(full_path)
     text = ""
@@ -237,7 +244,7 @@ def extract_items_from_pdf(text):
     for line in items_part.split("\n"):
         line = line.strip()
         # 判断是否是新的一行（以数字、CAN、KLT、T 开头）
-        if re.match(r'^\s*(\d{4,}|CAN|KLT|TC|TCL|TLESIM)(?!x)', line, re.IGNORECASE):
+        if re.match(r'^\s*(\d{4,}|CAN|KLT|TC|TCL|TLESIM|PC|LPC|FACE)(?!x)', line, re.IGNORECASE):
             if current_item:
                 items.append(current_item.strip())
             current_item = line # 开始新的产品名称
@@ -249,17 +256,58 @@ def extract_items_from_pdf(text):
         items.append(current_item.strip())
 
     # 3️⃣ Extract qtys
-    # qtys = qty_part.split("\n")
-    qtys = [q.strip() for q in qty_part.split("\n")]
+    qtys_raw = [q.strip() for q in qty_part.split("\n")]
+    qtys = []
+
+    for q in qtys_raw:
+        # 去掉逗号，把字符串转换为整数
+        try:
+            qty_int = int(q.replace(",", ""))
+            qtys.append(qty_int)
+        except ValueError:
+            # 如果无法转换为整数，可以跳过或设为 0，按你需要处理
+            qtys.append(0)
 
     # 4️⃣ Combine item with qty
     product_qty_list = list(zip(items, qtys))
 
     # ✅ Output the result
     for item, qty in product_qty_list:
-        print("item: ",item.strip(), "-->", qty.strip())
+        print("item: ",item.strip(), "-->", qty)
     
     return product_qty_list
+
+# 补充库存信息
+def get_product_qty_with_inventory(product_qty_list):
+    result = []
+    all_products = RMProduct.objects.all()
+    
+    for item, qty in product_qty_list:
+        item_cleaned = item.strip()
+        print(item_cleaned)
+        qty_cleaned = qty
+
+        matched_product = None
+
+        for p in all_products:
+            if (p.shortname and p.shortname.strip() in item_cleaned) or (p.name in item_cleaned):
+                matched_product = p
+                print(matched_product)
+                break
+
+        if matched_product:
+            
+            inventory = RMInventory.objects.filter(product=matched_product).first()
+            # print("---",inventory.quantity, inventory.quantity_for_neworder, inventory.quantity_to_stock)
+            inventory_qty = inventory.quantity_for_neworder if inventory else 0
+        else:
+            print(f"⚠️ 未找到匹配产品: {item_cleaned}")
+            inventory_qty = 0
+
+        print(f"item: {item_cleaned} --> ordered: {qty}, inventory: {inventory_qty}")
+        result.append((item_cleaned, qty_cleaned, inventory_qty))
+
+    return result
 
 # 转换日期
 def convert_to_yyyy_mm_dd(date_str):
@@ -323,7 +371,8 @@ def print_converted_order(request, so_num):
         packing_slip_x = page_width - 180  
         packing_slip_y = 50  
 
-        erase_title_width, erase_title_height = 280, 30  
+        # 遮住右上角名称
+        erase_title_width, erase_title_height = 320, 30  
         erase_rect = fitz.Rect(page_width - erase_title_width, 30, page_width, 30 + erase_title_height)
         page.draw_rect(erase_rect, color=(1, 1, 1), fill=(1, 1, 1))
 
@@ -338,8 +387,9 @@ def print_converted_order(request, so_num):
             return response
 
 def print_label(request, so_num):
+    print("----------print_label----------",so_num)
     order = get_object_or_404(RMOrder, so_num=so_num)
-    label_count = 50
+    label_count = order.plts
 
     # 构建PDF文件路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
@@ -409,7 +459,7 @@ def print_bol(request, so_num):
 
 def print_container_label(request, container_num):
     container = get_object_or_404(Container, container_id=container_num)
-    label_count = container.plts
+    label_count = 10
 
     # 构建PDF文件路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
@@ -474,6 +524,201 @@ def print_container_label(request, container_num):
         return response
 
 def print_container_detail(request, container_num):
-    # order = get_object_or_404(RMOrder, so_num=so_num)
-    # 实现打印BOL的逻辑
-    return HttpResponse("打印详单")
+    container = get_object_or_404(Container, container_id=container_num)
+    containerItems = ContainerItem.objects.filter(container=container)
+
+    # 列表
+    can_liner_details = []
+    total_plts = 0
+
+    for item in containerItems:
+        pallet_qty = item.product.Pallet or 1  # 避免除以0
+        plts = math.ceil(item.quantity / pallet_qty)
+        total_plts += plts  # 累加托盘总数
+        can_liner_details.append({
+            "Size": item.product.size if hasattr(item.product, 'size') else "N/A",
+            "Name": item.product.shortname,
+            "Qty": str(item.quantity),
+            "PLTS": str(plts)
+        })
+
+    # 基本信息
+    container_info = {
+        "Manufacturer": container.inboundCategory.Manufacturer,
+        "Container Number": container.container_id,
+        "Carrier": container.inboundCategory.Carrier.name,
+        "LOT#": container.lot,
+        "Date": datetime.now().strftime("%m/%d/%Y"),
+        "Product Validity": "",
+        "Name": "OMAR",
+        "Commodity": container.inboundCategory.Name,
+        # "Can liner Size": '',
+        "Total Pallets": str(total_plts),
+    }
+
+    # 保存路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, CHECKLIST_FOLDER)
+    filename = os.path.join(pdf_path, f"{container_info['Container Number']}.pdf")
+
+    # 创建 PDF 文件
+    c = canvas.Canvas(filename, pagesize=letter)
+    c.setTitle(f"Container - {container_info['Container Number']}")
+    width, height = letter
+
+    # 设置标题居中
+    c.setFont("Helvetica-Bold", 16)
+    title = f"Inbound Container {container.inboundCategory.Type} Quality Checklist"
+    c.drawCentredString(width / 2, height - 80, title)
+
+    # 内容起始位置
+    x_label = 60         # 标签起始 x
+    x_line_start = 180   # 填空线起始 x
+    line_length = 370    # 下划线长度
+    y = height - 120     # 初始 y 坐标
+    line_spacing = 30
+    x_sub_table = 100   #子表起始点
+
+    # 设置正文字体
+    c.setFont("Helvetica", 12)
+
+    for key, value in container_info.items():
+        # 写字段标签
+        c.drawString(x_label, y, f"{key}:")
+        # 画下划线
+        c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)
+        # 写字段值在下划线上方（居左对齐）
+        c.drawString(x_line_start + 20, y, str(value))
+        y -= line_spacing
+
+        if key == "Total Pallets":
+            # 插入子表头
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(x_sub_table + 5, y, "Size")
+            c.drawString(x_sub_table + 100, y, "Name")
+            c.drawString(x_sub_table + 220, y, "QTY")
+            c.drawString(x_sub_table + 280, y, "CTNS")
+            c.drawString(x_sub_table + 350, y, "PLTS")
+            y -= 20
+
+            c.setFont("Helvetica", 11)
+            for item in can_liner_details:
+                c.drawString(x_sub_table, y, item["Size"])
+
+                c.drawString(x_sub_table + 100, y, item["Name"])
+                c.line(x_sub_table + 80, y - 2, x_sub_table + 180, y - 2)  # Name 下划线
+
+                c.drawString(x_sub_table + 220, y, item["Qty"])
+                c.line(x_sub_table + 200, y - 2, x_sub_table + 260, y - 2)  # QTY 下划线
+
+                c.drawString(x_sub_table + 280, y, "CTNS")
+
+                c.drawString(x_sub_table + 360, y, item["PLTS"])
+                c.line(x_sub_table + 340, y - 2, x_sub_table + 400, y - 2)  # QTY 下划线
+
+                y -= 20
+
+            # 在子表格之后添加三组文字和空行
+            y -= 10
+            line_spacing_extra = 35  # 每组行距
+            note_lines = [
+                "Remove 1 case of each size performing physical examinations on the box as well as a detailed examination of a glove in each.",
+                "Check for black spots, tears, discoloration, and dampness, etc. ",
+                "Briefly check elasticity ensuring the glove doesn’t easily rip.", 
+                "Check the accuracy of the packaging does the external Bo match up with the internal boxes pertaining to weight, size, and the product number?",
+                "Check the external box of individual boxes for spelling and print accuracy. ",
+            ]
+
+            c.setFont("Helvetica", 12)
+            for i, note in enumerate(note_lines):
+                wrapped_lines = textwrap.wrap(note, width=max_line_width)
+                for line in wrapped_lines:
+                    c.drawString(x_label, y, line)
+                    y -= 18  # 行间距适当紧凑一点
+
+                # 如果是第2段开始，加下划线和额外间距
+                if i >= 1:
+                    c.line(x_label, y, x_label + 490, y)
+                    y -= line_spacing_extra
+                else:
+                    y -= 10  # 如果不画线就只空一点行距
+
+    # 保存 PDF
+    c.save()
+
+    # 返回 PDF 响应
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+
+def print_label_only(request):
+    print("----------print_label_only----------")
+    so_num = request.POST.get('so_number')
+    label_count = request.POST.get('quantity')
+    
+    try:
+        label_count = int(label_count) if label_count is not None else 0
+    except ValueError:
+        label_count = 10  # Handle invalid input gracefully
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
+    print("pdf_path: ", pdf_path)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+
+    filename = os.path.join(pdf_path, f"{so_num}.pdf")  # Save inside "label" folder
+    c = canvas.Canvas(filename, pagesize=letter)
+
+    # Set font
+    c.setFont("Helvetica-Bold", FONT_SIZE)
+    
+    y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
+    labels_on_page = 0  # Track labels per page
+    first_page = True
+
+    while label_count > 0:
+        if not first_page:  
+            c.showPage()  # Create a new page *only if necessary*
+            c.setFont("Helvetica-Bold", FONT_SIZE)  # Reset font on new page
+            y_position = PAGE_HEIGHT - MARGIN_TOP  # Reset y position
+            labels_on_page = 0  # Reset row counter
+
+        first_page = False 
+
+        for _ in range(5):  # Max 5 rows per page
+            if label_count <= 0:
+                break  # Stop when all labels are printed
+    
+            # Two labels per row, calculate positions
+            x_positions = [MARGIN_LEFT, MARGIN_LEFT + LABEL_WIDTH]
+
+            for x in x_positions:
+                if label_count <= 0:  
+                    break  # Stop if all labels are printed
+    
+                # Center text in each label
+                text_x = x + (LABEL_WIDTH / 2)
+                text_y = y_position  - (LABEL_HEIGHT / 2) - 20
+                
+                # Set font and draw text
+                c.setFont("Helvetica-Bold", FONT_SIZE)
+                c.drawCentredString(text_x, text_y, so_num)
+    
+                # Draw label borders (for testing)
+                if DRAW_BORDERS:
+                    c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
+    
+                label_count -= 1  # Reduce remaining label count
+
+            y_position -= LABEL_HEIGHT  # Move to next row
+            labels_on_page += 2  # Two labels per row
+
+    c.save()
+    
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response

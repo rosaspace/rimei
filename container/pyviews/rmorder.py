@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct,RMInventory, OrderItem
+from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct,RMInventory, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from django.http import JsonResponse
@@ -9,7 +9,13 @@ from datetime import datetime
 from django.http import HttpResponse
 import pandas as pd
 import json
-
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
+import openpyxl
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+from io import BytesIO
+from datetime import datetime, date, time
 
 def add_order(request):
     if request.method == "POST":
@@ -33,12 +39,13 @@ def add_order(request):
                     'customer_name': RMCustomer.objects.get(id=request.POST.get('customer_name')),
                     'is_sendemail': request.POST.get('is_sendemail') == 'on',
                     'is_updateInventory': request.POST.get('is_updateInventory') == 'on',
+                    'is_canceled': request.POST.get('is_canceled') == 'on',
+                    'is_allocated_to_stock': request.POST.get('is_allocated_to_stock') == 'on',
                     'order_pdfname':request.POST.get('order_pdfname')  # 添加这一行
                 })
             
-            print("------hello1-----")
+            print("------add_order-----")
             customer = RMCustomer.objects.get(id=request.POST.get('customer_name'))
-            print("---,",request.POST.get('order_pdfname'))
             order = RMOrder(
                 so_num=request.POST.get('so_num'),
                 po_num=request.POST.get('po_num'),
@@ -51,21 +58,24 @@ def add_order(request):
                 pickup_date=request.POST.get('pickup_date') or None,
                 outbound_date=request.POST.get('outbound_date') or None,
                 is_sendemail=request.POST.get('is_sendemail') == 'on',
-                is_updateInventory=request.POST.get('is_updateInventory') == 'on',                
+                is_updateInventory=request.POST.get('is_updateInventory') == 'on',
+                is_canceled=request.POST.get('is_canceled') == 'on',
+                is_allocated_to_stock=request.POST.get('is_allocated_to_stock') == 'on',  
+                created_user=request.user,  # ✅ 保存创建人           
             )
             order.save()
-            print("------hello2-----")
 
             # 假设您从 PDF 中提取的产品信息存储在一个字典中
             order_items_json = request.POST.get('orderitems')  # 获取产品信息
-            print("订单项目JSON:", order_items_json)
+            print("hello??",order_items_json)
             if order_items_json:
+                print("hello??")
                 order_items = json.loads(order_items_json)  # 解析JSON
-                print("解析后的订单项目:", order_items)
                 for item in order_items:
                     product_name = item['item']
-                    quantity = item['qty']
+                    quantity = item['qty']                    
                     print(f"处理商品: {product_name}, 数量: {quantity}")
+
                     products = RMProduct.objects.all()
                     product = None
                     for p in products:
@@ -73,12 +83,14 @@ def add_order(request):
                             product = p
                             break
                     if product:
+                        # 创建订单明细
                         OrderItem.objects.create(order=order, product=product, quantity=int(quantity))
                     else:
                         print(f"警告: 未找到匹配的产品 '{product_name}'")
             
-            print("------hello3-----")
-            # messages.success(request, '订单创建成功！')
+            # 更新库存for neworder
+
+
             return redirect('rimeiorder')
         except Exception as e:
             messages.error(request, f'创建订单失败：{str(e)}')
@@ -90,9 +102,21 @@ def add_order(request):
 def edit_order(request, so_num):
     print("--------edit_order------",so_num)
     try:
-        order = RMOrder.objects.get(so_num=so_num)
-        if request.method == "POST":
+        if request.method == "GET":
+            order = RMOrder.objects.get(so_num=so_num)
+            customers = RMCustomer.objects.all()
+            order_items = OrderItem.objects.filter(order=order)
+            print("---:",len(order_items),order.so_num)
+            products = RMProduct.objects.all()
+            return render(request, 'container/rmorder/edit_order.html', {
+                'order': order,
+                'customers': customers,
+                'order_items': order_items,
+                'products': products,  # 加上这行
+            })
+        elif request.method == "POST":
             try:
+                order = RMOrder.objects.get(so_num=so_num)
                 new_so_num = request.POST.get('so_num')
                 if new_so_num != so_num and RMOrder.objects.filter(so_num=new_so_num).exists():
                     messages.error(request, f'更新订单失败：SO号 {new_so_num} 已存在')
@@ -112,58 +136,249 @@ def edit_order(request, so_num):
                 order.pickup_date = request.POST.get('pickup_date') or None
                 order.outbound_date = request.POST.get('outbound_date') or None
                 order.is_sendemail = request.POST.get('is_sendemail') == 'on'
-                order.is_updateInventory = request.POST.get('is_updateInventory') == 'on'                             
+                order.is_updateInventory = request.POST.get('is_updateInventory') == 'on'
+                order.is_canceled = request.POST.get('is_canceled') == 'on'
+                order.is_allocated_to_stock = request.POST.get('is_allocated_to_stock') == 'on'                                         
                 order.save()
+
+                # 更新订单项目
+                items_json  = request.POST.get('orderitems')
+                print("---:",items_json)
+                if items_json :
+                    items = json.loads(items_json )
+
+                    # ⚠️ 先清空旧的条目（如果你是编辑页面）
+                    OrderItem.objects.filter(order=order).delete()
+                    for item in items:
+                        product = RMProduct.objects.get(id=item['product_id'])
+                        quantity = int(item['quantity'])
+                        print("---:",product,quantity)
+                        
+                        OrderItem.objects.create(
+                            order=order,
+                            product=product,
+                            quantity=int(quantity)
+                        )                            
+
                 messages.success(request, '订单更新成功！')
                 return redirect('rimeiorder')
             except Exception as e:
                 messages.error(request, f'更新订单失败：{str(e)}')
+                customers = RMCustomer.objects.all()
+                order_items = OrderItem.objects.filter(order=order)
+                products = RMProduct.objects.all()
+                return render(request, 'container/rmorder/edit_order.html', {
+                    'order': order,
+                    'customers': customers,
+                    'order_items': order_items,
+                    'products': products,
+                })
         
-        customers = RMCustomer.objects.all()
-        order_items = OrderItem.objects.filter(order=order)
-        return render(request, 'container/rmorder/edit_order.html', {
-            'order': order,
-            'customers': customers,
-            'order_items': order_items
-        })
+        
     except RMOrder.DoesNotExist:
         messages.error(request, '订单不存在')
-        return redirect('rmorder')
-    
-def search_order(request):
-    print("--------------search_order-----------------")
-    
-    # 获取搜索参数
-    search_so = request.GET.get('search_so', '')
-    search_po = request.GET.get('search_po', '')
-    search_customer = request.GET.get('search_customer', '')
-    search_pickup_date = request.GET.get('search_pickup_date', '')
+        return redirect('rimeiorder')
 
-    # 构建查询条件
-    filters = Q()
-    if search_so:
-        filters &= Q(so_num=search_so)
-    if search_po:
-        filters &= Q(po_num=search_po)
-    if search_customer:
-        filters &= Q(customer_name__id=search_customer)  # 使用客户 ID 进行过滤
-    if search_pickup_date:
-        filters &= Q(pickup_date=search_pickup_date)
+def inventory_view(request):
+    inventory_items = RMInventory.objects.all()  # 获取所有库存信息
+    print("----------inventory_view------------",len(inventory_items))
+    inventory_items_converty = []
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product.product)
 
-    # 根据过滤条件获取订单，并计算每个订单的图片数量
-    rimeiorders = RMOrder.objects.filter(filters).annotate(image_count=Count('images'))
+        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
-    # 打印每个订单的图片数量
-    # for order in rimeiorders:
-    #     print(f"Order ID: {order.id}, Image Count: {order.image_count}")
+        inventory_items_converty.append(product)
 
-    # 获取所有客户
-    customers = RMCustomer.objects.all()
+        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.product.name)
 
-    return render(request, 'container/rmorder.html', {
-        'rimeiorders': rimeiorders,
-        'customers': customers,  # 将客户列表传递给模板
+    user_permissions = get_user_permissions(request.user)
+    return render(request, "container/inventory.html", {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
+
+def inventory_diff_view(request):
+    inventory_items = RMInventory.objects.all()  # 获取所有库存信息
+
+    diff_items = []  # 用来存储有差异的库存记录
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product.product)
+
+        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+
+        if product.quantity != product.quantity_for_neworder:
+            diff_items.append(product)
+
+        diff_items = sorted(diff_items, key=lambda x: x.quantity_for_neworder)
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, "container/inventory.html", {"inventory_items": diff_items,'user_permissions': user_permissions})
+
+def export_stock(request):
+    inventory_items = RMInventory.objects.all()
+    print("----------export_stock------------", len(inventory_items))
+    inventory_items_converty = []
+
+    for product in inventory_items:
+        inbound_list, outbound_list, outbound_actual_list, outbound_stock_list, inbound_actual_list = get_quality(product.product)
+
+        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+
+        inventory_items_converty.append(product)
+
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.product.name)
+    user_permissions = get_user_permissions(request.user)
+
+    # 🔽 Export to Excel if requested
+    if request.GET.get("export") == "1":
+        return export_inventory_to_excel(inventory_items_converty)
+
+    return render(request, "container/inventory.html", {
+        "inventory_items": inventory_items_converty,
+        "user_permissions": user_permissions
     })
+
+def order_history(request,product_id):
+    product = get_object_or_404(RMProduct, id=product_id)
+
+    # 查询库存记录
+    inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
+
+    # 计算入库总数量
+    total_inbound_quantity = sum(item['quantity'] for item in inbound_list)
+    # 计算出库总数量
+    total_outbound_quantity = sum(item['quantity'] for item in outbound_list)
+    # 计算实际入库数量
+    total_inbound_actual_quantity = sum(item['quantity'] for item in inbound_actual_list)
+    # 计算实际出库数量
+    total_outbound_actual_quantity = sum(item['quantity'] for item in outbound_actual_list)
+    # 计算备货区数量
+    total_outbound_stock_quantity = sum(item['quantity'] for item in outbound_stock_list)
+
+    total_surplus_quantity = total_inbound_quantity - total_outbound_quantity
+    total_quality = total_inbound_actual_quantity - total_outbound_actual_quantity
+    total_stock = total_inbound_actual_quantity - total_outbound_actual_quantity - total_outbound_stock_quantity
+
+    return render(request, 'container/inventory/order_history.html', {
+        'product': product,
+        'inbound_logs': inbound_list,
+        'outbound_logs': outbound_list,
+        'total_inbound_quantity': total_inbound_quantity,
+        'total_outbound_quantity': total_outbound_quantity,
+        'total_surplus_quantity': total_surplus_quantity,
+        'total_inbound_actual_quantity':total_inbound_actual_quantity,
+        'total_outbound_actual_quantity':total_outbound_actual_quantity,
+        'total_quantity': total_quality,
+        'total_stock': total_stock
+    })
+
+def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list):
+     
+      # 计算入库总数量
+    total_inbound_quantity = sum(item['quantity'] for item in inbound_list)
+    # 计算出库总数量
+    total_outbound_quantity = sum(item['quantity'] for item in outbound_list)
+    # 计算实际入库数量
+    total_inbound_actual_quantity = sum(item['quantity'] for item in inbound_actual_list)
+    # 计算实际出库数量
+    total_outbound_actual_quantity = sum(item['quantity'] for item in outbound_actual_list)
+    # 计算备货区数量
+    total_outbound_stock_quantity = sum(item['quantity'] for item in outbound_stock_list)
+
+    product.quantity_for_neworder = total_inbound_actual_quantity - total_outbound_quantity
+    product.quantity = total_inbound_actual_quantity - total_outbound_actual_quantity
+    product.quantity_to_stock = product.quantity - total_outbound_stock_quantity
+    product.shownumber  = product.quantity_to_stock + product.quantity_diff
+    product.pallet = product.product.Pallet
+    product.color = product.product.Color
+    product.palletnumber = product.shownumber//product.product.Pallet
+    product.case = product.shownumber % product.product.Pallet
+    product.Location = product.product.Location
+    product.ShelfRecord = product.product.ShelfRecord
+
+    return product
+
+def get_quality(product):
+    # 获取 RMInventory 中的初始库存记录
+    inventory = RMInventory.objects.filter(product=product).first()
+    
+    # 创建一个“初始记录”对象，模拟一个类似入库日志的结构
+    initial_log = {
+        'date': 'Initial',
+        'quantity': inventory.quantity_init if inventory else 0,
+        'operator': 'System',
+        'note': 'Initial stock quantity'
+    }
+
+    # 入库记录：ContainerItem + Container 的 empty_date
+    inbound_logs = ContainerItem.objects.filter(product=product).select_related('container')
+    inbound_list = [{
+        'date': item.container.empty_date if item.container else None,
+        'quantity': item.quantity,
+        'operator': getattr(item.container, 'created_user', str(item.container)) if hasattr(item, 'container') else 'N/A',
+        'note': getattr(item.container, 'container_id', '')
+    } for item in inbound_logs]
+
+    # 排序
+    inbound_list = sorted(inbound_list, key=lambda x: sort_by_date(x, "date"), reverse=True)
+
+    # 插入初始记录到入库列表最前
+    inbound_list.insert(0, initial_log)    
+
+    # 出库记录：OrderItem + RMOrder 的 outbound_date
+    outbound_logs = OrderItem.objects.filter(product=product).select_related('order')
+    outbound_list = [{
+        'date': item.order.pickup_date if item.order and item.order.pickup_date else 'N/A',
+        'date_shipped': item.order.outbound_date if item.order and item.order.outbound_date else 'N/A',
+        'quantity': item.quantity,
+        'operator': getattr(item.order, 'created_user', 'N/A'),  # 使用 RMOrder 中的 created_user 或者其他字段作为操作员
+        'note': getattr(item.order, 'so_num', '')
+    } for item in outbound_logs]
+
+    # 排序
+    outbound_list = sorted(outbound_list, key=lambda x: sort_by_date(x, "date_shipped"), reverse=True)
+
+    # 实际入库记录
+    inbound_actual_logs = ContainerItem.objects.filter(product=product,container__is_updateInventory=True).select_related('container')
+    inbound_actual_list = [{
+        'date': item.container.delivery_date if item.container and item.container.delivery_date else 'N/A',
+        'quantity': item.quantity,
+        'operator': getattr(item.container, 'created_user', str(item.container)) if hasattr(item, 'container') else 'N/A',  # 使用 RMOrder 中的 created_user 或者其他字段作为操作员
+        'note': getattr(item.container, 'container_id', '')
+    } for item in inbound_actual_logs]
+    # 插入初始记录到入库列表最前
+    inbound_actual_list.insert(0, initial_log)    
+
+    outbound_actual_logs = OrderItem.objects.filter(product=product,order__is_updateInventory=True).select_related('order')
+    outbound_actual_list = [{
+        'date': item.order.pickup_date if item.order and item.order.pickup_date else 'N/A',
+        'date_shipped': item.order.outbound_date if item.order and item.order.outbound_date else 'N/A',
+        'quantity': item.quantity,
+        'operator': getattr(item.order, 'created_user', 'N/A'),  # 使用 RMOrder 中的 created_user 或者其他字段作为操作员
+        'note': getattr(item.order, 'so_num', '')
+    } for item in outbound_actual_logs]
+
+    outbound_stock_logs = OrderItem.objects.filter(product=product,order__is_allocated_to_stock=True).select_related('order')
+    outbound_stock_list = [{
+        'date': item.order.pickup_date if item.order and item.order.pickup_date else 'N/A',
+        'date_shipped': item.order.outbound_date if item.order and item.order.outbound_date else 'N/A',
+        'quantity': item.quantity,
+        'operator': getattr(item.order, 'created_user', 'N/A'),  # 使用 RMOrder 中的 created_user 或者其他字段作为操作员
+        'note': getattr(item.order, 'so_num', '')
+    } for item in outbound_stock_logs]
+
+    return inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list
+
+# 排序逻辑：将'N/A'视为最小（或最大）值，按需要可修改
+def sort_by_date(entry, field_name):
+    date_val = entry.get(field_name)
+    if date_val is None:
+        return datetime.min  # 或 datetime.max，如果想将空值排在最后
+    if isinstance(date_val, datetime):
+        return date_val
+    elif isinstance(date_val, date):
+        return datetime.combine(date_val, time.min)
+    return datetime.min
 
 @require_http_methods(["POST"])
 def order_images(request, order_id):
@@ -231,7 +446,7 @@ def export_pallet(request):
     else:
         return HttpResponse("Invalid month or year", status=400)
     
-def import_excel(request):
+def import_inventory(request):
     if request.method == "POST" and request.FILES.get("excel_file"):
         excel_file = request.FILES["excel_file"]
 
@@ -243,14 +458,140 @@ def import_excel(request):
             # Create RMProduct instance
             product = RMProduct.objects.create(
                 name=row["Display Name"],
+                shortname = row["Short Name"],
+                size = row["Size"],
                 description=""  # description 为空
             )
             # Create RMInventory instance
             RMInventory.objects.create(
                 product=product,
-                quantity=row["Quantity On Hand"]
+                quantity=row["Quantity On Hand"],
+                quantity_for_neworder=row["Quantity On Hand"],
+                quantity_to_stock=row["Quantity On Hand"],
             )
 
         return JsonResponse({"message": "Excel data imported successfully!"})
     
     return JsonResponse({"error": "No file uploaded"}, status=400)
+
+def import_aline(request):
+    if request.method == "POST" and request.FILES.get("excel_file"):
+        excel_file = request.FILES["excel_file"]
+
+        # Read only the "Matched Records" sheet
+        try:
+            df = pd.read_excel(excel_file, sheet_name="Matched Records", engine="openpyxl")
+        except ValueError:
+            return JsonResponse({"error": "Sheet 'Matched Records' not found in the uploaded file"}, status=400)
+
+        # Loop through each row and save to database
+        for _, row in df.iterrows():
+            try:
+                AlineOrderRecord.objects.create(
+                    document_number=row.get("Document Number", ""),  # 文档编号
+                    order_number=row.get("Order No", ""),  # 订单编号
+                    po_number=row.get("P.O. No.", ""),  # PO编号
+                    invoice_date=pd.to_datetime(row.get("Date", None), errors="coerce").date()
+                        if pd.notna(row.get("Date", None)) else None,  # 发票日期
+                    due_date=pd.to_datetime(row.get("Due Date", None), errors="coerce").date()
+                        if pd.notna(row.get("Due Date", None)) else None,  # 截止日期
+                    pdf_name=row.get("PDFFileName", ""),  # 文档名称
+                    price=row.get("Total", 0) if pd.notna(row.get("Total", 0)) else 0  # 价格
+                )
+            except Exception as e:
+                return JsonResponse({"error": f"Failed to import row {row.to_dict()} - {str(e)}"}, status=400)
+
+        return JsonResponse({"message": "Excel data imported successfully!"})
+    
+    return JsonResponse({"error": "No file uploaded"}, status=400)
+
+def preview_email(request, number, so_number=None, po_number=None, container_id=None, officedepot_id=None):
+    template = "container/temporary.html"
+    recipient = "omarorders@omarllc.com,omarwarehouse@rimeius.com"
+    current_date = timezone.now().strftime("%m/%d/%Y")
+    if number == 1:
+        context = {
+            "recipient": recipient,
+            "subject": f"INVENTORY {current_date}",
+            "body": f"Hello,\n\nINVENTORY SUMMARY {current_date}. Paperwork attached.\n\nJing"
+        }
+    elif number == 2:
+        context = {
+            "recipient": recipient,
+            "subject": "Shipped out Email",
+            "body": f"Hello,\n\nSO #{so_number} PO #{po_number}  has been shipped out. Paperwork is attached.\n\nThank you!\nJing"
+        }
+    elif number == 3:
+        context = {
+            "recipient": recipient,
+            "subject": f"{container_id} RECEIVED IN",
+            "body": f"Hello,\n\n{container_id}  has received in. Paperwork is attached.\n\nThank you!\nJing"
+        }
+    elif number == 4:
+        context = {
+            "recipient": recipient,
+            "subject": f"OFFICE DEPOT #{officedepot_id}",
+            "body": f"Hello,\n\nOffice Depot order #{officedepot_id} shipped out. Paperwork is attached.\n\nThank you!\nJing"
+        }
+    else:
+        context = {
+            "recipient": recipient,
+            "subject": "Received Order Email",
+            "body": "Well Received.\n\nThank you!\nJing"
+        }
+    return render(request, template, context)
+
+def get_user_permissions(user):
+    # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance
+    permissions = UserAndPermission.objects.filter(username=user).values_list('permissionIndex__name', flat=True)
+    
+    # Print the length of the permissions list (or log it)
+    print("permissions: ", len(permissions))
+    
+    return permissions
+
+def export_inventory_to_excel(items):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    ws.title = f"Inventory_{today_str}"
+
+    # Define headers
+    headers = ["Product", "Quantity", "New Order", "In Preparation", "Diff","Show Number","Each","Color", "Location", "Pallets", "Cases","ShelfRecord"]
+    ws.append(headers)
+
+    # Write data rows
+    for item in items:
+        ws.append([
+            str(item.product),  # Or item.product.name if it's a ForeignKey
+            item.quantity,
+            item.quantity_for_neworder,
+            item.quantity_to_stock,
+            item.quantity_diff,
+            item.shownumber,
+            item.pallet,
+            item.color,
+            item.Location,
+            item.palletnumber,
+            item.case,
+            item.ShelfRecord,            
+        ])
+
+    # Auto-fit column width
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or '')) for cell in col)
+        ws.column_dimensions[get_column_letter(col[0].column)].width = max_length + 2
+
+    # Save to in-memory file
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Create HTTP response
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"Inventory_{today_str}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

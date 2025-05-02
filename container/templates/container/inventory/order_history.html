@@ -1,0 +1,87 @@
+{% extends 'container/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div>
+        <h3>Inventory History for: {{ product.name }}</h3>
+    </div>
+    <!-- 显示入库和出库的总数量 -->
+    <div>
+        <div>Total Inbound Quantity: {{ total_inbound_quantity }}</div>
+        <div>Total Outbound Quantity: {{ total_outbound_quantity }}</dic>
+        <div>Total Surplus Quantity: {{ total_surplus_quantity }}</div>
+        <div>Total Actual Inbound Quality: {{ total_inbound_actual_quantity }}</div>
+        <div>Total Actual Outbound Quality: {{ total_outbound_actual_quantity }}</div>
+        <div>Total Quantity: {{ total_quantity }}</div>
+        <div>Total Stock: {{ total_stock }}</div>
+    </div>
+    <div>
+        <a href="{% url 'inventory_diff' %}" class="btn btn-secondary">Back</a>
+    </div>
+
+    <hr>
+
+    <div class="row">
+        <!-- Inbound History -->
+        <div class="col-md-6">
+            <h5>Inbound History</h5>
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Quantity</th>
+                        <th>Operator</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in inbound_logs %}
+                    <tr>
+                        <td>{{ record.date }}</td>
+                        <td>{{ record.quantity }}</td>
+                        <td>{{ record.operator }}</td>
+                        <td>{{ record.note }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-muted">No inbound records.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Outbound History -->
+        <div class="col-md-6">
+            <h5>Outbound History</h5>
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>Order Date</th>                        
+                        <th>Shipped Date</th>
+                        <th>Quantity</th>
+                        <th>Operator</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in outbound_logs %}
+                    <tr>
+                        <td>{{ record.date }}</td>                        
+                        <td>{{ record.date_shipped }}</td>
+                        <td>{{ record.quantity }}</td>
+                        <td>{{ record.operator }}</td>
+                        <td>{{ record.note }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-muted">No outbound records.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
