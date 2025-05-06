@@ -8,13 +8,16 @@ import re
 from ..models import RMCustomer
 from datetime import datetime,date
 from django.shortcuts import get_object_or_404
-from ..models import RMOrder,Container,RMInventory,RMProduct,ContainerItem
+from ..models import RMOrder,Container,RMInventory,RMProduct,ContainerItem,OrderItem
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from datetime import datetime
 import math
 import textwrap
+from io import BytesIO
+from reportlab.lib.units import inch
+from reportlab.lib.utils import ImageReader
 
 UPLOAD_DIR = "uploads/"
 UPLOAD_DIR_order = "orders/"
@@ -26,7 +29,8 @@ NEW_ADDRESS = """RIMEI INTERNATION INC
 1285 101st St
 Lemont, IL 60439"""
 NEW_TITLE = "Packing Slip"
-NEW_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/remei.jpg')
+Rimei_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/remei.jpg')
+SSA_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/ssa.jpg')
 
 # Label
 PAGE_WIDTH, PAGE_HEIGHT = letter  # Letter size (8.5 x 11 inches)
@@ -322,6 +326,7 @@ def convert_to_yyyy_mm_dd(date_str):
             continue  # 如果格式不匹配，继续尝试下一个格式
     return None  # 如果没有匹配的格式，返回 None
 
+# Order
 def print_original_order(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
 
@@ -360,7 +365,7 @@ def print_converted_order(request, so_num):
 
         # 添加新 LOGO
         logo_width, logo_height = 130, 65  
-        page.insert_image(fitz.Rect(x, y, x + logo_width, y + logo_height), filename=NEW_LOGO_PATH)
+        page.insert_image(fitz.Rect(x, y, x + logo_width, y + logo_height), filename=Rimei_LOGO_PATH)
 
         # 添加新地址
         address_x, address_y = x, y + logo_height + 20  
@@ -390,6 +395,7 @@ def print_label(request, so_num):
     print("----------print_label----------",so_num)
     order = get_object_or_404(RMOrder, so_num=so_num)
     label_count = order.plts
+    original_label_count = label_count  # 用于总数显示
 
     # 构建PDF文件路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
@@ -407,6 +413,7 @@ def print_label(request, so_num):
     y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
     labels_on_page = 0  # Track labels per page
     first_page = True
+    label_index = 1  # 当前标签序号
 
     while label_count > 0:
         if not first_page:  
@@ -430,7 +437,7 @@ def print_label(request, so_num):
     
                 # Center text in each label
                 text_x = x + (LABEL_WIDTH / 2)
-                text_y = y_position  - (LABEL_HEIGHT / 2) - 20
+                text_y = y_position  - (LABEL_HEIGHT / 2) - 0
                 
                 # Set font and draw text
                 c.setFont("Helvetica-Bold", FONT_SIZE)
@@ -439,7 +446,13 @@ def print_label(request, so_num):
                 # Draw label borders (for testing)
                 if DRAW_BORDERS:
                     c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
-    
+
+                # Add smaller text for container_id, lot_number, and current date below the label
+                c.setFont("Helvetica", FONT_SIZE - 30)  # Smaller font size for the new text
+                label_number_text = f"{label_index}/{original_label_count}"
+                c.drawCentredString(text_x, text_y - 30, label_number_text)
+
+                label_index += 1
                 label_count -= 1  # Reduce remaining label count
 
             y_position -= LABEL_HEIGHT  # Move to next row
@@ -454,9 +467,56 @@ def print_label(request, so_num):
 
 def print_bol(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
-    # 实现打印BOL的逻辑
-    return HttpResponse("打印BOL")
+    orderItems = OrderItem.objects.filter(order=order)
 
+    # 列表
+    order_details = []
+    total_plts = 0
+
+    for item in orderItems:
+        pallet_qty = item.product.Pallet or 1  # 避免除以0
+        plts = math.ceil(item.quantity / pallet_qty)
+        total_plts += plts  # 累加托盘总数
+        order_details.append({
+            "Size": item.product.size if hasattr(item.product, 'size') else "N/A",
+            "Name": item.product.shortname,
+            "Qty": str(item.quantity),
+            "PLTS": str(plts)
+        })
+
+    # 基本信息
+    container_info = {
+        "Ship From": 'Rimei INTERNATION INC\n1285 101st St\nLemont, IL 60439',
+        "Ship To": order.ship_to,
+        "Bill To": order.bill_to,
+        "SO Number": order.so_num,
+        "PO Number": order.po_num,
+        "Date": datetime.now().strftime("%m/%d/%Y"),
+        "Total LBS": str(total_plts * 1250),
+        "Total Pallets": str(total_plts),
+    }
+
+    # 注意事项
+    note_lines = [
+                "NOTE: Liability Limitation for loss or damage in this shipment may be applicable. See 49 U.S.C. - 14706(c)(1)(A) and (B).",
+                # "RECEIVED, subject to applicable written contracts or standard carrier rates and rules available upon request. The goods, in apparent good order except as noted, are consigned and destined as shown. The carrier agrees to transport or forward them to the destination. All services are subject to the bill of lading terms and conditions in effect on the shipment date, which the shipper acknowledges and accepts.",
+            ]
+
+    # 保存路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, CHECKLIST_FOLDER)
+    filename = os.path.join(pdf_path, f"{container_info['SO Number']}.pdf")
+    title = f"Order - {container_info['SO Number']}"
+    contentTitle =  f"Bill Of Lading - {order.so_num}"
+
+    print_checklist_template(title,filename, contentTitle, container_info, order_details, note_lines, True)
+
+    # 返回 PDF 响应
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+
+# Container
 def print_container_label(request, container_num):
     container = get_object_or_404(Container, container_id=container_num)
     label_count = 10
@@ -471,6 +531,7 @@ def print_container_label(request, container_num):
     today_date = datetime.today().strftime("%m/%d/%Y").replace("/0", "/")  # Fix for Windows
     filename = os.path.join(pdf_path, f"{container_num}.pdf")  # Save inside "label" folder
     c = canvas.Canvas(filename, pagesize=letter)
+    c.setTitle(f"Label - {container.container_id}")
 
     # Set font
     c.setFont("Helvetica-Bold", FONT_SIZE_Container)
@@ -523,6 +584,65 @@ def print_container_label(request, container_num):
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
         return response
 
+def print_container_color_label(request, container_num):
+    container = get_object_or_404(Container, container_id=container_num)
+    containerItems = ContainerItem.objects.filter(container=container)
+
+    # 统计每个 so_num 的数量
+    so_label_map = {}
+    for item in containerItems:
+        pallet_qty = item.product.Pallet or 1  # 避免除以0
+        plts = math.ceil(item.quantity / pallet_qty)
+        try:
+            order = item.product
+            if order and order.shortname:
+                so_num = order.shortname
+                so_label_map[so_num] = so_label_map.get(so_num, 0) + plts
+        except AttributeError:
+            continue
+
+    if not so_label_map:
+        return HttpResponse("找不到相关的订单号", status=400)
+
+    # 通用信息
+    container_id = container.container_id
+    lot_number = container.lot
+    current_date = datetime.now().strftime('%m/%d/%Y')
+
+    # PDF 路径设置
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
+    os.makedirs(pdf_path, exist_ok=True)
+    filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
+
+    # 使用内存文件构建 PDF
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+
+    for so_num, total_count in so_label_map.items():
+        pages = (total_count + 9) // 10  # 计算需要的总页数，每页最多 10 个
+
+        for page in range(pages):
+            # 计算当前页应打印的 label 数量
+            page_label_count = min(10, total_count - page * 10)
+            try:
+                containerid_lot(c, so_num, page_label_count, container_id, lot_number, current_date)
+                c.showPage()
+            except Exception as e:
+                print(f"生成标签出错：{e}")
+                return HttpResponse(f"生成标签时出错：{e}", status=500)
+
+    c.save()
+    buffer.seek(0)
+
+    # 保存到文件
+    with open(filename, 'wb') as f:
+        f.write(buffer.read())
+
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+
 def print_container_detail(request, container_num):
     container = get_object_or_404(Container, container_id=container_num)
     containerItems = ContainerItem.objects.filter(container=container)
@@ -555,25 +675,46 @@ def print_container_detail(request, container_num):
         # "Can liner Size": '',
         "Total Pallets": str(total_plts),
     }
+    # 注意事项
+    note_lines = [
+                "Remove 1 case of each size performing physical examinations on the box as well as a detailed examination of a glove in each.",
+                "Check for black spots, tears, discoloration, and dampness, etc. ",
+                "Briefly check elasticity ensuring the glove doesn’t easily rip.", 
+                "Check the accuracy of the packaging does the external Bo match up with the internal boxes pertaining to weight, size, and the product number?",
+                "Check the external box of individual boxes for spelling and print accuracy. ",
+            ]
 
     # 保存路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, CHECKLIST_FOLDER)
-    filename = os.path.join(pdf_path, f"{container_info['Container Number']}.pdf")
+    filename = os.path.join(pdf_path, f"container.container_id.pdf")
+    title = f"Container - {container.container_id}"
+    contentType = container.inboundCategory.Type
+    contentTitle = f"Inbound Container {contentType} Quality Checklist"
 
+    print_checklist_template(title,filename, contentTitle,container_info,can_liner_details, note_lines)
+
+    # 返回 PDF 响应
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+
+def print_checklist_template(title,filename, contentTitle, container_info,can_liner_details, note_lines, issign = False):
+  
     # 创建 PDF 文件
     c = canvas.Canvas(filename, pagesize=letter)
-    c.setTitle(f"Container - {container_info['Container Number']}")
+    c.setTitle(title)
     width, height = letter
 
     # 设置标题居中
     c.setFont("Helvetica-Bold", 16)
-    title = f"Inbound Container {container.inboundCategory.Type} Quality Checklist"
+    title = contentTitle
     c.drawCentredString(width / 2, height - 80, title)
 
     # 内容起始位置
     x_label = 60         # 标签起始 x
     x_line_start = 180   # 填空线起始 x
-    line_length = 370    # 下划线长度
+    line_length = 340    # 下划线长度
     y = height - 120     # 初始 y 坐标
     line_spacing = 30
     x_sub_table = 100   #子表起始点
@@ -584,20 +725,32 @@ def print_container_detail(request, container_num):
     for key, value in container_info.items():
         # 写字段标签
         c.drawString(x_label, y, f"{key}:")
-        # 画下划线
-        c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)
-        # 写字段值在下划线上方（居左对齐）
-        c.drawString(x_line_start + 20, y, str(value))
-        y -= line_spacing
+        # c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)
+
+        # 处理多行地址
+        if key in ["Ship To", "Bill To", "Ship From"] and isinstance(value, str):
+            address_lines = value.splitlines()
+            for i, line in enumerate(address_lines):
+                c.drawString(x_line_start + 20, y, line)
+                if i == len(address_lines) - 1:
+                    c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)  # 只画最后一行的下划线
+                    y -= 26
+                else:
+                    y -= 18  # 多行地址行间距
+        else:
+            # 单行字段值
+            c.drawString(x_line_start + 20, y, str(value))
+            c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)
+            y -= line_spacing
 
         if key == "Total Pallets":
             # 插入子表头
             c.setFont("Helvetica-Bold", 11)
-            c.drawString(x_sub_table + 5, y, "Size")
+            c.drawString(x_sub_table + 0, y, "Size")
             c.drawString(x_sub_table + 100, y, "Name")
-            c.drawString(x_sub_table + 220, y, "QTY")
-            c.drawString(x_sub_table + 280, y, "CTNS")
-            c.drawString(x_sub_table + 350, y, "PLTS")
+            c.drawString(x_sub_table + 220, y, "CTNS")
+            # c.drawString(x_sub_table + 280, y, "CTNS")
+            c.drawString(x_sub_table + 340, y, "PLTS")
             y -= 20
 
             c.setFont("Helvetica", 11)
@@ -608,25 +761,19 @@ def print_container_detail(request, container_num):
                 c.line(x_sub_table + 80, y - 2, x_sub_table + 180, y - 2)  # Name 下划线
 
                 c.drawString(x_sub_table + 220, y, item["Qty"])
-                c.line(x_sub_table + 200, y - 2, x_sub_table + 260, y - 2)  # QTY 下划线
+                c.line(x_sub_table + 200, y - 2, x_sub_table + 300, y - 2)  # QTY 下划线
 
-                c.drawString(x_sub_table + 280, y, "CTNS")
+                # c.drawString(x_sub_table + 280, y, "CTNS")
 
-                c.drawString(x_sub_table + 360, y, item["PLTS"])
-                c.line(x_sub_table + 340, y - 2, x_sub_table + 400, y - 2)  # QTY 下划线
+                c.drawString(x_sub_table + 340, y, item["PLTS"])
+                c.line(x_sub_table + 320, y - 2, x_sub_table + 400, y - 2)  # QTY 下划线
 
                 y -= 20
 
             # 在子表格之后添加三组文字和空行
             y -= 10
             line_spacing_extra = 35  # 每组行距
-            note_lines = [
-                "Remove 1 case of each size performing physical examinations on the box as well as a detailed examination of a glove in each.",
-                "Check for black spots, tears, discoloration, and dampness, etc. ",
-                "Briefly check elasticity ensuring the glove doesn’t easily rip.", 
-                "Check the accuracy of the packaging does the external Bo match up with the internal boxes pertaining to weight, size, and the product number?",
-                "Check the external box of individual boxes for spelling and print accuracy. ",
-            ]
+            
 
             c.setFont("Helvetica", 12)
             for i, note in enumerate(note_lines):
@@ -641,15 +788,41 @@ def print_container_detail(request, container_num):
                     y -= line_spacing_extra
                 else:
                     y -= 10  # 如果不画线就只空一点行距
+            
+            if issign :
+                # 添加附加说明
+                certification_notes = [
+                    "Checker: All pallets are in good condition, with no visible damage.",
+                    "Shipper: Materials are properly classified, packaged, and labeled per DOT regulations, and in good condition for transport.",
+                    "Carrier: Receipt of goods and placards; emergency info provided or accessible. Goods received in apparent good order unless noted.",
+                ]
+
+                for note in certification_notes:
+                    wrapped_lines = textwrap.wrap(note, width=90)
+                    for line in wrapped_lines:
+                        c.drawString(x_label, y, line)
+                        y -= 16
+                    y -= 6  # 每段间距
+
+                # 添加签名和日期区域
+                y -= 10  # 签名上方稍作间隔
+                signature_labels = ["Checker", "Shipper","Carrier"]
+                signature_spacing = 160  # 每组签名之间的水平间距
+                signature_y = y     # 签名区开始的 Y 坐标
+                signature_x_start = x_label
+
+                c.setFont("Helvetica", 12)
+                for i, label in enumerate(signature_labels):
+                    x_pos = signature_x_start + i * signature_spacing
+                    c.drawString(x_pos, signature_y, f"{label}:")
+                    c.line(x_pos + 60, signature_y, x_pos + 150, signature_y)  # 签名字下划线
+
+                    c.drawString(x_pos, signature_y - 30, "Date:")
+                    c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
 
     # 保存 PDF
     c.save()
 
-    # 返回 PDF 响应
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
 
 def print_label_only(request):
     print("----------print_label_only----------")
@@ -722,3 +895,252 @@ def print_label_only(request):
         response = HttpResponse(pdf_file.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
         return response
+
+def print_label_containerid_lot(request):
+    print("----------print_label_containerid_lot----------")
+    so_num = request.POST.get('so_number')
+    label_count = request.POST.get('quantity')
+    container_id = request.POST.get('containerid')
+    lot_number = request.POST.get('lot_number')
+    current_date = datetime.now().strftime('%m/%d/%Y')
+
+    # PDF 路径设置
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
+    os.makedirs(pdf_path, exist_ok=True)
+    filename = os.path.join(pdf_path, f"{container_id}.pdf")
+
+    c = canvas.Canvas(filename, pagesize=letter)
+    containerid_lot(c, so_num, label_count, container_id, lot_number, current_date)
+    c.save()
+
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+
+def containerid_lot(c, so_num, label_count, container_id, lot_number, current_date):
+    try:
+        label_count = int(label_count) if label_count is not None else 0
+    except ValueError:
+        label_count = 10  # Handle invalid input gracefully
+
+    # Set font
+    c.setFont("Helvetica-Bold", FONT_SIZE)
+    
+    y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
+    labels_on_page = 0  # Track labels per page
+    first_page = True
+
+    while label_count > 0:
+        if not first_page:  
+            c.showPage()  # Create a new page *only if necessary*
+            c.setFont("Helvetica-Bold", FONT_SIZE)  # Reset font on new page
+            y_position = PAGE_HEIGHT - MARGIN_TOP  # Reset y position
+            labels_on_page = 0  # Reset row counter
+
+        first_page = False 
+
+        for _ in range(5):  # Max 5 rows per page
+            if label_count <= 0:
+                break  # Stop when all labels are printed
+    
+            # Two labels per row, calculate positions
+            x_positions = [MARGIN_LEFT, MARGIN_LEFT + LABEL_WIDTH]
+
+            for x in x_positions:
+                if label_count <= 0:  
+                    break  # Stop if all labels are printed
+    
+                # Center text in each label
+                text_x = x + (LABEL_WIDTH / 2)
+                text_y = y_position  - (LABEL_HEIGHT / 2) - 0
+                
+                # Set font and draw text
+                c.setFont("Helvetica-Bold", FONT_SIZE)
+                c.drawCentredString(text_x, text_y, so_num)
+    
+                # Draw label borders (for testing)
+                if DRAW_BORDERS:
+                    c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
+
+                # Add smaller text for container_id, lot_number, and current date below the label
+                c.setFont("Helvetica", FONT_SIZE -40)  # Smaller font size for the new text
+                text_y_small = text_y - 30  # Position for the smaller text below the main label
+                c.drawCentredString(text_x, text_y_small, f"{container_id}    {current_date}")
+                c.drawCentredString(text_x, text_y_small - 20, f"Lot: {lot_number}")
+    
+                label_count -= 1  # Reduce remaining label count
+
+            y_position -= LABEL_HEIGHT  # Move to next row
+            labels_on_page += 2  # Two labels per row
+
+# Delivery Order
+def print_container_delivery_order(request, container_num):
+    container = get_object_or_404(Container, container_id=container_num)
+
+    containerInfo = {
+        "container_id": container.container_id,              # 集装箱编号
+        "size_type": "40HQ",                        # 集装箱尺寸/类型
+        "weight": "41535LBS",                       # 重量
+        "seal_number": "",                # 封条号
+        "commodity": "Plastic Bag",                 # 商品描述
+        "vessel": "",               # 船名
+        "voyage": "",                          # 航次
+        "ssl": "",                          # 船公司（Shipping Line）
+
+        "pickup_location": f"{container.railwayStation.name}\n{container.railwayStation.address}".replace("\\n", "\n").replace("\r\n", "\n"),
+        "pickup_date": "Pending",                   # 提货日期
+        "delivery_location": (
+            "SECURE SOURCE AMERICA LLC\n"             # 送货地点（可以多行）
+            "1285 101st St\n"
+            "Lemont IL 60439"
+        ),
+        "delivery_date": "Pending",                 # 送货日期
+
+        "ref_no": "TKI25-OI067807",                 # 参考编号
+        "mbl": "HLCUNG12503USPF7"                   # 提单号
+    }
+
+    # PDF 路径设置
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
+    os.makedirs(pdf_path, exist_ok=True)
+    filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
+
+    c = canvas.Canvas(filename, pagesize=letter)
+    width, height = letter
+
+    # 插入 logo
+    logo_width, logo_height = 130, 130  
+    logo_x = 0.5 * inch  # left_margin
+    logo_y = height - logo_height - 40  # 顶部边距 10
+    c.drawImage(ImageReader(SSA_LOGO_PATH), logo_x, logo_y, width=logo_width, height=logo_height)
+
+    # 样式设置
+    left_margin = 0.5 * inch
+    line_height = 18
+    font_size = 10
+    bold_font = "Helvetica-Bold"
+    regular_font = "Helvetica"
+
+    def draw_text(x, y, text, font=regular_font, size=font_size):
+        c.setFont(font, size)
+        c.drawString(x, y, text)
+
+    y = height - 75
+
+    # 标题
+    c.setFont("Helvetica-Bold", 18)
+    c.drawCentredString(width / 2 + 20, y, "DELIVERY ORDER")
+
+    # US Headquarter
+    y = height - 190
+    draw_text(left_margin, y, "US Headquarter:", bold_font)
+    draw_text(left_margin + 120, y, "1285 101st Street")
+    y -= line_height
+    draw_text(left_margin + 120, y, "Lemont, Illinois 60439")
+
+    # 右上角信息
+    right_x = width - 240
+    y = height - 190
+    draw_text(right_x, y, f"DATE: {datetime.now().strftime('%m/%d/%Y')}")
+    y -= line_height
+    draw_text(right_x, y, f"REF. NO: {containerInfo['ref_no']}")
+    y -= line_height
+    draw_text(right_x, y, f"MBL: {containerInfo['mbl']}")
+
+    # Pickup / Delivery 信息
+    # y -= 40
+    y = y - line_height * 2  # 空一行
+
+    # Pickup Location
+    pickup_lines = containerInfo['pickup_location'].split('\n')
+    pickup_y = y  # 记录起始高度
+    draw_text(left_margin, pickup_y, "Pickup Location:", bold_font)
+    for line in pickup_lines:
+        draw_text(left_margin + 120, pickup_y, line, bold_font)
+        pickup_y -= line_height
+    # Pickup Date 与 Pickup Location 的首行对齐
+    draw_text(right_x, y, f"Pickup Date:    {containerInfo['pickup_date']}")
+
+    # Delivery Location
+    y = pickup_y - line_height  # 空一行
+    delivery_lines = containerInfo['delivery_location'].split('\n')
+    delivery_y = y
+    draw_text(left_margin, delivery_y, "Delivery Location:", bold_font)
+    for line in delivery_lines:
+        draw_text(left_margin + 120, delivery_y, line, bold_font)
+        delivery_y -= line_height
+    # Delivery Date 与 Delivery Location 的首行对齐
+    draw_text(right_x, y, f"Delivery Date:    {containerInfo['delivery_date']}")
+    y = delivery_y  # 更新 y 供后续使用
+
+    # 提示
+    y -= 20
+    c.setFont(regular_font, font_size)
+    c.drawString(left_margin + 120, y, "FOR DELIVERY AND APPOINTMENT INSTRUCTIONS, CONTACT TEL:+1 630-909-9888")
+    y -= line_height
+    c.drawString(left_margin + 120, y, "BEFORE ATTEMPTING PICK-UP OR DELIVERY OF CARGO")
+
+    # 表头
+    y -= 20
+
+    # 添加表头上方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y + line_height -2, width - left_margin, y + line_height -2)
+
+    table_headers = ["Container#", "Container Size/Type", "Weight", "Seal#", "Remarks"]
+    col_widths = [150, 150, 100, 100, 100]
+    x = left_margin
+    for header, w in zip(table_headers, col_widths):
+        draw_text(x, y, header, bold_font)
+        x += w
+
+    # 添加表头下方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y - 4, width - left_margin, y - 4)
+
+    # 数据行
+    y -= line_height
+    x = left_margin
+    row_values = [
+        containerInfo['container_id'],
+        containerInfo['size_type'],
+        containerInfo['weight'],
+        containerInfo['seal_number'],
+        ""
+    ]
+    for value, w in zip(row_values, col_widths):
+        draw_text(x, y, str(value))
+        x += w
+
+    # 添加数据行下方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y - 4, width - left_margin, y - 4)
+
+    # Footer
+    y -= 20
+    draw_text(left_margin + 120, y, f"Total Containers: 1")
+    y -= line_height
+    draw_text(left_margin + 120, y, f"Commodity: {containerInfo['commodity']}")
+    y -= line_height
+    draw_text(left_margin + 120, y, f"Vessel: {containerInfo['vessel']}")
+    y -= line_height
+    draw_text(left_margin + 120, y, f"Voyage: {containerInfo['voyage']}")
+    y -= line_height
+    draw_text(left_margin + 120, y, f"SSL: {containerInfo['ssl']}")
+
+    # 签名区
+    y -= 60
+    draw_text(width / 2, y, "Received in Good Order")
+    y -= line_height * 2
+    draw_text(width / 2, y, "By: _____________________________")
+    y -= line_height
+    draw_text(width / 2, y, "Date:                                 Time:")
+
+    c.save()
+
+    with open(filename, 'rb') as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+    

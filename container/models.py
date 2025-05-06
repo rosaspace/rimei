@@ -212,8 +212,21 @@ class InboundCategory(models.Model):
     def __str__(self):
         return f"{self.Type}"
     
+class RailwayStation(models.Model):
+    name = models.CharField(max_length=255, default='')
+    address = models.CharField(max_length=255, default='')
+    telephone = models.CharField(max_length=255, default='')
+    fax = models.CharField(max_length=255, default='')
+    email = models.CharField(max_length=255, default='')
+
+    def __str__(self):
+        return f"{self.name}"
+    
 def get_default_inbound_category():
     first = InboundCategory.objects.first()
+    return first.id if first else None  # 避免为空时报错
+def get_default_railstation_category():
+    first = RailwayStation.objects.first()
     return first.id if first else None  # 避免为空时报错
 
 class Container(models.Model):
@@ -235,6 +248,7 @@ class Container(models.Model):
     is_updateInventory = models.BooleanField(default=False) # 是否更新库存
     inboundCategory = models.ForeignKey(InboundCategory, on_delete=models.CASCADE,default=get_default_inbound_category)
     lot = models.CharField(max_length=255, blank=True, default="")
+    railwayStation = models.ForeignKey(RailwayStation, on_delete=models.CASCADE,default=get_default_railstation_category)
     
     class Meta:
         ordering = ['delivery_date']  # 默认按 delivery_date 升序排序
@@ -250,8 +264,6 @@ class ContainerItem(models.Model):
     def __str__(self):
         return f"{self.product.name} - {self.quantity} pcs"
 
-
-
 class AlineOrderRecord(models.Model):
     document_number = models.CharField(max_length=255)  # 文档编号
     order_number = models.CharField(max_length=255)  # 订单编号
@@ -263,3 +275,5 @@ class AlineOrderRecord(models.Model):
 
     def __str__(self):
         return f"{self.order_number} - {self.po_number} - {self.price}"
+    
+

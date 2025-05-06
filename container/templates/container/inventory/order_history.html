@@ -59,7 +59,7 @@
                 <thead>
                     <tr>
                         <th>Order Date</th>                        
-                        <th>Shipped Date</th>
+                        <th>Pickup Date</th>
                         <th>Quantity</th>
                         <th>Operator</th>
                         <th>Source</th>
@@ -69,7 +69,7 @@
                     {% for record in outbound_logs %}
                     <tr>
                         <td>{{ record.date }}</td>                        
-                        <td>{{ record.date_shipped }}</td>
+                        <td>{{ record.pickup_date }}</td>
                         <td>{{ record.quantity }}</td>
                         <td>{{ record.operator }}</td>
                         <td>{{ record.note }}</td>

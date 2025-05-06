@@ -56,7 +56,7 @@ urlpatterns = [
     path("import_aline/", rmorder.import_aline, name="import_aline"), 
     path('export_pallet/',rmorder.export_pallet,name='export_pallet'),
     path("preview_email/<int:number>/", rmorder.preview_email,name="preview_email"), 
-    path('print_label_only/', pdfprocess.print_label_only, name='print_label_only'),  
+    path('print_label_only/', pdfprocess.print_label_containerid_lot, name='print_label_only'),  
   
     # Inventory    
     path("add_stock/", inventory.add_stock_view, name="add_stock"),  # 入库路径
@@ -72,6 +72,9 @@ urlpatterns = [
     path('print_bol/<str:so_num>/', pdfprocess.print_bol, name='print_bol'),
     path('print_container_detail/<str:container_num>/', pdfprocess.print_container_detail, name='print_container_detail'),
     path('print_container_label/<str:container_num>/', pdfprocess.print_container_label, name='print_container_label'),
+    path('print_container_color_label/<str:container_num>/', pdfprocess.print_container_color_label, name='print_container_color_label'),
+    path('print_container_delivery_order/<str:container_num>/', pdfprocess.print_container_delivery_order, name='print_container_delivery_order'),
+    
 
     # 打卡记录
     path('week_record/', weekrecord.week_record, name='week_record'),

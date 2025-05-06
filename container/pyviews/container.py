@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 
-from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory
+from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory,RailwayStation
 from django.utils import timezone
 from datetime import datetime
 import json
@@ -95,6 +95,7 @@ def edit_container(request, container_id):
         customers = InvoiceCustomer.objects.all()
         logistics = LogisticsCompany.objects.all()
         inboundCategory = InboundCategory.objects.all()
+        railstation = RailwayStation.objects.all()
 
         # 显示编辑页面
         return render(request, 'container/containerManager/edit_container.html', {
@@ -103,6 +104,7 @@ def edit_container(request, container_id):
             'customers': customers,
             'logistics': logistics,
             'inboundCategory':inboundCategory,
+            'railstation':railstation,
             "container_items":container_items})
         
     elif request.method == 'POST':
@@ -121,6 +123,7 @@ def edit_container(request, container_id):
             container.customer = InvoiceCustomer.objects.get(id=request.POST.get('customer_name'))
             container.logistics = LogisticsCompany.objects.get(id=request.POST.get('logistics_name'))
             container.inboundCategory= InboundCategory.objects.get(id=request.POST.get('inbound_category'))
+            container.railwayStation= RailwayStation.objects.get(id=request.POST.get('station_name'))
             
             # 更新日期字段
             date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']

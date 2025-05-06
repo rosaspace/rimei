@@ -326,17 +326,20 @@ def get_quality(product):
     inbound_list.insert(0, initial_log)    
 
     # 出库记录：OrderItem + RMOrder 的 outbound_date
-    outbound_logs = OrderItem.objects.filter(product=product).select_related('order')
+    outbound_logs = OrderItem.objects.filter(
+        product=product,
+        order__is_canceled=False  # 排除已取消订单
+    ).select_related('order')
     outbound_list = [{
         'date': item.order.pickup_date if item.order and item.order.pickup_date else 'N/A',
-        'date_shipped': item.order.outbound_date if item.order and item.order.outbound_date else 'N/A',
+        'pickup_date': item.order.pickup_date if item.order and item.order.pickup_date else 'N/A',
         'quantity': item.quantity,
         'operator': getattr(item.order, 'created_user', 'N/A'),  # 使用 RMOrder 中的 created_user 或者其他字段作为操作员
         'note': getattr(item.order, 'so_num', '')
     } for item in outbound_logs]
 
     # 排序
-    outbound_list = sorted(outbound_list, key=lambda x: sort_by_date(x, "date_shipped"), reverse=True)
+    outbound_list = sorted(outbound_list, key=lambda x: sort_by_date(x, "pickup_date"), reverse=True)
 
     # 实际入库记录
     inbound_actual_logs = ContainerItem.objects.filter(product=product,container__is_updateInventory=True).select_related('container')
