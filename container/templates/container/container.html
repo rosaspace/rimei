@@ -1,6 +1,5 @@
 {% extends "container/base.html" %}
 {% block content %}
-
    
     <div class="mb-3">
         <a href="{% url 'add_container_view' %}" class="btn btn-primary">
@@ -16,6 +15,7 @@
                     <th>Container#</th>
                     <th>Customer</th>
                     <th>Logistics</th>
+                    <th>Carrier</th>
                     <th>PU#</th>
                     <th>PLTS</th>
                     <th>RailwayDate</th>
@@ -34,6 +34,7 @@
                     </td>
                     <td>{{ container.customer.name }}</td>
                     <td>{{ container.logistics.name }}</td>
+                    <td>{{ container.Carrier.name }}</td>
                     <td>{{ container.pickup_number }}</td>
                     <td>{{ container.plts }}</td>
                     <td>{{ container.railway_date |date:"m/d/Y" }}</td>

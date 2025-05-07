@@ -22,6 +22,7 @@
                     <th>PickupNumber</th>
                     <th>Invoice#</th>
                     <th>PDFName</th>
+                    <th>Pay</th>
                 </tr>
             </thead>
             <tbody>
@@ -43,6 +44,13 @@
                     <td>{{ container.pickup_number }}</td>
                     <td>{{ container.invoice_id }}</td>
                     <td>{{ container.invoice_pdfname }}</td>
+                    <td class="text-center">
+                        {% if container.ispay %}
+                        <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
+                        {% else %}
+                        <i class="far fa-circle text-muted"></i>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

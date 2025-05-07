@@ -8,9 +8,9 @@ from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation
 
 class ContainerAdmin(admin.ModelAdmin):
     list_display = ('container_id', 'plts','railway_date', 'pickup_date', 'delivery_date','empty_date',
-                    'pickup_number','customer','logistics','is_updateInventory','created_user','inboundCategory')
+                    'pickup_number','customer','logistics','is_updateInventory','created_user','inboundCategory','Carrier')
     fields = ('container_id', 'plts','railway_date', 'pickup_date', 'delivery_date','empty_date',
-              'pickup_number','customer','logistics','is_updateInventory','created_user','inboundCategory')
+              'pickup_number','customer','logistics','is_updateInventory','created_user','inboundCategory','Carrier')
     ordering = ['delivery_date']
 
 class RMOrderAdmin(admin.ModelAdmin):

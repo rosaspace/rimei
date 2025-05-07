@@ -199,6 +199,7 @@ class LogisticsCompany(models.Model):
 
 class Carrier(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 公司名称
+    address = models.CharField(max_length=255, default='1285 101st St\nLemont IL 60439')
 
     def __str__(self):
         return self.name
@@ -249,6 +250,10 @@ class Container(models.Model):
     inboundCategory = models.ForeignKey(InboundCategory, on_delete=models.CASCADE,default=get_default_inbound_category)
     lot = models.CharField(max_length=255, blank=True, default="")
     railwayStation = models.ForeignKey(RailwayStation, on_delete=models.CASCADE,default=get_default_railstation_category)
+    refnumber = models.CharField(max_length=255, blank=True, default="")
+    mbl = models.CharField(max_length=255, blank=True, default="")
+    Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE, default=1)
+    ispay = models.BooleanField(default=False) # 是否付款
     
     class Meta:
         ordering = ['delivery_date']  # 默认按 delivery_date 升序排序
@@ -272,6 +277,7 @@ class AlineOrderRecord(models.Model):
     due_date = models.DateField(blank=True, null=True)  # 截止日期
     pdf_name = models.CharField(max_length=255)  # 文档名称
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    ispay = models.BooleanField(default=False) # 是否付款
 
     def __str__(self):
         return f"{self.order_number} - {self.po_number} - {self.price}"

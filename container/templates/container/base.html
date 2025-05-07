@@ -156,6 +156,8 @@
             {% if 'Payment' in user_permissions %}
             <!-- <span class="divider">|</span>    
             <a class="nav-link {% if request.resolver_match.url_name == 'payment' %}active{% endif %}" href="{% url 'payment' %}">Payment</a> -->
+            <span class="divider">|</span>    
+            <a class="nav-link {% if request.resolver_match.url_name == 'aline_payment' %}active{% endif %}" href="{% url 'aline_payment' %}">Aline Payment</a>
             {% endif %}            
             {% if 'WeekRecord' in user_permissions %}
             <span class="divider">|</span>    

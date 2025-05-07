@@ -3,11 +3,9 @@
 
 {% block content %}
 <div class="mb-3">
-    <div class="input-group">
-        <a href="{% url 'add_order' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add Order
-        </a>
-    </div>
+    <a href="{% url 'add_order' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Order</a>
+    <a href="{% url 'pickup_tomorrow' %}" class="btn btn-primary">PICKUP LIST Tomorrow</a>
+    <a href="{% url 'pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
 </div>
 
 <!-- 订单列表 -->

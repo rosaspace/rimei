@@ -12,7 +12,7 @@ from ..models import RMOrder,Container,RMInventory,RMProduct,ContainerItem,Order
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
 import textwrap
 from io import BytesIO
@@ -45,7 +45,7 @@ LINE_SPACING = 40
 DRAW_BORDERS = False  # Set to True to draw borders, False to hide them
 
 # 一行的文字长度
-max_line_width = 90  # 根据页面宽度大致估算字符数
+max_line_width = 110  # 根据页面宽度大致估算字符数
 
 LABEL_FOLDER = "label"
 os.makedirs(LABEL_FOLDER, exist_ok=True)
@@ -479,7 +479,8 @@ def print_bol(request, so_num):
         total_plts += plts  # 累加托盘总数
         order_details.append({
             "Size": item.product.size if hasattr(item.product, 'size') else "N/A",
-            "Name": item.product.shortname,
+            "ShortName": item.product.shortname,
+            "Name": item.product.name,
             "Qty": str(item.quantity),
             "PLTS": str(plts)
         })
@@ -491,16 +492,19 @@ def print_bol(request, so_num):
         "Bill To": order.bill_to,
         "SO Number": order.so_num,
         "PO Number": order.po_num,
-        "Date": datetime.now().strftime("%m/%d/%Y"),
+        "Ship Date": order.pickup_date.strftime("%m/%d/%Y"),
         "Total LBS": str(total_plts * 1250),
         "Total Pallets": str(total_plts),
     }
 
     # 注意事项
-    note_lines = [
-                "NOTE: Liability Limitation for loss or damage in this shipment may be applicable. See 49 U.S.C. - 14706(c)(1)(A) and (B).",
-                # "RECEIVED, subject to applicable written contracts or standard carrier rates and rules available upon request. The goods, in apparent good order except as noted, are consigned and destined as shown. The carrier agrees to transport or forward them to the destination. All services are subject to the bill of lading terms and conditions in effect on the shipment date, which the shipper acknowledges and accepts.",
-            ]
+    # 添加附加说明
+    certification_notes = [
+        "NOTE: Liability Limitation for loss or damage in this shipment may be applicable. See 49 U.S.C. - 14706(c)(1)(A) and (B).",
+        "Checker: All pallets are in good condition, with no visible damage.",
+        "Shipper: Materials are properly classified, packaged, and labeled per DOT regulations, and in good condition for transport.",
+        "Carrier: Receipt of goods and placards; emergency info provided or accessible. Goods received in apparent good order unless noted.",
+    ]
 
     # 保存路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, CHECKLIST_FOLDER)
@@ -508,7 +512,7 @@ def print_bol(request, so_num):
     title = f"Order - {container_info['SO Number']}"
     contentTitle =  f"Bill Of Lading - {order.so_num}"
 
-    print_checklist_template(title,filename, contentTitle, container_info, order_details, note_lines, True)
+    print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes)
 
     # 返回 PDF 响应
     with open(filename, 'rb') as pdf_file:
@@ -698,6 +702,127 @@ def print_container_detail(request, container_num):
         response = HttpResponse(pdf_file.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
         return response
+
+def print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes):
+    # 创建 PDF 文件
+    c = canvas.Canvas(filename, pagesize=letter)
+    c.setTitle(title)
+    width, height = letter
+
+    # 设置标题居中
+    c.setFont("Helvetica-Bold", 16)
+    title = contentTitle
+    c.drawCentredString(width / 2, height - 80, title)
+
+    # 内容起始位置
+    x_label = 60         # 标签起始 x
+    line_length = 210    # 下划线长度
+    y = height - 120     # 初始 y 坐标
+    line_spacing = 30
+    x_sub_table = 100   #子表起始点
+
+    # 设置正文字体
+    c.setFont("Helvetica", 12)
+
+    regular_font = "Helvetica"
+    bold_font = "Helvetica-Bold"
+    font_size = 10
+    left_margin = 0.8 * inch
+    line_height = 18
+
+    def draw_text(x, y, text, font=regular_font, size=font_size):
+        c.setFont(font, size)
+        c.drawString(x, y, text)
+
+    part1_Y = y
+    items_Y = 0
+    for key, value in container_info.items():
+        # 左上角多行地址
+        if key in ["Ship To", "Bill To", "Ship From"] and isinstance(value, str):
+            draw_text(x_label, y, f"{key}:")
+            address_lines = value.splitlines()
+            for i, line in enumerate(address_lines):
+                draw_text(x_label + 60, y, line)
+                if i == len(address_lines) - 1:
+                    # c.line(x_label + 60, y - 2, x_label + line_length, y - 2)  # 只画最后一行的下划线
+                    y -= 18
+                    items_Y = y
+                else:
+                    y -= 14  # 多行地址行间距
+        else:
+            # 右上角信息
+            right_x = width - 280
+            draw_text(right_x, part1_Y, f"{key}:")            
+            draw_text(right_x + 80, part1_Y, str(value))
+            # c.line(right_x + 60, part1_Y - 2, right_x + line_length, part1_Y - 2)
+            part1_Y -= line_spacing
+
+    # 产品条目表头
+    y = items_Y - line_height
+
+    # 添加表头上方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y + line_height -2, width - left_margin, y + line_height -2)
+
+    table_headers = ["Size", "ShortName", "Name", "Qty", "PLTS"]
+    col_widths = [40, 60, 320, 50, 60]
+    x = left_margin
+    for header, w in zip(table_headers, col_widths):
+        draw_text(x, y, header, bold_font)
+        x += w
+
+    # 添加表头下方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y - 4, width - left_margin, y - 4)
+    
+    # 产品条目
+    y -= line_height 
+    for item in order_details:
+        row_values = [
+            item['Size'],
+            item['ShortName'],
+            item['Name'],
+            item['Qty'],
+            item['PLTS'],
+        ]
+        x = left_margin  # 每行开始时重置 x 坐标
+        for value, w in zip(row_values, col_widths):
+            draw_text(x, y, str(value))
+            x += w
+        y -= line_height  # 向下移一行
+
+    # 添加数据行下方横线
+    y += line_height
+    c.setLineWidth(1)
+    c.line(left_margin, y - 4, width - left_margin, y - 4)
+
+    # 提示信息
+    y -= line_height * 2
+    for note in certification_notes:
+        wrapped_lines = textwrap.wrap(note, width=max_line_width)
+        for line in wrapped_lines:
+            draw_text(x_label, y, line)
+            y -= 16
+        y -= 6  # 每段间距
+
+    # 添加签名和日期区域
+    y -= line_height  # 签名上方稍作间隔
+    signature_labels = ["Checker", "Shipper","Carrier"]
+    signature_spacing = 160  # 每组签名之间的水平间距
+    signature_y = y     # 签名区开始的 Y 坐标
+    signature_x_start = x_label
+
+    c.setFont("Helvetica", 12)
+    for i, label in enumerate(signature_labels):
+        x_pos = signature_x_start + i * signature_spacing
+        c.drawString(x_pos, signature_y, f"{label}:")
+        c.line(x_pos + 60, signature_y, x_pos + 150, signature_y)  # 签名字下划线
+
+        c.drawString(x_pos, signature_y - 30, "Date:")
+        c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
+
+    # 保存 PDF
+    c.save()
 
 def print_checklist_template(title,filename, contentTitle, container_info,can_liner_details, note_lines, issign = False):
   
@@ -990,15 +1115,11 @@ def print_container_delivery_order(request, container_num):
 
         "pickup_location": f"{container.railwayStation.name}\n{container.railwayStation.address}".replace("\\n", "\n").replace("\r\n", "\n"),
         "pickup_date": "Pending",                   # 提货日期
-        "delivery_location": (
-            "SECURE SOURCE AMERICA LLC\n"             # 送货地点（可以多行）
-            "1285 101st St\n"
-            "Lemont IL 60439"
-        ),
+        "delivery_location": f"{container.Carrier.name}\n{container.Carrier.address}".replace("\\n", "\n").replace("\r\n", "\n"),
         "delivery_date": "Pending",                 # 送货日期
 
-        "ref_no": "TKI25-OI067807",                 # 参考编号
-        "mbl": "HLCUNG12503USPF7"                   # 提单号
+        "ref_no": container.refnumber,                 # 参考编号
+        "mbl": container.mbl                   # 提单号
     }
 
     # PDF 路径设置
@@ -1010,7 +1131,7 @@ def print_container_delivery_order(request, container_num):
     width, height = letter
 
     # 插入 logo
-    logo_width, logo_height = 130, 130  
+    logo_width, logo_height = 80, 80  
     logo_x = 0.5 * inch  # left_margin
     logo_y = height - logo_height - 40  # 顶部边距 10
     c.drawImage(ImageReader(SSA_LOGO_PATH), logo_x, logo_y, width=logo_width, height=logo_height)
@@ -1019,6 +1140,7 @@ def print_container_delivery_order(request, container_num):
     left_margin = 0.5 * inch
     line_height = 18
     font_size = 10
+    font_size_small = 8
     bold_font = "Helvetica-Bold"
     regular_font = "Helvetica"
 
@@ -1030,10 +1152,10 @@ def print_container_delivery_order(request, container_num):
 
     # 标题
     c.setFont("Helvetica-Bold", 18)
-    c.drawCentredString(width / 2 + 20, y, "DELIVERY ORDER")
+    c.drawCentredString(width / 2 , y, "DELIVERY ORDER")
 
     # US Headquarter
-    y = height - 190
+    y = height - 140
     draw_text(left_margin, y, "US Headquarter:", bold_font)
     draw_text(left_margin + 120, y, "1285 101st Street")
     y -= line_height
@@ -1041,7 +1163,7 @@ def print_container_delivery_order(request, container_num):
 
     # 右上角信息
     right_x = width - 240
-    y = height - 190
+    y += line_height
     draw_text(right_x, y, f"DATE: {datetime.now().strftime('%m/%d/%Y')}")
     y -= line_height
     draw_text(right_x, y, f"REF. NO: {containerInfo['ref_no']}")
@@ -1076,7 +1198,7 @@ def print_container_delivery_order(request, container_num):
 
     # 提示
     y -= 20
-    c.setFont(regular_font, font_size)
+    c.setFont(regular_font, font_size_small)
     c.drawString(left_margin + 120, y, "FOR DELIVERY AND APPOINTMENT INSTRUCTIONS, CONTACT TEL:+1 630-909-9888")
     y -= line_height
     c.drawString(left_margin + 120, y, "BEFORE ATTEMPTING PICK-UP OR DELIVERY OF CARGO")
@@ -1089,7 +1211,7 @@ def print_container_delivery_order(request, container_num):
     c.line(left_margin, y + line_height -2, width - left_margin, y + line_height -2)
 
     table_headers = ["Container#", "Container Size/Type", "Weight", "Seal#", "Remarks"]
-    col_widths = [150, 150, 100, 100, 100]
+    col_widths = [120, 150, 100, 100, 100]
     x = left_margin
     for header, w in zip(table_headers, col_widths):
         draw_text(x, y, header, bold_font)
@@ -1119,15 +1241,16 @@ def print_container_delivery_order(request, container_num):
 
     # Footer
     y -= 20
-    draw_text(left_margin + 120, y, f"Total Containers: 1")
+    c.setFont(regular_font, font_size_small)
+    c.drawString(left_margin + 120, y, f"Total Containers: 1")
     y -= line_height
-    draw_text(left_margin + 120, y, f"Commodity: {containerInfo['commodity']}")
+    c.drawString(left_margin + 120, y, f"Commodity: {containerInfo['commodity']}")
     y -= line_height
-    draw_text(left_margin + 120, y, f"Vessel: {containerInfo['vessel']}")
+    c.drawString(left_margin + 120, y, f"Vessel: {containerInfo['vessel']}")
     y -= line_height
-    draw_text(left_margin + 120, y, f"Voyage: {containerInfo['voyage']}")
+    c.drawString(left_margin + 120, y, f"Voyage: {containerInfo['voyage']}")
     y -= line_height
-    draw_text(left_margin + 120, y, f"SSL: {containerInfo['ssl']}")
+    c.drawString(left_margin + 120, y, f"SSL: {containerInfo['ssl']}")
 
     # 签名区
     y -= 60
@@ -1144,3 +1267,70 @@ def print_container_delivery_order(request, container_num):
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
         return response
     
+# pick up list
+def pickup_tomorrow(request):
+    # 获取今天或明天
+    target_date = datetime.today()
+    target_date += timedelta(days=1)
+    response = print_pickuplist(target_date)
+    return response
+
+def pickup_today(request):
+    # 获取今天或明天
+    target_date = datetime.today()
+    response = print_pickuplist(target_date)
+    return response
+
+def print_pickuplist(target_date):
+    # 格式化日期文本：TUESDAY 04/10
+    weekday_str = target_date.strftime('%A').upper()
+    date_str = target_date.strftime('%m/%d')
+
+    # 查询 RMOrder 表中的 Pickup No.
+    pickup_orders = RMOrder.objects.filter(pickup_date=target_date.date()).exclude(customer_name="4")
+    pickup_numbers = [str(order.so_num) for order in pickup_orders]
+
+    # 如果没有数据，显示占位
+    if not pickup_numbers:
+        pickup_numbers = ["N/A"]
+    if target_date.weekday() == 0:  # Monday
+        pickup_numbers.append("Office Depot")
+
+    # 生成 PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="pickup_report.pdf"'
+
+    c = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+    left_margin = 1 * inch
+    y = height - 2 * inch
+
+    # 日期行样式
+    c.setFont("Helvetica-Bold", 48)
+    # 日期文字
+    date_text = f"{weekday_str}   {date_str}"
+    c.drawString(left_margin, y, date_text)
+
+    # 计算文字宽度以便画下划线
+    text_width = c.stringWidth(date_text, "Helvetica-Bold", 48)
+    underline_y = y - 5  # 稍微低一点以贴近文字底部
+
+    # 画下划线
+    c.setLineWidth(3)
+    c.line(left_margin, underline_y, left_margin + text_width, underline_y)
+
+    # Pickup 标签
+    y -= 60
+    c.setFont("Helvetica", 30)
+    c.drawString(left_margin, y, "PICKUPS:")
+
+    # Pickup 编号列表
+    y -= 50
+    c.setFont("Helvetica", 30)
+    for num in pickup_numbers:
+        c.drawString(left_margin, y, num)
+        y -= 50
+
+    c.save()
+    return response
+

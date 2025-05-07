@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Container, RMOrder,RMCustomer,RMInventory
+from .models import Container, RMOrder,RMCustomer,RMInventory,AlineOrderRecord
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .models import UserAndPermission
@@ -27,6 +27,12 @@ def payment_view(request):
     template = "container/payment.html"  
     user_permissions = get_user_permissions(request.user)  
     return render(request, template,{'user_permissions': user_permissions})
+
+def aline_payment_view(request):
+    template = "container/payment_aline.html"  
+    alineOrders = AlineOrderRecord.objects.all().order_by('due_date')
+    user_permissions = get_user_permissions(request.user)  
+    return render(request, template,{'orders':alineOrders, 'user_permissions': user_permissions})
 
 def container_view(request):
     template = "container/container.html"

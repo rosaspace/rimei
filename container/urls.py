@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 from . import views
-from .pyviews import container, invoice, rmorder, inventory,pdfprocess,weekrecord
+from .pyviews import container, invoice, rmorder, inventory,pdfprocess,weekrecord,payment
 from .pyviews import user, login
 
 urlpatterns = [
@@ -10,7 +10,8 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("index/", views.index, name="index"),    
     path("invoice/", views.invoice_view, name="invoice"),
-    path("payment/", views.payment_view, name="payment"),    
+    path("payment/", views.payment_view, name="payment"),
+    path("aline_payment/", views.aline_payment_view, name="aline_payment"),    
     path("inventory/", rmorder.inventory_view, name="inventory"),
     path("inventory_diff/", rmorder.inventory_diff_view, name="inventory_diff"),
     path("export_stock/", rmorder.export_stock, name="export_stock"),    
@@ -40,6 +41,9 @@ urlpatterns = [
     path('add_invoice/', invoice.add_invoice, name='add_invoice'),
     path('add_invoice_view/', invoice.add_invoice_view, name='add_invoice_view'),
     path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
+
+    # Payment
+    path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
 
     # user
     path('add_user/', user.add_user_view, name='add_user'),
@@ -74,6 +78,9 @@ urlpatterns = [
     path('print_container_label/<str:container_num>/', pdfprocess.print_container_label, name='print_container_label'),
     path('print_container_color_label/<str:container_num>/', pdfprocess.print_container_color_label, name='print_container_color_label'),
     path('print_container_delivery_order/<str:container_num>/', pdfprocess.print_container_delivery_order, name='print_container_delivery_order'),
+    
+    path('pickup_tomorrow/', pdfprocess.pickup_tomorrow, name='pickup_tomorrow'),
+    path('pickup_today/', pdfprocess.pickup_today, name='pickup_today'),
     
 
     # 打卡记录

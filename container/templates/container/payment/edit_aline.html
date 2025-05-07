@@ -1,0 +1,61 @@
+{% extends "container/base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- 左侧：标题和返回按钮 -->
+        <div class="d-flex align-items-center">
+            <h4>Edit Aline Payment</h4>
+        </div>
+        <div class="ml-auto">
+            <a href="{% url 'aline_payment' %}" class="btn btn-secondary">Back</a>
+        </div>
+    </div>
+
+    <div class="container-form">
+        <form id="edit-container-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_aline' order.order_number %}">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Order ID</label>
+                    <div class="container-id-display">{{ order.order_number }}</div>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">PO Number</label>
+                    <div class="container-id-display">{{ order.po_number }}</div>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label for="pickup-number" class="form-label">Invoice Date</label>
+                    <div class="container-id-display">{{ order.invoice_date }}</div>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label for="lot_number" class="form-label">Due Date</label>
+                    <div class="container-id-display">{{ order.due_date }}</div>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label for="lot_number" class="form-label">PDF Name</label>
+                    <div class="container-id-display">{{ order.pdf_name }}</div>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label for="lot_number" class="form-label">Price</label>
+                    <div class="container-id-display">{{ order.price }}</div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="is_pay" name="is_pay"
+                            {% if order.ispay %} checked {% endif %}>
+                        <label class="form-check-label" for="is_pay">Is Pay</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3">                           
+                <button type="submit" class="btn btn-primary">
+                    Save
+                </button>                     
+            </div>   
+        </form>
+    </div>
+</div>
+
+{% endblock %}

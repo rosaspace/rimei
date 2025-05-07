@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 
-from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory,RailwayStation
+from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory,RailwayStation,Carrier
 from django.utils import timezone
 from datetime import datetime
 import json
@@ -96,6 +96,7 @@ def edit_container(request, container_id):
         logistics = LogisticsCompany.objects.all()
         inboundCategory = InboundCategory.objects.all()
         railstation = RailwayStation.objects.all()
+        carrier = Carrier.objects.all()
 
         # 显示编辑页面
         return render(request, 'container/containerManager/edit_container.html', {
@@ -105,6 +106,7 @@ def edit_container(request, container_id):
             'logistics': logistics,
             'inboundCategory':inboundCategory,
             'railstation':railstation,
+            'carrier':carrier,
             "container_items":container_items})
         
     elif request.method == 'POST':
@@ -112,6 +114,8 @@ def edit_container(request, container_id):
             # 更新基本字段
             container.pickup_number = request.POST.get('pickup_number', container.pickup_number)
             container.lot = request.POST.get('lot_number', container.lot)
+            container.refnumber = request.POST.get('ref_number', container.refnumber)
+            container.mbl = request.POST.get('mbl', container.mbl)
             print(f"pickup_number: {container.pickup_number}")
 
             # 更新 PLTS 字段
@@ -120,10 +124,12 @@ def edit_container(request, container_id):
                 container.plts = int(plts_value)  # 将 PLTS 转换为整数并保存
                 print(f"PLTS updated to: {container.plts}")
 
+            print("---:",request.POST.get('carrier_name'))
             container.customer = InvoiceCustomer.objects.get(id=request.POST.get('customer_name'))
             container.logistics = LogisticsCompany.objects.get(id=request.POST.get('logistics_name'))
             container.inboundCategory= InboundCategory.objects.get(id=request.POST.get('inbound_category'))
             container.railwayStation= RailwayStation.objects.get(id=request.POST.get('station_name'))
+            container.Carrier = Carrier.objects.get(id=request.POST.get('carrier_name'))
             
             # 更新日期字段
             date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']
