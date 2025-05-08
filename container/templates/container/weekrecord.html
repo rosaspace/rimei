@@ -37,6 +37,7 @@
             <th>Hours</th>
             <th>hour/day</th>
             <th>Rate/week</th>
+            <th>BelongTo</th>
         </tr>
     </thead>
     <tbody>
@@ -50,6 +51,7 @@
             <td>{{ employee_record.total_hours }}</td>
             <td>{{ employee_record.average_hours }}</td>
             <td>{{ employee_record.attendance_rate }}%</td>
+            <td>{{ employee_record.belongTo }}</td>
         </tr>
     {% endfor %}
     </tbody>

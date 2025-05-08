@@ -305,8 +305,7 @@
             fetch(`/receivedin_inventory/${containerID}/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
+                    'X-CSRFToken': '{{ csrf_token }}'
                 }
             })
             .then(response => response.json())
@@ -315,7 +314,7 @@
                     const is_updateInventory = data.is_updateInventory;
 
                     // 更新按钮文字
-                    cancelBtn.textContent = is_updateInventory ? 'Restore Inventory' : 'Received in';
+                    receivedInBtn.textContent = is_updateInventory ? 'Restore Inventory' : 'Received in';
 
                     // 跳转到订单列表页面
                     window.location.href = data.redirect_url;

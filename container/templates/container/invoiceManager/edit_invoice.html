@@ -64,13 +64,23 @@
 
     <!-- Functionality Section -->
     <div>
-        <form id="invoice-form" enctype="multipart/form-data" class="border p-3 rounded mb-4">
+        <form method="POST" enctype="multipart/form-data" action="{% url 'edit_invoice' container.container_id %}" class="border p-3 rounded mb-4">
+            {% csrf_token %}
             <div class="mb-3">
                 <label for="invoice-file" class="form-label">Upload Invoice PDF</label>
                 <input type="file" id="invoice-file" name="invoice_file" accept="application/pdf" required>
             </div>
-            <button type="submit" class="btn btn-primary">{% if container_id %}Update Invoice{% else %}Upload Invoice{% endif %}</button>
-            
+        
+            {% if extracted_price %}
+                <div class="mb-3">
+                    <label class="form-label">Extracted Price</label>
+                    <input type="text" name="invoice_price" value="{{ extracted_price }}" class="form-control" readonly>
+                </div>
+            {% endif %}
+        
+            <button type="submit" class="btn btn-primary">
+                {% if container_id %}Update Invoice{% else %}Upload Invoice{% endif %}
+            </button>
         </form>
     </div>
 

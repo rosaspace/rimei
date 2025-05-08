@@ -3,12 +3,11 @@ import os
 from django.http import JsonResponse
 from django.core.files.storage import default_storage
 import fitz  # PyMuPDF 解析 PDF
-from django.shortcuts import render
 import re
 from ..models import RMCustomer
 from datetime import datetime,date
-from django.shortcuts import get_object_or_404
 from ..models import RMOrder,Container,RMInventory,RMProduct,ContainerItem,OrderItem
+from .pdfextract import extract_invoice_data
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -18,6 +17,9 @@ import textwrap
 from io import BytesIO
 from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
+from django.db.models import Q
+from django.shortcuts import render, redirect, get_object_or_404
+from decimal import Decimal
 
 UPLOAD_DIR = "uploads/"
 UPLOAD_DIR_order = "orders/"
@@ -948,7 +950,7 @@ def print_checklist_template(title,filename, contentTitle, container_info,can_li
     # 保存 PDF
     c.save()
 
-
+# Temp
 def print_label_only(request):
     print("----------print_label_only----------")
     so_num = request.POST.get('so_number')
@@ -1106,7 +1108,7 @@ def print_container_delivery_order(request, container_num):
     containerInfo = {
         "container_id": container.container_id,              # 集装箱编号
         "size_type": "40HQ",                        # 集装箱尺寸/类型
-        "weight": "41535LBS",                       # 重量
+        "weight": "56658.80LBS",                       # 重量
         "seal_number": "",                # 封条号
         "commodity": "Plastic Bag",                 # 商品描述
         "vessel": "",               # 船名
@@ -1275,6 +1277,12 @@ def pickup_tomorrow(request):
     response = print_pickuplist(target_date)
     return response
 
+def pickup_third(request):
+    target_date = datetime.today()
+    target_date += timedelta(days=2)
+    response = print_pickuplist(target_date)
+    return response
+
 def pickup_today(request):
     # 获取今天或明天
     target_date = datetime.today()
@@ -1287,7 +1295,7 @@ def print_pickuplist(target_date):
     date_str = target_date.strftime('%m/%d')
 
     # 查询 RMOrder 表中的 Pickup No.
-    pickup_orders = RMOrder.objects.filter(pickup_date=target_date.date()).exclude(customer_name="4")
+    pickup_orders = RMOrder.objects.filter(pickup_date=target_date.date()).exclude(Q(customer_name="4") | Q(is_canceled=True))
     pickup_numbers = [str(order.so_num) for order in pickup_orders]
 
     # 如果没有数据，显示占位
@@ -1334,3 +1342,59 @@ def print_pickuplist(target_date):
     c.save()
     return response
 
+# Invoice
+def edit_invoice(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+    extracted_price = None
+
+    if request.method == 'POST':
+        invoice_file = request.FILES.get('invoice_file')
+        is_pay = 'is_pay' in request.POST
+
+        if invoice_file:
+            container.invoice_pdfname = invoice_file.name
+            file_path = os.path.join('invoices', invoice_file.name)  # 假设保存在 MEDIA_ROOT/invoices/
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+
+            # 保存文件
+            with open(full_path, 'wb+') as destination:
+                for chunk in invoice_file.chunks():
+                    destination.write(chunk)
+
+            # 解析 PDF 内容
+            try:
+                text = extract_text_from_pdf(file_path)
+                data = extract_invoice_data(text)
+
+                # 更新模型字段
+                if data['invoice_id']:
+                    container.invoice_id = data['invoice_id']
+                if data['invoice_date']:
+                    container.invoice_date = data['invoice_date']
+                if data['due_date']:
+                    container.due_date = data['due_date']
+                if data['price']:
+                    container.price = Decimal(data['price'])
+            except Exception as e:
+                return render(request, 'container/invoiceManager/edit_invoice.html', {
+                    'container': container,
+                    'container_id': container_id,
+                    'error': f"解析失败：{e}"
+                })
+
+        container.ispay = is_pay
+        container.save()
+
+        if extracted_price:
+            return render(request, 'container/invoiceManager/edit_invoice.html', {
+                'container': container,
+                'container_id': container_id,
+                'extracted_price': extracted_price
+            })
+
+        return redirect('invoice')
+
+    return render(request, 'container/invoiceManager/edit_invoice.html', {
+        'container': container,
+        'container_id': container_id,
+    })

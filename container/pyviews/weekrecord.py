@@ -72,7 +72,8 @@ def week_record(request):
                 'period_end': selected_week_end,
                 'total_hours': employee_total_hours,
                 'average_hours': employee_avg_hours,
-                "attendance_rate":employee_attendance_rate
+                "attendance_rate":employee_attendance_rate,
+                'belongTo':employee.belongTo
             })
         else:
             employee_records.append({
@@ -82,8 +83,12 @@ def week_record(request):
                 'period_end': selected_week_end,
                 'total_hours': 0,
                 'average_hours': 0,
-                "attendance_rate":0
+                "attendance_rate":0,
+                'belongTo':employee.belongTo
             })
+
+    # ✅ 排序
+    employee_records = sorted(employee_records, key=lambda x: (x['belongTo'] or '').lower())
     
     return render(request, 'container/weekrecord.html', {
         'employee_records': employee_records,

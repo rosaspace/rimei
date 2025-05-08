@@ -19,7 +19,7 @@ def index(request):
 
 def invoice_view(request):
     template = "container/invoice.html"
-    containers = Container.objects.all().order_by('-delivery_date')
+    containers = Container.objects.all().order_by('-delivery_date').exclude(logistics=2)
     user_permissions = get_user_permissions(request.user)
     return render(request, template, {'containers': containers,'user_permissions': user_permissions})
 

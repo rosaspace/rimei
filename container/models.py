@@ -253,6 +253,9 @@ class Container(models.Model):
     refnumber = models.CharField(max_length=255, blank=True, default="")
     mbl = models.CharField(max_length=255, blank=True, default="")
     Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE, default=1)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    invoice_date = models.DateField(blank=True, null=True)  # 发票日期
+    due_date = models.DateField(blank=True, null=True)  # 截止日期
     ispay = models.BooleanField(default=False) # 是否付款
     
     class Meta:

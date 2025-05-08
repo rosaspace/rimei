@@ -194,3 +194,10 @@ def receivedin_inventory(request, container_id):
                     })
         except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})
+        
+def container_ispay(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+    container.ispay = not container.ispay
+    container.save()
+    next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
+    return redirect(next_url)

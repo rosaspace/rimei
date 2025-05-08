@@ -36,11 +36,12 @@ urlpatterns = [
     path('add_container_view/', container.add_container_view, name='add_container_view'),
     path("edit_container/<str:container_id>/", container.edit_container, name="edit_container"), 
     path("receivedin_inventory/<str:container_id>/", container.receivedin_inventory, name="receivedin_inventory"), 
+    path('container_ispay/<str:container_id>/', container.container_ispay, name='container_ispay'),     
 
     # Invoice    
     path('add_invoice/', invoice.add_invoice, name='add_invoice'),
     path('add_invoice_view/', invoice.add_invoice_view, name='add_invoice_view'),
-    path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
+    path("edit_invoice/<str:container_id>/", pdfprocess.edit_invoice, name="edit_invoice"),
 
     # Payment
     path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
@@ -81,7 +82,7 @@ urlpatterns = [
     
     path('pickup_tomorrow/', pdfprocess.pickup_tomorrow, name='pickup_tomorrow'),
     path('pickup_today/', pdfprocess.pickup_today, name='pickup_today'),
-    
+    path('pickup_third/', pdfprocess.pickup_third, name='pickup_third'),   
 
     # 打卡记录
     path('week_record/', weekrecord.week_record, name='week_record'),
