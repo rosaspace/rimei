@@ -201,3 +201,10 @@ def container_ispay(request, container_id):
     container.save()
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     return redirect(next_url)
+
+def container_customer_ispay(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+    container.customer_ispay = not container.customer_ispay
+    container.save()
+    next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
+    return redirect(next_url)

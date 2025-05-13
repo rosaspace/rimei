@@ -96,6 +96,18 @@
             {% csrf_token %}
             <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
             <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
+            <button type="submit" class="btn btn-primary" id="printLabel">
+                Print Label
+            </button>
+        </div>
+    </form>
+</div>
+<div class="mb-3">
+    <form action="/print_label_containerid_lot/" method="post" enctype="multipart/form-data">
+        <div class="input-group">
+            {% csrf_token %}
+            <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
+            <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
             <input type="text" name="containerid" id="containerid" class="form-control" placeholder="ContainerID" required>
             <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="Lot Number" required>
             <button type="submit" class="btn btn-primary" id="printLabel">

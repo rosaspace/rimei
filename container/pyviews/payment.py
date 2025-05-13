@@ -11,3 +11,11 @@ def edit_aline(request, order_number):
         alineOrder.save()
         
         return redirect('aline_payment')
+    
+def aline_ispay(request, order_number):
+    alineOrder = get_object_or_404(AlineOrderRecord, order_number=order_number)
+    alineOrder.ispay = not alineOrder.ispay
+    alineOrder.save()
+    
+    next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
+    return redirect(next_url)

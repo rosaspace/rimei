@@ -241,9 +241,7 @@ class Container(models.Model):
     pickup_date = models.DateField(blank=True, null=True)  # 提货日期
     delivery_date = models.DateField(blank=True, null=True)  # 交货日期
     empty_date = models.DateField(blank=True, null=True)  # 空箱日期
-    pickup_number = models.CharField(max_length=255, blank=True, null=True)  # 提货编号
-    invoice_id = models.CharField(max_length=255, blank=True, null=True)  # 发票ID
-    invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 发票PDF文件名
+    pickup_number = models.CharField(max_length=255, blank=True, null=True)  # 提货编号    
     customer = models.ForeignKey(InvoiceCustomer, on_delete=models.CASCADE, default=3)  # 关联到 InvoiceCustomer
     logistics = models.ForeignKey(LogisticsCompany, on_delete=models.CASCADE, default=1)  # 关联到 LogisticsCompany
     is_updateInventory = models.BooleanField(default=False) # 是否更新库存
@@ -253,10 +251,22 @@ class Container(models.Model):
     refnumber = models.CharField(max_length=255, blank=True, default="")
     mbl = models.CharField(max_length=255, blank=True, default="")
     Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE, default=1)
+
+    invoice_id = models.CharField(max_length=255, blank=True, null=True)  # 发票ID
+    invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 发票PDF文件名
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     invoice_date = models.DateField(blank=True, null=True)  # 发票日期
     due_date = models.DateField(blank=True, null=True)  # 截止日期
+    payment_date = models.DateField(blank=True, null=True)  # 付款日期
     ispay = models.BooleanField(default=False) # 是否付款
+
+    customer_invoiceId = models.CharField(max_length=255, blank=True, null=True)  # 发票ID
+    customer_invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 发票PDF文件名
+    customer_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    customer_invoice_date = models.DateField(blank=True, null=True)  # 发票日期
+    customer_due_date = models.DateField(blank=True, null=True)  # 截止日期
+    customer_payment_date = models.DateField(blank=True, null=True)  # 付款日期
+    customer_ispay = models.BooleanField(default=False) # 是否付款
     
     class Meta:
         ordering = ['delivery_date']  # 默认按 delivery_date 升序排序
@@ -280,6 +290,7 @@ class AlineOrderRecord(models.Model):
     due_date = models.DateField(blank=True, null=True)  # 截止日期
     pdf_name = models.CharField(max_length=255)  # 文档名称
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    payment_date = models.DateField(blank=True, null=True)  # 付款日期
     ispay = models.BooleanField(default=False) # 是否付款
 
     def __str__(self):

@@ -7,7 +7,7 @@ import re
 from ..models import RMCustomer
 from datetime import datetime,date
 from ..models import RMOrder,Container,RMInventory,RMProduct,ContainerItem,OrderItem
-from .pdfextract import extract_invoice_data
+from .pdfextract import extract_invoice_data, extract_customer_invoice_data
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -42,12 +42,14 @@ LABEL_WIDTH = (PAGE_WIDTH - MARGIN_LEFT * 2) / 2  # Two labels per row
 LABEL_HEIGHT = (PAGE_HEIGHT - MARGIN_TOP * 2) / 5  # Five rows per page
 
 FONT_SIZE = 60  # Larger font size
+# FONT_SIZE = 46  # Larger font size
+FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size
 LINE_SPACING = 40
 DRAW_BORDERS = False  # Set to True to draw borders, False to hide them
 
 # 一行的文字长度
-max_line_width = 110  # 根据页面宽度大致估算字符数
+max_line_width = 96  # 根据页面宽度大致估算字符数
 
 LABEL_FOLDER = "label"
 os.makedirs(LABEL_FOLDER, exist_ok=True)
@@ -767,7 +769,7 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     c.line(left_margin, y + line_height -2, width - left_margin, y + line_height -2)
 
     table_headers = ["Size", "ShortName", "Name", "Qty", "PLTS"]
-    col_widths = [40, 60, 320, 50, 60]
+    col_widths = [50, 80, 270, 60, 60]
     x = left_margin
     for header, w in zip(table_headers, col_widths):
         draw_text(x, y, header, bold_font)
@@ -1091,7 +1093,7 @@ def containerid_lot(c, so_num, label_count, container_id, lot_number, current_da
                     c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
 
                 # Add smaller text for container_id, lot_number, and current date below the label
-                c.setFont("Helvetica", FONT_SIZE -40)  # Smaller font size for the new text
+                c.setFont("Helvetica", FONT_SIZE_Lot)  # Smaller font size for the new text
                 text_y_small = text_y - 30  # Position for the smaller text below the main label
                 c.drawCentredString(text_x, text_y_small, f"{container_id}    {current_date}")
                 c.drawCentredString(text_x, text_y_small - 20, f"Lot: {lot_number}")
@@ -1108,7 +1110,7 @@ def print_container_delivery_order(request, container_num):
     containerInfo = {
         "container_id": container.container_id,              # 集装箱编号
         "size_type": "40HQ",                        # 集装箱尺寸/类型
-        "weight": "56658.80LBS",                       # 重量
+        "weight": "45855.68LBS",                       # 重量
         "seal_number": "",                # 封条号
         "commodity": "Plastic Bag",                 # 商品描述
         "vessel": "",               # 船名
@@ -1270,6 +1272,12 @@ def print_container_delivery_order(request, container_num):
         return response
     
 # pick up list
+def pickup_fourth(request):
+    target_date = datetime.today()
+    target_date += timedelta(days=3)
+    response = print_pickuplist(target_date)
+    return response
+
 def pickup_tomorrow(request):
     # 获取今天或明天
     target_date = datetime.today()
@@ -1345,9 +1353,13 @@ def print_pickuplist(target_date):
 # Invoice
 def edit_invoice(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
-    extracted_price = None
 
-    if request.method == 'POST':
+    if request.method == "GET":
+        return render(request, 'container/invoiceManager/edit_invoice.html', {
+            'container': container,
+        })
+
+    elif request.method == 'POST':
         invoice_file = request.FILES.get('invoice_file')
         is_pay = 'is_pay' in request.POST
 
@@ -1378,19 +1390,65 @@ def edit_invoice(request, container_id):
             except Exception as e:
                 return render(request, 'container/invoiceManager/edit_invoice.html', {
                     'container': container,
-                    'container_id': container_id,
                     'error': f"解析失败：{e}"
                 })
 
         container.ispay = is_pay
+        container.payment_date = request.POST.get('pay_date') or None
         container.save()
 
-        if extracted_price:
-            return render(request, 'container/invoiceManager/edit_invoice.html', {
-                'container': container,
-                'container_id': container_id,
-                'extracted_price': extracted_price
-            })
+        return render(request, 'container/invoiceManager/edit_invoice.html', {
+            'container': container,
+        })
+    
+
+def edit_customer_invoice(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+
+    if request.method == 'POST':
+        invoice_file = request.FILES.get('invoice_file')
+        is_pay = 'is_pay' in request.POST
+
+        if invoice_file:
+            container.customer_invoice_pdfname = invoice_file.name
+            file_path = os.path.join('invoices', invoice_file.name)  # 假设保存在 MEDIA_ROOT/invoices/
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+
+            # 保存文件
+            with open(full_path, 'wb+') as destination:
+                for chunk in invoice_file.chunks():
+                    destination.write(chunk)
+
+            # 解析 PDF 内容
+            try:
+                text = extract_text_from_pdf(file_path)
+                print("---:",text)
+                data = extract_customer_invoice_data(text)
+
+                # 更新模型字段
+                if data['invoice_id']:
+                    container.customer_invoiceId = data['invoice_id']
+                if data['invoice_date']:
+                    container.customer_invoice_date = data['invoice_date']
+                if data['due_date']:
+                    container.customer_due_date = data['due_date']
+                if data['price']:
+                    container.customer_price = Decimal(data['price'])
+                    print(container.customer_price)
+            except Exception as e:
+                return render(request, 'container/invoiceManager/edit_invoice.html', {
+                    'container': container,
+                    'container_id': container_id,
+                    'error': f"解析失败：{e}"
+                })
+
+        container.customer_ispay = is_pay
+        container.save()
+
+        return render(request, 'container/invoiceManager/edit_invoice.html', {
+            'container': container,
+            'container_id': container_id
+        })
 
         return redirect('invoice')
 
@@ -1398,3 +1456,4 @@ def edit_invoice(request, container_id):
         'container': container,
         'container_id': container_id,
     })
+ 

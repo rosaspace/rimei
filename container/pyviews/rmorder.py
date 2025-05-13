@@ -598,3 +598,10 @@ def export_inventory_to_excel(items):
     filename = f"Inventory_{today_str}.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+def order_is_allocated_to_stock(request, so_num):
+    order = get_object_or_404(RMOrder, so_num=so_num)
+    order.is_allocated_to_stock = not order.is_allocated_to_stock
+    order.save()
+    next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
+    return redirect(next_url)
