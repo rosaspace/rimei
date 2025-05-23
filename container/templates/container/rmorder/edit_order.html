@@ -5,22 +5,25 @@
 <div class="container mt-4">
     <h4 class="mb-4">Print Order</h4>
     <div class="row">
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printOrder">Original Order</a>
-        </div>
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printConvertedOrder">Converted Order</a>
-        </div>
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printLabel">Label</a>
-        </div>
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printBOL">BOL</a>
-        </div>  
-        <div class="col-md-2 mb-3">
-            <a href="{% url 'order_email' order.so_num %}?type=shippeout %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Send Shipped out
-            </a>
+        <div class="d-flex flex-wrap align-items-start">
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary" id="printOrder">Original Order</button>
+            </div>
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary" id="printConvertedOrder">Converted Order</button>
+            </div>
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary" id="printLabel">Label</button>
+            </div>
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary" id="printBOL">BOL</button>
+            </div>
+            <!-- Push this button to the right -->
+            <div class="ms-auto mb-2">
+                <a href="{% url 'order_email' order.so_num %}?type=shippeout" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Send Shipped out
+                </a>
+            </div>
         </div>
     </div>
 
@@ -74,10 +77,6 @@
         </div>
 
         <div class="row">
-            
-        </div>
-
-        <div class="row">
             <div class="col-md-6 mb-3">
                 <label for="bill_to" class="form-label required-label">Bill To:</label>
                 <textarea class="form-control" id="bill_to" name="bill_to" rows="4" required>{{ order.bill_to|default:'' }}</textarea>
@@ -110,10 +109,10 @@
             
             <div class="col-md-3 mb-3">
                 <label for="order_pdf" class="form-label">Order PDF</label>
+                <input type="file" class="form-control" id="order_pdf" name="order_pdf" accept="application/pdf">
                 {% if order.order_pdfname %}
                     <p class="text-muted">Current file: {{ order.order_pdfname }}</p>
                 {% endif %}
-                <input type="file" class="form-control" id="order_pdf" name="order_pdf" accept="application/pdf">
             </div>
         </div>
 
@@ -187,16 +186,16 @@
                                 <input type="number" class="form-control quantity-input" value="{{ item.quantity }}" min="1">
                             </td>
                             
-                            <td>
-                                <span>
-                                    {{ item.inventory_qty }}
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center">
+                                    <span>{{ item.inventory_qty }}</span>
                                     {% if item.quantity > item.inventory_qty %}
                                         <span class="text-danger ms-2">This order doesn't have enough inventory</span>
                                     {% endif %}
-                                </span>
+                                </div>
                             </td>
                             
-                            <td>
+                            <td class="align-middle">
                                 <button class="btn btn-danger btn-sm remove-row">Remove</button>
                             </td>
                         </tr>

@@ -3,11 +3,23 @@
 
 {% block content %}
 
-<div class="mb-3">
-    <a href="{% url 'add_week_records' %}" class="btn btn-primary">Add Weekly Records</a>
-    <a href="{% url 'export_week_records' %}?brand=CabinetsDepot" class="btn btn-primary">Export CabinetsDepot</a>
-    <a href="{% url 'export_week_records' %}?brand=Lowes" class="btn btn-primary">Export Lowes</a>
-    <a href="{% url 'export_week_records' %}?brand=Aline" class="btn btn-primary">Export Aline</a>
+<div class="mb-3 d-flex flex-wrap align-items-center w-100">
+    <!-- 左侧按钮 -->
+    <div class="me-2 mb-2">
+        <a href="{% url 'add_week_records' %}" class="btn btn-primary">Add Weekly Records</a>
+    </div>
+    <!-- 右侧按钮组 -->
+    <div class="d-flex flex-wrap gap-2 ms-auto">
+        <div class="mb-2">
+            <a href="{% url 'export_week_records' %}?brand=CabinetsDepot" class="btn btn-primary">Export CabinetsDepot</a>
+        </div>
+        <div class="mb-2">
+            <a href="{% url 'export_week_records' %}?brand=Lowes" class="btn btn-primary">Export Lowes</a>
+        </div>
+        <div class="mb-2">
+            <a href="{% url 'export_week_records' %}?brand=Aline" class="btn btn-primary">Export Aline</a>
+        </div>
+    </div>
 </div>
 
 <div class="mb-3">
@@ -15,15 +27,15 @@
         <div class="input-group">
             <select name="year" action="{% url 'week_record' %}" class="form-control">
                 {% for year in years %}
-                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}年</option>
+                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>Year {{ year }}</option>
                 {% endfor %}
             </select>
             <select name="week" class="form-control">
                 {% for week in weeks %}
-                    <option value="{{ week }}" {% if selected_week == week %}selected{% endif %}>第{{ week }}周</option>
+                    <option value="{{ week }}" {% if selected_week == week %}selected{% endif %}>Week {{ week }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn btn-primary">筛选</button>
+            <button type="submit" class="btn btn-primary">Select</button>
         </div>
     </form>
 </div>

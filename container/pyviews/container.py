@@ -15,7 +15,15 @@ def add_container_view(request):
     """显示添加Container的页面"""
     customers = InvoiceCustomer.objects.all()
     logistics = LogisticsCompany.objects.all()
-    return render(request, 'container/containerManager/add_container.html',{'customers': customers,'logistics':logistics})
+    inboundCategory = InboundCategory.objects.all()
+    railstation= RailwayStation.objects.all()
+    carrier = Carrier.objects.all()
+    return render(request, 'container/containerManager/add_container.html',{
+        'customers': customers,
+        'logistics':logistics,
+        'inboundCategory':inboundCategory,
+        'railstation':railstation,
+        'carrier':carrier,})
 
 # 新增Container
 def add_container(request):
@@ -38,11 +46,18 @@ def add_container(request):
             # 获取基本字段
             # container_id = request.POST.get('container_id')
             pickup_number = request.POST.get('pickup_number')
+            lot = request.POST.get('lot_number')
             plts_value = request.POST.get('plts')
+            refnumber = request.POST.get('ref_number')
+            mbl = request.POST.get('mbl')
+            weight = request.POST.get('weight')
             # customer_name = request.POST.get('customer_name')
             # logistics_name = request.POST.get('logistics_name')
             customer_name = InvoiceCustomer.objects.get(id=request.POST.get('customer_name'))
             logistics_name = LogisticsCompany.objects.get(id=request.POST.get('logistics_name'))
+            inbound_category = InboundCategory.objects.get(id=request.POST.get('inbound_category'))
+            station_name = RailwayStation.objects.get(id=request.POST.get('station_name'))
+            carrier_name = Carrier.objects.get(id=request.POST.get('carrier_name'))
             print("plts_value: ",plts_value)
             print("customer_name: ",customer_name)
             print("logistics_name: ",logistics_name)
@@ -52,8 +67,15 @@ def add_container(request):
                 container_id=container_id,
                 pickup_number=pickup_number,
                 plts = plts_value,
+                lot = lot,
+                refnumber = refnumber,
+                mbl = mbl,
+                weight = weight,
+                inboundCategory= inbound_category,
                 customer = customer_name,
                 logistics = logistics_name,
+                railwayStation = station_name,
+                Carrier = carrier_name,
                 created_at=timezone.now(),
                 created_user=request.user,  # ✅ 保存创建人
             )

@@ -2,12 +2,29 @@
 {% load static %}
 
 {% block content %}
-<div class="mb-3">
-    <a href="{% url 'add_order' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Order</a>
-    <a href="{% url 'pickup_fourth' %}" class="btn btn-primary">PICKUP LIST Fourth</a>
-    <a href="{% url 'pickup_third' %}" class="btn btn-primary">PICKUP LIST Third</a>
-    <a href="{% url 'pickup_tomorrow' %}" class="btn btn-primary">PICKUP LIST Tomorrow</a>
-    <a href="{% url 'pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
+<div class="mb-3 d-flex flex-wrap align-items-center w-100">
+    <!-- 左侧按钮 -->
+    <div class="me-2 mb-2">
+        <a href="{% url 'add_order' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Order
+        </a>
+    </div>
+
+    <!-- 右侧按钮组 -->
+    <div class="d-flex flex-wrap gap-2 ms-auto">
+        <div class="mb-2">
+            <a href="{% url 'pickup_fourth' %}" class="btn btn-primary">PICKUP LIST Fourth</a>
+        </div>
+        <div class="mb-2">
+            <a href="{% url 'pickup_third' %}" class="btn btn-primary">PICKUP LIST Third</a>
+        </div>
+        <div class="mb-2">
+            <a href="{% url 'pickup_tomorrow' %}" class="btn btn-primary">PICKUP LIST Tomorrow</a>
+        </div>
+        <div class="mb-2">
+            <a href="{% url 'pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
+        </div>
+    </div>
 </div>
 
 <!-- 订单列表 -->

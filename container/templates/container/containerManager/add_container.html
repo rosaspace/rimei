@@ -1,22 +1,39 @@
 {% extends "container/base.html" %}
 {% block content %}
-<h2>🧾 Add Container</h2>
 
-<div class="container-form">
+
+<div class="container mt-4">
+    <h4>Add Container</h4>
+
     <form id="add-container-form">
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="container-id" class="form-label">Container ID*</label>
                 <input type="text" class="form-control" id="container-id" name="container_id" required>
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Container Type</label>
+                <select class="form-select" id="inbound_category" name="inbound_category" required>
+                    <option value="">Select Type...</option>
+                    {% for category in inboundCategory %}
+                    <option value="{{ category.id }}" {% if category.id == container.inboundCategory.id %}selected{% endif %}>
+                        {{ category }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
                 <label for="pickup-number" class="form-label">Pickup Number</label>
                 <input type="text" class="form-control" id="pickup-number" name="pickup_number">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="lot_number" class="form-label">Lot Number</label>
+                <input type="text" class="form-control" id="lot_number" name="lot_number" >
             </div>
         </div>
 
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="customer_name" class="form-label">Customer</label>
                 <select class="form-select" id="customer_name" name="customer_name" required>
                     <option value="">Select Customer...</option>
@@ -27,7 +44,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="pickup-logistics_name" class="form-label">Logistics</label>
                 <select class="form-select" id="logistics_name" name="logistics_name" required>
                     <option value="">Select Logistics...</option>
@@ -38,6 +55,28 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="col-md-3 mb-3">
+                <label for="station_name" class="form-label">Railway Station</label>
+                <select class="form-select" id="station_name" name="station_name" required>
+                    <option value="">Select Railway Station...</option>
+                    {% for customer in railstation %}
+                    <option value="{{ customer.id }}" {% if customer.id == container.railwayStation.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- <div class="col-md-3 mb-3">
+                <label for="carrier_name" class="form-label">Carrier</label>
+                <select class="form-select" id="carrier_name" name="carrier_name" required>
+                    <option value="">Select Carrier...</option>
+                    {% for customer in carrier %}
+                    <option value="{{ customer.id }}" {% if customer.id == container.Carrier.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div> -->
         </div>
         
         <div class="row">
@@ -63,11 +102,23 @@
             
         </div>
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-1 mb-3">
                 <label for="plts" class="form-label">PLTS</label>
                 <input type="number" class="form-control" id="plts" name="plts" value="{{ plts|default:'1' }}" min="1" required>
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-2 mb-3">
+                <label for="plts" class="form-label">Weight</label>
+                <input type="number" class="form-control" id="weight" name="weight" value="{{ plts|default:'1' }}" min="1" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="pickup-number" class="form-label">REF NO</label>
+                <input type="text" class="form-control" id="ref_number" name="ref_number" >
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="lot_number" class="form-label">MBL</label>
+                <input type="text" class="form-control" id="mbl" name="mbl" >
+            </div>
+            <div class="col-md-3 mb-3">
                 <label for="container-pdf" class="form-label">Container PDF</label>
                 <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
             </div>

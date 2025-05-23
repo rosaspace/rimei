@@ -4,36 +4,41 @@
 <div class="container mt-4">
     <h4 class="mb-4">Print Container</h4>
     <div class="row">
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printDetail">Print Detail</a>
+        <div class="d-flex flex-wrap align-items-start">
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary  w-100" id="printDetail">Print Detail</a>
+            </div>
+            <!-- <div class="me-2 mb-2">
+                <button class="btn btn-primary  w-100" id="printLabel">Print Label</a>
+            </div> -->
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary  w-100" id="printColorLabel">Print Color Label</a>
+            </div>
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary  w-100" id="printDeliveryOrder">Delivery Order</a>
+            </div>
+            <!-- 右侧按钮组，用 ms-auto 推到右边 -->
+            <div class="d-flex ms-auto gap-2 flex-wrap">
+                <div class="ms-auto mb-2">
+                    <a href="{% url 'container_email' container.container_id%}?type=do" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Send DO Email
+                    </a>
+                </div>
+                <div class="mb-2">
+                    <a href="{% url 'container_email' container.container_id%}?type=received" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Send Received In
+                    </a>
+                </div>
+                <div class="mb-2">
+                    <a href="{% url 'container_email' container.container_id%}?type=empty" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Send Empty
+                    </a>
+                </div>   
+            </div>
         </div>
-        <!-- <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printLabel">Print Label</a>
-        </div> -->
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printColorLabel">Print Color Label</a>
-        </div>
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printDeliveryOrder">Delivery Order</a>
-        </div>
-        <div class="col-md-2 mb-3">
-            <a href="{% url 'container_email' container.container_id%}?type=do" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Send DO Email
-            </a>
-        </div>
-        <div class="col-md-2 mb-3">
-            <a href="{% url 'container_email' container.container_id%}?type=received" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Send Received In
-            </a>
-        </div>
-        <div class="col-md-2 mb-3">
-            <a href="{% url 'container_email' container.container_id%}?type=empty" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Send Empty
-            </a>
-        </div>        
     </div>
 
-    <hr class="my-4 border-2 opacity-100">
+    <hr class="my-2 border-2 opacity-100">
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <!-- 左侧：标题和取消订单按钮 -->
@@ -128,36 +133,6 @@
             </div>
 
             <div class="row">
-                <div class="col-md-1 mb-3">
-                    <label for="plts" class="form-label">PLTS</label>
-                    <input type="number" class="form-control" id="plts" name="plts" 
-                        value="{{ container.plts }}" required>
-                </div>
-                <div class="col-md-2 mb-3">
-                    <label for="plts" class="form-label">Weight</label>
-                    <input type="number" class="form-control" id="weight" name="weight" min="1"
-                        value="{{ container.weight }}" required>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="pickup-number" class="form-label">REF NO</label>
-                    <input type="text" class="form-control" id="ref_number" name="ref_number" 
-                        value="{{ container.refnumber }}">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="lot_number" class="form-label">MBL</label>
-                    <input type="text" class="form-control" id="mbl" name="mbl" 
-                        value="{{ container.mbl }}">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="container-pdf" class="form-label">Container PDF</label>
-                    {% if container.container_pdfname %}
-                        <p class="text-muted">Current file: {{ container.container_pdfname }}</p>
-                    {% endif %}
-                    <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
-                </div>
-            </div>
-            
-            <div class="row">
                 <div class="col-md-3 mb-3">
                     <label for="railway-date" class="form-label">Railway Date</label>
                     <input type="date" class="form-control" id="railway-date" name="railway_date" 
@@ -181,7 +156,33 @@
             </div>
 
             <div class="row">
-                
+                <div class="col-md-1 mb-3">
+                    <label for="plts" class="form-label">PLTS</label>
+                    <input type="number" class="form-control" id="plts" name="plts" 
+                        value="{{ container.plts }}" required>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label for="plts" class="form-label">Weight</label>
+                    <input type="number" class="form-control" id="weight" name="weight" min="1"
+                        value="{{ container.weight }}" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="pickup-number" class="form-label">REF NO</label>
+                    <input type="text" class="form-control" id="ref_number" name="ref_number" 
+                        value="{{ container.refnumber }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="lot_number" class="form-label">MBL</label>
+                    <input type="text" class="form-control" id="mbl" name="mbl" 
+                        value="{{ container.mbl }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="container-pdf" class="form-label">Container PDF</label>
+                    <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+                    {% if container.container_pdfname %}
+                        <p class="text-muted">Current file: {{ container.container_pdfname }}</p>
+                    {% endif %}                    
+                </div>
             </div>
 
             <!-- 添加Container项目表格 -->
