@@ -7,15 +7,30 @@
         <div class="col-md-2 mb-3">
             <button class="btn btn-primary  w-100" id="printDetail">Print Detail</a>
         </div>
-        <div class="col-md-2 mb-3">
+        <!-- <div class="col-md-2 mb-3">
             <button class="btn btn-primary  w-100" id="printLabel">Print Label</a>
-        </div>
+        </div> -->
         <div class="col-md-2 mb-3">
             <button class="btn btn-primary  w-100" id="printColorLabel">Print Color Label</a>
         </div>
         <div class="col-md-2 mb-3">
             <button class="btn btn-primary  w-100" id="printDeliveryOrder">Delivery Order</a>
         </div>
+        <div class="col-md-2 mb-3">
+            <a href="{% url 'container_email' container.container_id%}?type=do" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send DO Email
+            </a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <a href="{% url 'container_email' container.container_id%}?type=received" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send Received In
+            </a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <a href="{% url 'container_email' container.container_id%}?type=empty" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send Empty
+            </a>
+        </div>        
     </div>
 
     <hr class="my-4 border-2 opacity-100">
@@ -113,10 +128,15 @@
             </div>
 
             <div class="row">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-1 mb-3">
                     <label for="plts" class="form-label">PLTS</label>
                     <input type="number" class="form-control" id="plts" name="plts" 
                         value="{{ container.plts }}" required>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label for="plts" class="form-label">Weight</label>
+                    <input type="number" class="form-control" id="weight" name="weight" min="1"
+                        value="{{ container.weight }}" required>
                 </div>
                 <div class="col-md-3 mb-3">
                     <label for="pickup-number" class="form-label">REF NO</label>
@@ -230,9 +250,9 @@
         });
 
         // 打印标签
-        document.getElementById('printLabel').addEventListener('click', function() {
-            window.open(`/print_container_label/${containerID}/`, '_blank');
-        });
+        // document.getElementById('printLabel').addEventListener('click', function() {
+        //     window.open(`/print_container_label/${containerID}/`, '_blank');
+        // });
 
         // 打印标签
         document.getElementById('printColorLabel').addEventListener('click', function() {

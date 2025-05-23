@@ -61,6 +61,14 @@ class InvoiceCustomer(models.Model):
     def __str__(self):
         return self.name
 
+class Employee(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 员工名称，唯一
+    belongTo = models.CharField(max_length=255, default="CabinetsDepot")
+
+    def __str__(self):
+        return self.name 
+
+
 class RMProduct(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 产品名称，唯一
     shortname = models.CharField(max_length=255, blank=True, null=True)  # 短名称，唯一
@@ -72,6 +80,7 @@ class RMProduct(models.Model):
     Location = models.CharField(max_length=255, blank=True, null=True, default='')
     ShelfRecord = models.CharField(max_length=255, blank=True, null=True, default='')
     description = models.TextField(blank=True, null=True)  # 客户描述
+    blongTo = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)  # 关联到 RMOrder
 
     def __str__(self):
         return self.name
@@ -184,12 +193,6 @@ class ClockRecord(models.Model):
 
         super().save(*args, **kwargs)
 
-class Employee(models.Model):
-    name = models.CharField(max_length=255, unique=True)  # 员工名称，唯一
-    belongTo = models.CharField(max_length=255, default="CabinetsDepot")
-
-    def __str__(self):
-        return self.name 
 
 class LogisticsCompany(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 物流公司名称，唯一
@@ -251,6 +254,7 @@ class Container(models.Model):
     refnumber = models.CharField(max_length=255, blank=True, default="")
     mbl = models.CharField(max_length=255, blank=True, default="")
     Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE, default=1)
+    weight = models.CharField(max_length=255, blank=True, default="")
 
     invoice_id = models.CharField(max_length=255, blank=True, null=True)  # 发票ID
     invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 发票PDF文件名

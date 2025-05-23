@@ -152,6 +152,8 @@
             {% if 'Invoice' in user_permissions %}
             <span class="divider">|</span>    
             <a class="nav-link {% if request.resolver_match.url_name == 'invoice' %}active{% endif %}" href="{% url 'invoice' %}">Invoice</a>
+            <span class="divider">|</span>    
+            <a class="nav-link {% if request.resolver_match.url_name == 'invoice_finished' %}active{% endif %}" href="{% url 'invoice_finished' %}">Invoice Finished</a>
             {% endif %}
 
             {% if 'Payment' in user_permissions %}

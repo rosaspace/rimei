@@ -7,6 +7,8 @@ from datetime import datetime
 import json
 from django.shortcuts import render, redirect
 from django.contrib import messages
+import os
+from django.conf import settings
 
 # 打开添加Container页面
 def add_container_view(request):
@@ -90,7 +92,7 @@ def edit_container(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
     
     if request.method == 'GET':
-        products = RMProduct.objects.all()
+        products = RMProduct.objects.all().order_by('name')
         container_items = ContainerItem.objects.filter(container=container)
         customers = InvoiceCustomer.objects.all()
         logistics = LogisticsCompany.objects.all()
@@ -116,6 +118,7 @@ def edit_container(request, container_id):
             container.lot = request.POST.get('lot_number', container.lot)
             container.refnumber = request.POST.get('ref_number', container.refnumber)
             container.mbl = request.POST.get('mbl', container.mbl)
+            container.weight = request.POST.get('weight', container.weight)
             print(f"pickup_number: {container.pickup_number}")
 
             # 更新 PLTS 字段
@@ -143,9 +146,17 @@ def edit_container(request, container_id):
 
             # 处理PDF文件
             if 'container_pdf' in request.FILES:
-                container.container_pdfname = request.FILES['container_pdf']                
+                container.container_pdfname = request.FILES['container_pdf']
+                filename = container.container_pdfname.name
                 # 打印 PDF 文件名
                 print(f"Uploaded PDF file name: {container.container_pdfname}")
+
+                file_path = os.path.join(settings.MEDIA_ROOT, "containers", "original", filename)
+
+               # 保存文件
+                with open(file_path, 'wb+') as destination:
+                    for chunk in container.container_pdfname.chunks():
+                        destination.write(chunk)
 
             container.save()
 
@@ -208,3 +219,38 @@ def container_customer_ispay(request, container_id):
     container.save()
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     return redirect(next_url)
+
+def container_email(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+    email_type = request.GET.get("type", "do")  # default to 'do' if not provided
+
+    template = "container/temporary.html"
+    recipient = "omarorders@omarllc.com;omarwarehouse@rimeius.com"
+    recipient_advance = "jovana@advance77.com;tijana@advance77.com;raluca@advance77.com;intermodal@advance77.com"
+    current_date = timezone.now().strftime("%m/%d/%Y")
+
+    if email_type == "do":
+        context = {
+            "recipient": recipient_advance,
+            "subject": f"New **  D/O **  {container.container_id} / OMAR- RIMEI",
+            "body": f"Hello,\n\nPlease see new DO for these containers going to Lemont.\n\nContainer: {container_id}\nMBL: {container.mbl}\n\nThank you!\nJing"
+        }
+    elif email_type == "received":
+        context = {
+            "recipient": recipient,
+            "subject": f"{container.container_id} RECEIVED IN Notification",
+            "body": f"Hello,\n\n{container_id} has been received in.\nPaperwork is attached.\n\nThank you!\nJing"
+        }
+    elif email_type == "empty":
+        context = {
+            "recipient": recipient_advance,
+            "subject": f"{container.container_id} Empty Container Notification",
+            "body": f"Hello,\n\nContainer {container_id} is now empty and ready for pickup.\n\nThank you!\nJing"
+        }
+    else:
+        context = {
+            "recipient": recipient,
+            "subject": f"Notification - {container.container_id}",
+            "body": f"Hello,\n\nThis is a notification regarding container {container_id}.\n\nThank you!\nJing"
+        }
+    return render(request, template, context)

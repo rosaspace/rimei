@@ -3,19 +3,17 @@ from django.views.generic import TemplateView
 
 from . import views
 from .pyviews import container, invoice, rmorder, inventory,pdfprocess,weekrecord,payment
-from .pyviews import user, login
+from .pyviews import user, login, inventory_count
 
 urlpatterns = [
     # main page
     path("", views.home, name="home"),
     path("index/", views.index, name="index"),    
     path("invoice/", views.invoice_view, name="invoice"),
+    path("invoice_finished/", views.invoice_finished, name="invoice_finished"),
+    
     path("payment/", views.payment_view, name="payment"),
     path("aline_payment/", views.aline_payment_view, name="aline_payment"),    
-    path("inventory/", rmorder.inventory_view, name="inventory"),
-    path("inventory_diff/", rmorder.inventory_diff_view, name="inventory_diff"),
-    path("export_stock/", rmorder.export_stock, name="export_stock"),    
-    path("order_history/<int:product_id>/", rmorder.order_history, name="order_history"),
     path("permission/", views.permission_view, name ="permission"),
     path("temporary/", views.temporary_view, name="temporary"),    
 
@@ -25,6 +23,12 @@ urlpatterns = [
     path("rimeiorder_finished/", views.rimeiorder_view_finished, name="rimeiorder_finished"),
     path("rimeiorder_officedepot/", views.rimeiorder_officedepot, name="rimeiorder_officedepot"),
     path("rimeiorder_cancel/", views.rimeiorder_cancel, name="rimeiorder_cancel"),    
+
+    # inventory count
+    path("inventory/", inventory_count.inventory_view, name="inventory"),
+    path("inventory_diff/", inventory_count.inventory_diff_view, name="inventory_diff"),
+    path("export_stock/", inventory_count.export_stock, name="export_stock"),    
+    path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),
 
     # login
     path('login/', login.login_view, name='login'),
@@ -37,7 +41,8 @@ urlpatterns = [
     path("edit_container/<str:container_id>/", container.edit_container, name="edit_container"), 
     path("receivedin_inventory/<str:container_id>/", container.receivedin_inventory, name="receivedin_inventory"), 
     path('container_ispay/<str:container_id>/', container.container_ispay, name='container_ispay'), 
-    path('container_customer_ispay/<str:container_id>/', container.container_customer_ispay, name='container_customer_ispay'),     
+    path('container_customer_ispay/<str:container_id>/', container.container_customer_ispay, name='container_customer_ispay'),
+    path('container_email/<str:container_id>/', container.container_email, name='container_email'),     
 
     # Invoice    
     path('add_invoice/', invoice.add_invoice, name='add_invoice'),
@@ -58,7 +63,8 @@ urlpatterns = [
     path('add_order/', rmorder.add_order, name='add_order'),
     path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
-    path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),      
+    path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
+    path('order_email/<str:so_num>/', rmorder.order_email, name='order_email'),
 
     # Temporary
     path("import_inventory/", rmorder.import_inventory, name="import_inventory"), 
@@ -78,8 +84,13 @@ urlpatterns = [
 
     path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),
     path('print_converted_order/<str:so_num>/', pdfprocess.print_converted_order, name='print_converted_order'),
-    path('print_label/<str:so_num>/', pdfprocess.print_label, name='print_label'),    
-    path('print_bol/<str:so_num>/', pdfprocess.print_bol, name='print_bol'),
+
+    
+    path('print_original_do/<str:container_id>/', pdfprocess.print_original_do, name='print_original_do'),
+    path('print_original_invoice/<str:container_id>/', pdfprocess.print_original_invoice, name='print_original_invoice'),
+    path('print_converted_invoice/<str:container_id>/', pdfprocess.print_converted_invoice, name='print_converted_invoice'),
+    path('print_order_label/<str:so_num>/', pdfprocess.print_order_label, name='print_order_label'),    
+    path('print_order_bol/<str:so_num>/', pdfprocess.print_order_bol, name='print_order_bol'),
 
     path('print_container_detail/<str:container_num>/', pdfprocess.print_container_detail, name='print_container_detail'),
     path('print_container_label/<str:container_num>/', pdfprocess.print_container_label, name='print_container_label'),

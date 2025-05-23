@@ -16,10 +16,15 @@
         </div>
         <div class="col-md-2 mb-3">
             <button class="btn btn-primary  w-100" id="printBOL">BOL</a>
-        </div>        
+        </div>  
+        <div class="col-md-2 mb-3">
+            <a href="{% url 'order_email' order.so_num %}?type=shippeout %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Send Shipped out
+            </a>
+        </div>
     </div>
 
-    <hr class="my-4 border-2 opacity-100">
+    <hr class="my-2 border-2 opacity-100">
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <!-- 左侧：标题和取消订单按钮 -->
@@ -31,7 +36,7 @@
         </div>
     </div>
 
-    <form id="edit-order-form" method="POST" action="{% url 'edit_order' order.so_num %}" class="needs-validation" novalidate>
+    <form id="edit-order-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_order' order.so_num %}" class="needs-validation" novalidate>
         {% csrf_token %}
         
         <div class="row">
@@ -103,6 +108,13 @@
                     value="{{ order.outbound_date|date:'Y-m-d' }}">
             </div>
             
+            <div class="col-md-3 mb-3">
+                <label for="order_pdf" class="form-label">Order PDF</label>
+                {% if order.order_pdfname %}
+                    <p class="text-muted">Current file: {{ order.order_pdfname }}</p>
+                {% endif %}
+                <input type="file" class="form-control" id="order_pdf" name="order_pdf" accept="application/pdf">
+            </div>
         </div>
 
         <div class="row">
@@ -153,12 +165,13 @@
                         <tr>
                             <th>Product Name</th>
                             <th>Quantity</th>
+                            <th>Inventory Qty</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in order_items %}
-                        <tr>
+                        <tr {% if item.quantity > item.inventory_qty %}class="table-danger"{% endif %}>
                             <td>
                                 <select class="form-control product-select">
                                     <option value="">-- Select Product --</option>
@@ -173,6 +186,16 @@
                             <td>
                                 <input type="number" class="form-control quantity-input" value="{{ item.quantity }}" min="1">
                             </td>
+                            
+                            <td>
+                                <span>
+                                    {{ item.inventory_qty }}
+                                    {% if item.quantity > item.inventory_qty %}
+                                        <span class="text-danger ms-2">This order doesn't have enough inventory</span>
+                                    {% endif %}
+                                </span>
+                            </td>
+                            
                             <td>
                                 <button class="btn btn-danger btn-sm remove-row">Remove</button>
                             </td>
@@ -216,12 +239,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 打印标签
     document.getElementById('printLabel').addEventListener('click', function() {
-        window.open(`/print_label/${soNum}/`, '_blank');
+        window.open(`/print_order_label/${soNum}/`, '_blank');
     });
 
     // 打印BOL
     document.getElementById('printBOL').addEventListener('click', function() {
-        window.open(`/print_bol/${soNum}/`, '_blank');
+        window.open(`/print_order_bol/${soNum}/`, '_blank');
     });
     // 编辑订单条目
     const form = document.getElementById('edit-order-form');

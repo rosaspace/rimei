@@ -9,20 +9,12 @@ from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation
 class ContainerAdmin(admin.ModelAdmin):
     list_display = ('container_id', 'plts','railway_date', 'pickup_date', 'delivery_date','empty_date',
                     'pickup_number','customer','logistics','is_updateInventory','created_user','inboundCategory','Carrier')
-    fields = ('container_id', 'plts','railway_date', 'pickup_date', 'delivery_date','empty_date',
-              'pickup_number','customer','logistics','is_updateInventory','created_user','inboundCategory','Carrier')
-    ordering = ['delivery_date']
 
 class RMOrderAdmin(admin.ModelAdmin):
-    form = OrderForm
+    # form = OrderForm
     list_display = ('so_num', 'po_num', 'plts', 'customer_name', 'order_date','pickup_date', 
                    'outbound_date', 'is_sendemail', 'is_updateInventory','is_allocated_to_stock','is_canceled',
                    'order_pdfname','created_user')
-    # search_fields = ('so_num', 'po_num', 'customer_name__name')
-    # list_filter = ('is_sendemail', 'is_updateInventory','is_allocated_to_stock', 'pickup_date', 'outbound_date')
-    fields = ('so_num', 'po_num', 'plts', 'customer_name', 'order_date', 
-              'pickup_date', 'outbound_date', 'is_sendemail', 'is_updateInventory','is_allocated_to_stock','is_canceled',
-              'order_pdfname','created_user')
 
 class RMInventoryAdmin(admin.ModelAdmin):
     list_display = ('product','quantity_init', 'quantity','quantity_for_neworder','quantity_to_stock','quantity_diff')
@@ -31,7 +23,7 @@ class ClockRecordAdmin(admin.ModelAdmin):
     list_display = ('employee_name', 'date',"weekday","total_hours")
 
 class RMProductdAdmin(admin.ModelAdmin):
-    list_display = ('name', 'id','shortname','size','TI','HI','Pallet','Color',"Location","ShelfRecord","description")
+    list_display = ('name', 'id','shortname','size','TI','HI','Pallet','Color',"Location","ShelfRecord","blongTo")
 
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'id','belongTo')

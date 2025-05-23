@@ -1,6 +1,21 @@
 {% extends "container/base.html" %}
 {% block content %}
 <div class="container mt-4">
+    <h4 class="mb-4">Print Invoice</h4>
+    <div class="row">
+        <div class="col-md-2 mb-3">
+            <button class="btn btn-primary  w-100" id="printOriginalDO">Original DO</a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <button class="btn btn-primary  w-100" id="printInvoice">Original Invoice</a>
+        </div>
+        <div class="col-md-2 mb-3">
+            <button class="btn btn-primary  w-100" id="printConvertedInvoice">Converted Invoice</a>
+        </div>
+    </div>
+
+    <hr class="my-4 border-2 opacity-100">
+
     <div class="d-flex justify-content-between align-items-center mb-3">
         <!-- 左侧：标题和返回按钮 -->
         <div class="d-flex align-items-center">
@@ -42,21 +57,35 @@
     <div class="info-section mb-4 border p-3 rounded">
         <div class="d-flex justify-content-between">
             <div class="left-info">
-                <p>Container ID: <strong>{{ container.container_id }}</strong></p> <!-- 显示 Container ID -->
                 {% if container %}
+                    <p>Container ID: <strong>{{ container.container_id }}</strong></p> <!-- 显示 Container ID -->                
                     <p>Container File Name: <strong>{{ container.container_pdfname }}</strong></p>
                     <p>Pickup Number: <strong>{{ container.pickup_number }}</strong></p>
+                    <hr class="my-2 opacity-100">
                     <p>Invoice ID: <strong>{{ container.invoice_id }}</strong></p>
                     <p>Invoice File Name: <strong>{{ container.invoice_pdfname }}</strong></p>
+                    <p>Invoice Price: <strong>{{ container.price }}</strong></p>                    
+                    <hr class="my-2 opacity-100">
+                    <p>Customer Invoice ID: <strong>{{ container.customer_invoiceId }}</strong></p>
+                    <p>Customer Invoice File Name: <strong>{{ container.customer_invoice_pdfname }}</strong></p>
+                    <p>Customer Invoice Price: <strong>{{ container.customer_price }}</strong></p>
                 {% endif %}
             </div>
             <div class="right-info">
                 {% if container %}
-                    <p>Railway Date: <strong>{{ container.railway_date }}</strong></p>
-                    <p>Pickup Date: <strong>{{ container.pickup_date }}</strong></p>
+                    <!-- <p>Railway Date: <strong>{{ container.railway_date }}</strong></p>
+                    <p>Pickup Date: <strong>{{ container.pickup_date }}</strong></p> -->
                     <p>Delivery Date: <strong>{{ container.delivery_date }}</strong></p>
                     <p>Empty Date: <strong>{{ container.empty_date }}</strong></p>
                     <p>Created At: <strong>{{ container.created_at }}</strong></p>
+                    <hr class="my-2 opacity-100">
+                    <p>Invoice Date: <strong>{{ container.invoice_date }}</strong></p>
+                    <p>Invoice Due Date: <strong>{{ container.due_date }}</strong></p>
+                    <p>Invoice Pay Date: <strong>{{ container.payment_date }}</strong></p>
+                    <hr class="my-2 opacity-100">
+                    <p>Customer Invoice Date: <strong>{{ container.customer_invoice_date }}</strong></p>
+                    <p>Customer Invoice Due Date: <strong>{{ container.customer_due_date }}</strong></p>
+                    <p>Customer Invoice Pay Date: <strong>{{ container.customer_payment_date }}</strong></p>
                 {% endif %}
             </div>
         </div>
@@ -161,6 +190,57 @@
             </div>
         </form>
     </div>
+
+    <!--是否 Pay-->
+    <div class="container-form">
+        <form id="edit-container-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_customer_invoice' container.container_id %}">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label" for="pay_date">Pay Date</label>
+                    <input type="date" id="pay_date" name="pay_date" class="form-control" value="{{ container.customer_payment_date |date:'Y-m-d'}}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-1 mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="is_pay" name="is_pay"
+                            {% if container.customer_ispay %} checked {% endif %}>
+                        <label class="form-check-label" for="is_pay">Is Pay</label>
+                    </div>
+                </div>
+                <div class="col-md-1 mb-3">                           
+                    <button type="submit" class="btn btn-primary">
+                        Save
+                    </button>                     
+                </div>   
+            </div>  
+        </form>
+    </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const containerID = '{{ container.container_id }}';
+    console.log('---:',containerID)
+
+    
+    document.getElementById('printOriginalDO').addEventListener('click', function() {
+        window.open(`/print_original_do/${containerID}/`, '_blank');
+    });
+    
+    // 打印原始订单
+    document.getElementById('printInvoice').addEventListener('click', function() {
+        window.open(`/print_original_invoice/${containerID}/`, '_blank');
+    });
+
+    // 打印转换后的订单
+    document.getElementById('printConvertedInvoice').addEventListener('click', function() {
+        window.open(`/print_converted_invoice/${containerID}/`, '_blank');
+    });
+});
+</script>
 {% endblock %}

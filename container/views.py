@@ -19,7 +19,27 @@ def index(request):
 
 def invoice_view(request):
     template = "container/invoice.html"
-    containers = Container.objects.all().order_by('-delivery_date').exclude(logistics=2)
+
+    containers = Container.objects.exclude(
+        Q(ispay=True, customer_ispay=True) |
+        Q(customer = 3, ispay=True)
+    ).exclude(
+        logistics=2
+    ).order_by('-due_date')
+    
+    user_permissions = get_user_permissions(request.user)
+    return render(request, template, {'containers': containers,'user_permissions': user_permissions})
+
+def invoice_finished(request):
+    template = "container/invoice.html"
+
+    containers = Container.objects.filter(
+        Q(ispay=True, customer_ispay=True) |
+        Q(customer = 3, ispay=True)
+    ).exclude(
+        logistics=2
+    ).order_by('-due_date')
+
     user_permissions = get_user_permissions(request.user)
     return render(request, template, {'containers': containers,'user_permissions': user_permissions})
 
@@ -148,7 +168,10 @@ def permission_view(request):
 def temporary_view(request):
     template = "container/temporary.html"
     user_permissions = get_user_permissions(request.user)
-    return render(request, template,{'user_permissions': user_permissions})
+
+    years = [2025]
+    months = list(range(1, 13))  # 1 到 12 月
+    return render(request, template,{'user_permissions': user_permissions,'years':years,'months':months})
 
 def get_user_permissions(user):
     # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance

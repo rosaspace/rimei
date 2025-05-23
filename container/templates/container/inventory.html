@@ -2,8 +2,8 @@
 {% block content %}
 
 <div class="mb-3">
-    <a href="{% url 'add_stock' %}" class="btn btn-primary">Add Stock</a>
-    <a href="{% url 'remove_stock' %}" class="btn btn-primary">Remove Stock</a>
+    <!-- <a href="{% url 'add_stock' %}" class="btn btn-primary">Add Stock</a>
+    <a href="{% url 'remove_stock' %}" class="btn btn-primary">Remove Stock</a> -->
     <a href="{% url 'export_stock' %}?export=1" class="btn btn-primary">Export Stock</a>
 </div>
 
@@ -22,6 +22,7 @@
                 <th>Pallet</th>
                 <th>Case</th>
                 <th>Location</th>
+                <th>BelongTo</th>
                 <th>History</th>
             </tr>
         </thead>
@@ -39,6 +40,7 @@
                 <td>{{ item.palletnumber }}</td>
                 <td>{{ item.case }}</td>
                 <td>{{ item.Location }}</td>
+                <td>{{ item.product.blongTo.name|default:"-" }}</td>
                 <td>
                     <a href="{% url 'order_history' item.product.id %}" class="btn btn-sm btn-outline-primary">
                         View
