@@ -1,120 +1,160 @@
 {% extends "container/base.html" %}
 {% block content %}
 
-<div class="mb-3">
-    <h4>Import Excel -> Upload Inventory</h2>
-    <!-- Import Inventory -->
-    <form action="/import_inventory/" method="post" enctype="multipart/form-data">
-        <div class="input-group">
-            {% csrf_token %}
-            <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
-            <button type="submit" class="btn btn-primary">Upload Excel</button>
-        </div>
-    </form>
-</div>
-<hr>
-
-<div class="mb-3">
-    <h4>Import Excel -> Upload Aline Order Record</h2>
-    <!-- Import Inventory -->
-    <form action="/import_aline/" method="post" enctype="multipart/form-data">
-        <div class="input-group">
-            {% csrf_token %}
-            <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
-            <button type="submit" class="btn btn-primary">Upload Excel</button>
-        </div>
-    </form>
-</div>
-<hr>
-
-<div class="mb-3">
-    <h4>Export Inventory -> Download</h2>
-    <form method="GET" action="{% url 'export_pallet' %}" class="mb-3">
-        <div class="input-group">
-            <select name="year" class="form-control" required>
-                <option value="">Select Year</option>
-                {% for year in years %}
-                    <option value="{{ year }}">{{ year }}</option>
-                {% endfor %}
-            </select>
-            <select name="month" class="form-control" required>
-                <option value="">Select Month</option>
-                {% for month in months %}
-                    <option value="{{ month }}">{{ month }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="btn btn-primary">Export Pallets</button>
-        </div>
-    </form>
-</div>
-<hr>
-
-<div class="mb-3">
-    <h4>Email Content Preview:</h2>
-    <form method="post" action="{% url 'preview_email' number=4 %}">
-        {% csrf_token %}
-        <div class="row">
-            <div class="mb-3"> 
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> OfficeDepot
-                </button>
-                <a href="{% url 'preview_email' number=1 %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Inventory
-                </a>
-                <a href="{% url 'preview_email' number=5 %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Order Received
-                </a>
-                <a href="{% url 'container' %}" class="btn btn-secondary ms-2">Back</a>
+<div class="row">
+    <div class="col-md-3">
+        <h4>Import Excel -> Upload Inventory</h2>    
+        <!-- Import Inventory -->
+        <form action="/import_inventory/" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                {% csrf_token %}
+                <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
+                <button type="submit" class="btn btn-primary">Upload Excel</button>
             </div>
-            <div class="mb-3">  
-                <input type="text" name="officedepot_number" id="officedepot_number" class="form-control mb-2" placeholder="Enter OfficeDepot Number" required>
-            </div>
-        </div>
         </form>
-    <div class="row">
-        <div class="col-12">
-            <div class="mb-3">
-                <div class="container-id-display">{{ recipient }}</div>
-                <div class="container-id-display">{{ subject }}</div>
-                <textarea id="emailContent" class="form-control" rows="6" readonly>
-{{ body }}</textarea>
+    </div>
+    <div class="col-md-3">
+        <h4>Import Excel -> Upload Aline Order</h2>
+        <!-- Import Inventory -->
+        <form action="/import_aline/" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                {% csrf_token %}
+                <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
+                <button type="submit" class="btn btn-primary">Upload Excel</button>
             </div>
+        </form>
+    </div>
+    <div class="col-md-3">
+        <h4>Export Inventory -> Download</h2>
+        <form method="GET" action="{% url 'export_pallet' %}" class="mb-3">
+            <div class="input-group">
+                <select name="year" class="form-control" required>
+                    <option value="">Select Year</option>
+                    {% for year in years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+                <select name="month" class="form-control" required>
+                    <option value="">Select Month</option>
+                    {% for month in months %}
+                        <option value="{{ month }}">{{ month }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary">Export Pallets</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-            <div class="mb-3">
-                <a href="mailto:{{ recipient }}?subject={{ subject|urlencode }}&body={{ body|urlencode }}" 
-                    class="btn btn-primary">
-                    <i class="fas fa-envelope"></i> Open in Outlook
-                </a>
+<div class="row">
+    <div class="col-md-6">
+        <h4>Print Label</h2>
+        <form action="/print_label_only/" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                {% csrf_token %}
+                <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
+                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
+                <button type="submit" class="btn btn-primary" id="printLabel">
+                    Print Label
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <h4>Print Label with Lot</h2>
+        <form action="/print_label_containerid_lot/" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                {% csrf_token %}
+                <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
+                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
+                <input type="text" name="containerid" id="containerid" class="form-control" placeholder="ContainerID" required>
+                <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="Lot Number" required>
+                <button type="submit" class="btn btn-primary" id="printLabel">
+                    Print Label
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <h4>Email Content Preview</h4>
+        <form method="post" action="{% url 'preview_email' number=4 %}">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-12"> 
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <input type="text" name="officedepot_number" id="officedepot_number" class="form-control w-auto" placeholder="Enter OfficeDepot Number" required style="min-width: 200px;">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> OfficeDepot
+                        </button>
+                        <a href="{% url 'preview_email' number=1 %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Inventory
+                        </a>
+                        <a href="{% url 'preview_email' number=5 %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Order Received
+                        </a>
+                        <a href="{% url 'container' %}" class="btn btn-secondary ms-2">Back</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <div class="container-id-display">{{ recipient }}</div>
+                    <div class="container-id-display">{{ subject }}</div>
+                    <textarea id="emailContent" class="form-control" rows="6" readonly>{{ body }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <a href="mailto:{{ recipient }}?subject={{ subject|urlencode }}&body={{ body|urlencode }}" 
+                        class="btn btn-primary">
+                        <i class="fas fa-envelope"></i> Open in Outlook
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-</div>
-<hr>
 
-<div class="mb-3">
-    <form action="/print_label_only/" method="post" enctype="multipart/form-data">
-        <div class="input-group">
-            {% csrf_token %}
-            <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
-            <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
-            <button type="submit" class="btn btn-primary" id="printLabel">
-                Print Label
-            </button>
+    <div class="col-md-8">
+        <h4>Inventory Count Number</h4>
+        <a href="{% url 'inventory_summary' %}" class="btn btn-primary mb-3">Inventory Summary</a>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Qty</th>
+                    <th>Details (Sum Expression)</th>
+                    <th>Type</th>
+                    <th>Percent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary %}
+                <tr>
+                    <td>{{ row.employee }}</td>
+                    <td>{{ row.total_qty }}</td>
+                    <td>{{ row.qty_expression }}</td>
+                    <td>{{ row.product_count }} 种</td>
+                    <td>{{ row.percentage }}%</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">No inventory records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- 显示总数量 -->
+        <div class="mt-3 text-end">
+            <strong>Total Quantity: {{ total_qty_all }}</strong>
         </div>
-    </form>
+    </div>
 </div>
-<div class="mb-3">
-    <form action="/print_label_containerid_lot/" method="post" enctype="multipart/form-data">
-        <div class="input-group">
-            {% csrf_token %}
-            <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
-            <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
-            <input type="text" name="containerid" id="containerid" class="form-control" placeholder="ContainerID" required>
-            <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="Lot Number" required>
-            <button type="submit" class="btn btn-primary" id="printLabel">
-                Print Label
-            </button>
-        </div>
-    </form>
-</div>
+
+
+
 {% endblock %}

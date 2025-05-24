@@ -6,6 +6,7 @@ from openpyxl.utils import get_column_letter
 import openpyxl
 from io import BytesIO
 from django.http import HttpResponse
+from collections import defaultdict
 
 def inventory_view(request):
     inventory_items = RMInventory.objects.all()  # 获取所有库存信息
@@ -99,6 +100,57 @@ def order_history(request,product_id):
         'total_stock': total_stock
     })
 
+def inventory_summary(request):
+    inventory_items = RMInventory.objects.all()  # 获取所有库存信息
+    print("----------inventory_summary------------",len(inventory_items))
+    inventory_items_converty = []
+    employee_data = {}
+
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product.product)
+        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+
+        inventory_items_converty.append(product)
+
+        # 统计员工库存
+        employee = product.product.blongTo.name if product.product.blongTo else "Unknown"
+        qty = product.quantity
+        
+        if employee not in employee_data:
+            employee_data[employee] = {
+                'total_qty': 0,
+                'qty_list': [],
+                'product_set': set(),
+            }
+
+        employee_data[employee]['total_qty'] += qty
+        employee_data[employee]['qty_list'].append(qty)
+        employee_data[employee]['product_set'].add(product.product.id)
+
+    # 总数量
+    total_qty_all = sum(v['total_qty'] for v in employee_data.values())
+
+    # 构造 summary 列表
+    summary = []
+    for employee, qty_list in employee_data.items():
+        percentage = round((qty_list['total_qty'] / total_qty_all) * 100, 2) if total_qty_all else 0
+        summary.append({
+            "employee": employee,
+            "total_qty": qty_list['total_qty'],
+            'qty_expression': ' + '.join(str(q) for q in qty_list['qty_list']),
+            'product_count': len(qty_list['product_set']),
+            'percentage': percentage,
+            })
+
+    summary = sorted(summary, key=lambda x: x['percentage'], reverse=True)
+    # 汇总总数量
+    total_qty_all = sum(row['total_qty'] for row in summary)
+
+    user_permissions = get_user_permissions(request.user)
+    years = [2025]
+    months = list(range(1, 13))  # 1 到 12 月
+    return render(request, "container/temporary.html", {'user_permissions': user_permissions,'years':years,'months':months,'summary':summary,'total_qty_all': total_qty_all,})
 
 def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list):
      

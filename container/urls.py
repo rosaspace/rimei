@@ -29,6 +29,7 @@ urlpatterns = [
     path("inventory_diff/", inventory_count.inventory_diff_view, name="inventory_diff"),
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    
     path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),
+    path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),
 
     # login
     path('login/', login.login_view, name='login'),

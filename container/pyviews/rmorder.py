@@ -329,8 +329,8 @@ def import_aline(request):
 
 def preview_email(request, number):
     template = "container/temporary.html"
-    recipient = "omarorders@omarllc.com,omarwarehouse@rimeius.com"
-    recipient_advance = "jovana@advance77.com,tijana@advance77.com,raluca@advance77.com"
+    recipient = "omarorders@omarllc.com;omarwarehouse@rimeius.com"
+    recipient_advance = "jovana@advance77.com;tijana@advance77.com;raluca@advance77.com;intermodal@advance77.com"
     current_date = timezone.now().strftime("%m/%d/%Y")
     officedepot_id = request.POST.get('officedepot_number')
     print("officedepot_id: ",officedepot_id)
