@@ -7,6 +7,7 @@ from django.http import JsonResponse
 import pandas as pd
 from django.http import HttpResponse
 from openpyxl.styles import Border, Side, PatternFill, Alignment
+import os
 
 def week_record(request):
     # 获取当前年份和周数（ISO标准）
@@ -285,9 +286,13 @@ def export_week_records(request):
     for group, group_employees in grouped_employees.items():
         print("---group: ",group)
         filename = f'Working_Hours_{group}_{last_week_start.strftime("%m.%d")}-{last_week_end.strftime("%m.%d")}.2025.xlsx'
+        # 拼接完整路径
+        save_dir = os.path.join(os.getcwd(), 'media/workrecord')
+        os.makedirs(save_dir, exist_ok=True)
+        full_path = os.path.join(save_dir, filename)
         
         data = []        
-        with pd.ExcelWriter(filename, engine='openpyxl') as writer: 
+        with pd.ExcelWriter(full_path, engine='openpyxl') as writer: 
             for employee in group_employees:
                 total_hours_weekly = 0
                 employee_records = []
@@ -363,17 +368,18 @@ def export_week_records(request):
                         cell.alignment = Alignment(horizontal='center', vertical='center')  # 设置居中对齐
 
         # 返回 Excel 文件作为响应
-        with open(filename, 'rb') as f:
-            file_data = f.read()
-            response = HttpResponse(
-                file_data,
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            return response
+        if os.path.exists(full_path):
+            with open(full_path, 'rb') as f:
+                file_data = f.read()
+                response = HttpResponse(
+                    file_data,
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
     
-    # 如果没有数据，返回空响应
-    return HttpResponse("No data available for the selected group.")
+        # 如果没有数据，返回空响应
+        return HttpResponse("No data available for the selected group.")
 
 def convertToTime(workTime):
     if isinstance(workTime, str):

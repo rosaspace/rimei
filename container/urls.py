@@ -102,7 +102,7 @@ urlpatterns = [
     path('pickup_today/', pdfprocess.pickup_today, name='pickup_today'),
     path('pickup_third/', pdfprocess.pickup_third, name='pickup_third'),   
     path('pickup_fourth/', pdfprocess.pickup_fourth, name='pickup_fourth'),  
-    
+    path('pickup_week/', pdfprocess.pickup_week, name='pickup_week'),
 
     # 打卡记录
     path('week_record/', weekrecord.week_record, name='week_record'),

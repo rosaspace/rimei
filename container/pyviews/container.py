@@ -9,6 +9,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 import os
 from django.conf import settings
+from django.db import IntegrityError, DatabaseError
 
 # 打开添加Container页面
 def add_container_view(request):
@@ -46,18 +47,35 @@ def add_container(request):
             # 获取基本字段
             # container_id = request.POST.get('container_id')
             pickup_number = request.POST.get('pickup_number')
-            lot = request.POST.get('lot_number')
+            lot = request.POST.get('lot_number') or ""
             plts_value = request.POST.get('plts')
-            refnumber = request.POST.get('ref_number')
-            mbl = request.POST.get('mbl')
-            weight = request.POST.get('weight')
-            # customer_name = request.POST.get('customer_name')
-            # logistics_name = request.POST.get('logistics_name')
-            customer_name = InvoiceCustomer.objects.get(id=request.POST.get('customer_name'))
-            logistics_name = LogisticsCompany.objects.get(id=request.POST.get('logistics_name'))
-            inbound_category = InboundCategory.objects.get(id=request.POST.get('inbound_category'))
-            station_name = RailwayStation.objects.get(id=request.POST.get('station_name'))
-            carrier_name = Carrier.objects.get(id=request.POST.get('carrier_name'))
+            refnumber = request.POST.get('ref_number') or ""
+            mbl = request.POST.get('mbl') or ""
+            weight = request.POST.get('weight') or "1"
+
+           
+            # 设置默认值（建议放在函数顶部）
+            # DEFAULT_INBOUND_CATEGORY = InboundCategory.objects.get(Type="Default Category")
+            DEFAULT_STATION = RailwayStation.objects.get(name="CPRR/ BENSENVILLE")
+            # DEFAULT_CARRIER = Carrier.objects.get(name="Default Carrier")
+            DEFAULT_CUSTOMER = InvoiceCustomer.objects.get(name="GoldenFeather")
+            DEFAULT_LOGISTICS = LogisticsCompany.objects.get(name="Advance77")
+
+            # inbound_category_id = request.POST.get('inbound_category')
+            # inbound_category = InboundCategory.objects.get(id=inbound_category_id) if inbound_category_id else DEFAULT_INBOUND_CATEGORY
+
+            station_id = request.POST.get('station_name')
+            station_name = RailwayStation.objects.get(id=station_id) if station_id else DEFAULT_STATION
+
+            # carrier_id = request.POST.get('carrier_name')
+            # carrier_name = Carrier.objects.get(id=carrier_id) if carrier_id else DEFAULT_CARRIER
+
+            customer_id = request.POST.get('customer_name')
+            customer_name = InvoiceCustomer.objects.get(id=customer_id) if customer_id else DEFAULT_CUSTOMER
+
+            logistics_id = request.POST.get('logistics_name')
+            logistics_name = LogisticsCompany.objects.get(id=logistics_id) if logistics_id else DEFAULT_LOGISTICS
+            
             print("plts_value: ",plts_value)
             print("customer_name: ",customer_name)
             print("logistics_name: ",logistics_name)
@@ -71,11 +89,11 @@ def add_container(request):
                 refnumber = refnumber,
                 mbl = mbl,
                 weight = weight,
-                inboundCategory= inbound_category,
+                # inboundCategory= inbound_category,
                 customer = customer_name,
                 logistics = logistics_name,
                 railwayStation = station_name,
-                Carrier = carrier_name,
+                # Carrier = carrier_name,
                 created_at=timezone.now(),
                 created_user=request.user,  # ✅ 保存创建人
             )
@@ -101,9 +119,11 @@ def add_container(request):
                 'message': 'Container saved successfully'
             })
             
-        except Exception as e:
+        except (IntegrityError, DatabaseError, Exception) as e:
+            print("❌ Save failed:", str(e))
             return JsonResponse({
-                'error': str(e)
+                'error': True,
+                'message': str(e)
             }, status=400)
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)

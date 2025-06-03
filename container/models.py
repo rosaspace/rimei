@@ -233,6 +233,18 @@ def get_default_railstation_category():
     first = RailwayStation.objects.first()
     return first.id if first else None  # 避免为空时报错
 
+def get_default_carrier():
+    default = Carrier.objects.first()
+    return default.pk if default else None
+
+def get_default_customer():
+    default = InvoiceCustomer.objects.first()
+    return default.pk if default else None
+
+def get_default_logistics():
+    default = LogisticsCompany.objects.first()
+    return default.pk if default else None
+
 class Container(models.Model):
     container_id = models.CharField(max_length=255)  # Container ID
     container_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
@@ -245,15 +257,15 @@ class Container(models.Model):
     delivery_date = models.DateField(blank=True, null=True)  # 交货日期
     empty_date = models.DateField(blank=True, null=True)  # 空箱日期
     pickup_number = models.CharField(max_length=255, blank=True, null=True)  # 提货编号    
-    customer = models.ForeignKey(InvoiceCustomer, on_delete=models.CASCADE, default=3)  # 关联到 InvoiceCustomer
-    logistics = models.ForeignKey(LogisticsCompany, on_delete=models.CASCADE, default=1)  # 关联到 LogisticsCompany
+    customer = models.ForeignKey(InvoiceCustomer, on_delete=models.CASCADE, default=get_default_customer)  # 关联到 InvoiceCustomer
+    logistics = models.ForeignKey(LogisticsCompany, on_delete=models.CASCADE, default=get_default_logistics)  # 关联到 LogisticsCompany
     is_updateInventory = models.BooleanField(default=False) # 是否更新库存
     inboundCategory = models.ForeignKey(InboundCategory, on_delete=models.CASCADE,default=get_default_inbound_category)
-    lot = models.CharField(max_length=255, blank=True, default="")
+    lot = models.CharField(max_length=255, blank=True, null=True, default="")
     railwayStation = models.ForeignKey(RailwayStation, on_delete=models.CASCADE,default=get_default_railstation_category)
     refnumber = models.CharField(max_length=255, blank=True, default="")
     mbl = models.CharField(max_length=255, blank=True, default="")
-    Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE, default=1)
+    Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE, default=get_default_carrier)
     weight = models.CharField(max_length=255, blank=True, default="")
 
     invoice_id = models.CharField(max_length=255, blank=True, null=True)  # 发票ID

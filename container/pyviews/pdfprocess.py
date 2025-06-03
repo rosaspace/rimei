@@ -13,7 +13,7 @@ from ..models import RMCustomer
 from datetime import datetime,date
 from ..models import RMOrder,Container,ContainerItem,OrderItem
 from .pdfextract import extract_invoice_data, extract_customer_invoice_data, extract_order_info, extract_items_from_pdf,get_product_qty_with_inventory
-from .pdfgenerate import extract_text_from_pdf, print_pickuplist, containerid_lot
+from .pdfgenerate import extract_text_from_pdf, print_pickuplist, print_weekly_pickuplist, containerid_lot, print_weekly_pickuplist_on_one_page
 from django.http import HttpResponse
 
 from datetime import datetime, timedelta
@@ -425,7 +425,7 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     c.line(left_margin, y + line_height -2, width - left_margin, y + line_height -2)
 
     table_headers = ["Size", "ShortName", "Name", "Qty", "PLTS"]
-    col_widths = [50, 80, 270, 60, 60]
+    col_widths = [60, 80, 270, 60, 60]
     x = left_margin
     for header, w in zip(table_headers, col_widths):
         draw_text(x, y, header, bold_font)
@@ -1078,6 +1078,12 @@ def pickup_today(request):
     # 获取今天或明天
     target_date = datetime.today()
     response = print_pickuplist(target_date)
+    return response
+
+def pickup_week(request):
+    target_date = datetime.today()
+    # target_date += timedelta(days=7)
+    response = print_weekly_pickuplist_on_one_page(target_date)
     return response
 
 # Invoice

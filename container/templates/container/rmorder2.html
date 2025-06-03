@@ -24,6 +24,9 @@
         <div class="mb-2">
             <a href="{% url 'pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
         </div>
+        <div class="mb-2">
+            <a href="{% url 'pickup_week' %}" class="btn btn-primary">PICKUP LIST Week</a>
+        </div>
     </div>
 </div>
 
@@ -40,8 +43,8 @@
                 <th>BOL</th>
                 <th>OrderDate</th>
                 <th>PickupDate</th>
-                <th>ShippedOutDate</th>
-                <th>InPreparation</th>
+                <th>OutDate</th>
+                <th>InPrepa</th>
                 <th>Shipped</th>
             </tr>
         </thead>

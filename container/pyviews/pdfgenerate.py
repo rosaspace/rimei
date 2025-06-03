@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
+from datetime import timedelta
 
 from ..models import RMOrder
 
@@ -51,8 +52,8 @@ def print_pickuplist(target_date):
     # 如果没有数据，显示占位
     if not pickup_numbers:
         pickup_numbers = ["N/A"]
-    if target_date.weekday() == 0:  # Monday
-        pickup_numbers.append("Office Depot")
+    # if target_date.weekday() == 0:  # Monday
+    #     pickup_numbers.append("Office Depot")
 
     # 生成 PDF
     response = HttpResponse(content_type='application/pdf')
@@ -88,6 +89,128 @@ def print_pickuplist(target_date):
     for num in pickup_numbers:
         c.drawString(left_margin, y, num)
         y -= 50
+
+    c.save()
+    return response
+
+def print_weekly_pickuplist_on_one_page(start_date):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="weekday_pickup_report.pdf"'
+
+    c = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+
+    # 配置
+    left_margin = 1 * inch
+    top_margin = height - 1 * inch
+    line_height = 30
+    title_font_size = 24
+    item_font_size = 20
+
+    # 标题
+    c.setFont("Helvetica-Bold", title_font_size + 10)
+    c.drawCentredString(width / 2, height - 1 * inch, "WEEKDAY PICKUP LIST")
+
+    # 当前绘制位置
+    y = top_margin - 1 * inch
+
+    # 仅打印周一至周五
+    current_date = start_date
+    printed_days = 0
+    while printed_days < 5:
+        
+        weekday = current_date.weekday()
+        if weekday < 5:  # 周一到周五
+            weekday_str = current_date.strftime('%A')[:3].upper()
+            date_str = current_date.strftime('%m/%d')
+            header_text = f"{weekday_str} {date_str}"
+
+            c.setFont("Helvetica-Bold", title_font_size)
+            c.drawString(left_margin, y, header_text)
+            y -= line_height
+
+            pickup_orders = RMOrder.objects.filter(
+                pickup_date=current_date.date()
+            ).exclude(Q(customer_name="4") | Q(is_canceled=True))
+
+            if pickup_orders.exists():
+                pickup_list = [f"{o.so_num} / {o.plts} plts / {o.customer_name}" for o in pickup_orders]
+            else:
+                pickup_list = ["N/A"]
+
+            # 编号列表
+            c.setFont("Helvetica", item_font_size)
+            for entry in pickup_list:
+                if y < 1 * inch:
+                    c.showPage()
+                    y = top_margin
+                    c.setFont("Helvetica", item_font_size)
+                c.drawString(left_margin + 10, y, f"- {entry}")
+                y -= line_height
+
+            y -= line_height  # 每天之间多留一行间隔
+            printed_days += 1
+
+        current_date += timedelta(days=1)
+
+    c.save()
+    return response
+
+def print_weekly_pickuplist(start_date):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="weekly_pickup_report.pdf"'
+
+    c = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+    left_margin = 1 * inch
+
+    for i in range(7):  # 接下来 7 天
+        target_date = start_date + timedelta(days=i)
+        weekday_str = target_date.strftime('%A').upper()
+        date_str = target_date.strftime('%m/%d')
+
+        pickup_orders = RMOrder.objects.filter(
+            pickup_date=target_date.date()
+        ).exclude(Q(customer_name="4") | Q(is_canceled=True))
+
+        pickup_numbers = [str(order.so_num) for order in pickup_orders]
+        if not pickup_numbers:
+            pickup_numbers = ["N/A"]
+        # if target_date.weekday() == 0:
+        #     pickup_numbers.append("Office Depot")
+
+        # 页面起始 Y 坐标
+        y = height - 2 * inch
+
+        # 日期标题
+        c.setFont("Helvetica-Bold", 48)
+        date_text = f"{weekday_str}   {date_str}"
+        c.drawString(left_margin, y, date_text)
+
+        text_width = c.stringWidth(date_text, "Helvetica-Bold", 48)
+        underline_y = y - 5
+        c.setLineWidth(3)
+        c.line(left_margin, underline_y, left_margin + text_width, underline_y)
+
+        # Pickup 标签
+        y -= 60
+        c.setFont("Helvetica", 30)
+        c.drawString(left_margin, y, "PICKUPS:")
+
+        # 列表
+        y -= 50
+        for num in pickup_numbers:
+            if y < 1.5 * inch:  # 页面到底了，加新页
+                c.showPage()
+                y = height - 2 * inch
+                c.setFont("Helvetica-Bold", 48)
+                c.drawString(left_margin, y, f"{weekday_str}   {date_str}")
+                y -= 110  # 留出 Pickup 标签空间
+                c.setFont("Helvetica", 30)
+            c.drawString(left_margin, y, num)
+            y -= 50
+
+        c.showPage()  # 每天单独一页
 
     c.save()
     return response
