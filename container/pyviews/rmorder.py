@@ -16,6 +16,8 @@ from django.http import HttpResponse
 from datetime import datetime
 import os
 from django.conf import settings
+from openpyxl.styles import Alignment
+from openpyxl.utils import get_column_letter
 
 def add_order(request):
     if request.method == "POST":
@@ -107,13 +109,17 @@ def edit_order(request, so_num):
             customers = RMCustomer.objects.all()
             order_items = OrderItem.objects.filter(order=order)
             orderitems_new = get_product_qty_with_inventory_from_order(order_items)
-            print("---:",len(order_items),order.so_num)
+            # ✅ 计算总重量（假设每项是字典，键名为 'weight'）
+            total_weight = sum(float(item.weight) for item in orderitems_new if item.weight)
+            total_quantity = sum(int(item.quantity) for item in orderitems_new)
             products = RMProduct.objects.all().order_by('name')
             return render(request, 'container/rmorder/edit_order.html', {
                 'order': order,
                 'customers': customers,
                 'order_items': orderitems_new,
                 'products': products,  # 加上这行
+                'total_weight': total_weight,  # ✅ 加入模板变量
+                'total_quantity': total_quantity,  # ✅ 加入模板变量
             })
         elif request.method == "POST":
             try:
@@ -229,45 +235,80 @@ def export_pallet(request):
             end_date = datetime(int(year), int(month) + 1, 1)  # 下个月的1日
 
         # 查询 "gloves in" 数据
-        gloves_in_orders = Container.objects.filter(empty_date__gte=start_date, empty_date__lt=end_date).order_by('empty_date')
+        gloves_in_orders = Container.objects.filter(
+            empty_date__gte=start_date, 
+            empty_date__lt=end_date
+        ).order_by('empty_date')
         print("golve in : ",len(gloves_in_orders))
 
         # 创建 "gloves in" DataFrame
         gloves_in_data = {
-            'Empty Date': [order.empty_date for order in gloves_in_orders],  # 假设有 empty_date 字段
+            'Inbound Date': [order.empty_date for order in gloves_in_orders],  # 假设有 empty_date 字段
             'Container ID': [order.container_id for order in gloves_in_orders],  # 假设有 container_id 字段
             'PLTS': [order.plts for order in gloves_in_orders],
+            'Customer': [order.customer for order in gloves_in_orders],
+            'Description': [order.content for order in gloves_in_orders],
         }
         gloves_in_df = pd.DataFrame(gloves_in_data)
 
         # 查询 "gloves out" 数据（根据您的需求进行调整）
-        gloves_out_orders = RMOrder.objects.filter(outbound_date__gte=start_date, outbound_date__lt=end_date).order_by('outbound_date')
-        print("golve in : ",len(gloves_out_orders))
+        gloves_out_orders = RMOrder.objects.filter(
+            outbound_date__gte=start_date, 
+            outbound_date__lt=end_date
+        ).exclude(customer_name="8").order_by('outbound_date')
+        print("golve out : ",len(gloves_out_orders))
 
         # 创建 "gloves out" DataFrame
         gloves_out_data = {
             'Outbound Date': [order.outbound_date for order in gloves_out_orders],
             'SO': [order.so_num for order in gloves_out_orders],
             'PLTS': [order.plts for order in gloves_out_orders],
+            'Customer': [order.customer_name for order in gloves_out_orders],
         }
-        gloves_out_df = pd.DataFrame(gloves_out_data)
+        gloves_out_df = pd.DataFrame(gloves_out_data) 
+
+        full_path = os.path.join(settings.MEDIA_ROOT, "orderpallets")
+        os.makedirs(full_path, exist_ok=True)  # 确保目录存在
+        filename = f'Pallets_{year}_{month}.xlsx'
+        file_path = os.path.join(full_path, filename)
 
         # 创建 Excel 文件
-        with pd.ExcelWriter(f'orders_{year}_{month}_pallets.xlsx', engine='openpyxl') as writer:
+        with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
             gloves_in_df.to_excel(writer, sheet_name='gloves in', index=False)
             gloves_out_df.to_excel(writer, sheet_name='gloves out', index=False)
 
         # 返回 Excel 文件
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="rmorders_{year}_{month}_pallets.xlsx"'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         with pd.ExcelWriter(response, engine='openpyxl') as writer:
             gloves_in_df.to_excel(writer, sheet_name='gloves in', index=False)
             gloves_out_df.to_excel(writer, sheet_name='gloves out', index=False)
+
+            # 获取 workbook 和 worksheet 并设置格式
+            workbook = writer.book
+            gloves_in_ws = writer.sheets['gloves in']
+            gloves_out_ws = writer.sheets['gloves out']
+
+            format_worksheet(gloves_in_ws)
+            format_worksheet(gloves_out_ws)
 
         return response
     else:
         return HttpResponse("Invalid month or year", status=400)
     
+# 设置列宽和居中样式
+def format_worksheet(ws):
+    alignment = Alignment(horizontal='center', vertical='center')
+    for col in ws.columns:
+        max_length = 0
+        column_letter = get_column_letter(col[0].column)
+        for cell in col:
+            cell.alignment = alignment
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        adjusted_width = max(max_length + 2, 12)  # 设置最小宽度为12
+        ws.column_dimensions[column_letter].width = adjusted_width
+
 def import_inventory(request):
     if request.method == "POST" and request.FILES.get("excel_file"):
         excel_file = request.FILES["excel_file"]

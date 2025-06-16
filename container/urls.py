@@ -11,7 +11,11 @@ urlpatterns = [
     path("index/", views.index, name="index"),    
     path("invoice/", views.invoice_view, name="invoice"),
     path("invoice_finished/", views.invoice_finished, name="invoice_finished"),
-    
+    path("invoice_unpaid/", views.invoice_unpaid, name="invoice_unpaid"),
+    path("generate_selected_invoices/", views.generate_selected_invoices, name="generate_selected_invoices"),
+    path("paid_invoice/", views.paid_invoice, name="paid_invoice"),
+    path("paid_invoice_customer/", views.paid_invoice_customer, name="paid_invoice_customer"),
+    path("generate_invoice_pdf/", pdfprocess.generate_invoice_pdf, name="generate_invoice_pdf"),
     path("payment/", views.payment_view, name="payment"),
     path("aline_payment/", views.aline_payment_view, name="aline_payment"),    
     path("permission/", views.permission_view, name ="permission"),
@@ -82,16 +86,17 @@ urlpatterns = [
     # pdf
     path("upload_pdf/", pdfprocess.upload_pdf, name="upload_pdf"),
     path("upload_orderpdf/", pdfprocess.upload_orderpdf, name="upload_orderpdf"),
-
-    path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),
-    path('print_converted_order/<str:so_num>/', pdfprocess.print_converted_order, name='print_converted_order'),
-
-    
+     
     path('print_original_do/<str:container_id>/', pdfprocess.print_original_do, name='print_original_do'),
     path('print_original_invoice/<str:container_id>/', pdfprocess.print_original_invoice, name='print_original_invoice'),
     path('print_converted_invoice/<str:container_id>/', pdfprocess.print_converted_invoice, name='print_converted_invoice'),
+    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/', pdfprocess.print_customer_invoice, name='print_customer_invoice'),
+
+    path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),
+    path('print_converted_order/<str:so_num>/', pdfprocess.print_converted_order, name='print_converted_order'),
     path('print_order_label/<str:so_num>/', pdfprocess.print_order_label, name='print_order_label'),    
     path('print_order_bol/<str:so_num>/', pdfprocess.print_order_bol, name='print_order_bol'),
+    path('print_order_mcd/<str:so_num>/', pdfprocess.print_order_mcd, name='print_order_mcd'),
 
     path('print_container_detail/<str:container_num>/', pdfprocess.print_container_detail, name='print_container_detail'),
     path('print_container_label/<str:container_num>/', pdfprocess.print_container_label, name='print_container_label'),

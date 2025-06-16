@@ -2,15 +2,25 @@
 {% block content %}
 <div class="container mt-4">
     <h4 class="mb-4">Print Invoice</h4>
-    <div class="row">
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printOriginalDO">Original DO</a>
+    <div class="row align-items-center">
+        <!-- 左侧按钮组 -->
+        <div class="col">
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" id="printOriginalDO">Original DO</button>
+                <button class="btn btn-primary" id="printInvoice">Original Invoice</button>
+                <button class="btn btn-primary" id="printConvertedInvoice">Converted Invoice</button>
+            </div>
         </div>
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printInvoice">Original Invoice</a>
-        </div>
-        <div class="col-md-2 mb-3">
-            <button class="btn btn-primary  w-100" id="printConvertedInvoice">Converted Invoice</a>
+    
+        <!-- 右侧 relocate + invoice -->
+        <div class="col-auto">
+            <div class="d-flex align-items-center gap-2">
+                <div class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="is_relocate" name="is_relocate">
+                    <label class="form-check-label" for="is_relocate">Empty Container Relocate</label>
+                </div>
+                <button class="btn btn-primary" id="printCustomerInvoice">Customer Invoice</button>
+            </div>
         </div>
     </div>
 
@@ -240,6 +250,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // 打印转换后的订单
     document.getElementById('printConvertedInvoice').addEventListener('click', function() {
         window.open(`/print_converted_invoice/${containerID}/`, '_blank');
+    });
+
+    // 打印客户发票
+    document.getElementById('printCustomerInvoice').addEventListener('click', function() {
+        // const containerID = /* 获取 containerID 的方式，比如从某个隐藏字段或变量 */;
+        const isRelocateChecked = document.getElementById('is_relocate').checked;
+        const isEmptyContainerRelocate = isRelocateChecked ? '1' : '0';
+        window.open(`/print_customer_invoice/${containerID}/${isEmptyContainerRelocate}/`, '_blank');
     });
 });
 </script>

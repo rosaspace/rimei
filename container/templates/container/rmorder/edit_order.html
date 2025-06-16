@@ -18,6 +18,9 @@
             <div class="me-2 mb-2">
                 <button class="btn btn-primary" id="printBOL">BOL</button>
             </div>
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary" id="printMcdOrder">Mcd Order</button>
+            </div>
             <!-- Push this button to the right -->
             <div class="ms-auto mb-2">
                 <a href="{% url 'order_email' order.so_num %}?type=shippeout" class="btn btn-primary">
@@ -164,6 +167,9 @@
                         <tr>
                             <th>Product Name</th>
                             <th>Quantity</th>
+                            <th>Pallet</th>
+                            <th>Case</th>
+                            <th>Weight</th>
                             <th>Inventory Qty</th>
                             <th>Action</th>
                         </tr>
@@ -185,7 +191,17 @@
                             <td>
                                 <input type="number" class="form-control quantity-input" value="{{ item.quantity }}" min="1">
                             </td>
-                            
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.pallet_qty }}</span></div>
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.case_qty }}</span></div>
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center">
+                                    <span>{{ item.weight }}</span>
+                                </div>
+                            </td>
                             <td class="align-middle">
                                 <div class="d-flex align-items-center">
                                     <span>{{ item.inventory_qty }}</span>
@@ -202,6 +218,10 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                <div class="mt-3">
+                    <p>Total Weight: {{ total_weight|floatformat:2 }} LBS</p>
+                    <p>Total Quantity: {{ total_quantity }} cases</p>
+                </div>
             </div>
         </div>
 
@@ -245,6 +265,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('printBOL').addEventListener('click', function() {
         window.open(`/print_order_bol/${soNum}/`, '_blank');
     });
+
+    // 打印Mcd订单
+    document.getElementById('printMcdOrder').addEventListener('click', function() {
+        window.open(`/print_order_mcd/${soNum}/`, '_blank');
+    });
+
     // 编辑订单条目
     const form = document.getElementById('edit-order-form');
     const itemsField = document.getElementById('orderitems-field');

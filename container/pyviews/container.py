@@ -161,6 +161,7 @@ def edit_container(request, container_id):
             container.refnumber = request.POST.get('ref_number', container.refnumber)
             container.mbl = request.POST.get('mbl', container.mbl)
             container.weight = request.POST.get('weight', container.weight)
+            container.content = request.POST.get('description', container.content)
             print(f"pickup_number: {container.pickup_number}")
 
             # 更新 PLTS 字段

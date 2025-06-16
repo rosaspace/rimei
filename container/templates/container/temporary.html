@@ -3,7 +3,7 @@
 
 <div class="row">
     <div class="col-md-3">
-        <h4>Import Excel -> Upload Inventory</h2>    
+        <h4>Import Excel -> Upload Inventory</h4>    
         <!-- Import Inventory -->
         <form action="/import_inventory/" method="post" enctype="multipart/form-data">
             <div class="input-group">
@@ -14,7 +14,7 @@
         </form>
     </div>
     <div class="col-md-3">
-        <h4>Import Excel -> Upload Aline Order</h2>
+        <h4>Import Excel -> Upload Aline Order</h4>
         <!-- Import Inventory -->
         <form action="/import_aline/" method="post" enctype="multipart/form-data">
             <div class="input-group">
@@ -25,7 +25,7 @@
         </form>
     </div>
     <div class="col-md-3">
-        <h4>Export Inventory -> Download</h2>
+        <h4>Export Pallets -> Download</h4>
         <form method="GET" action="{% url 'export_pallet' %}" class="mb-3">
             <div class="input-group">
                 <select name="year" class="form-control" required>
@@ -44,10 +44,16 @@
             </div>
         </form>
     </div>
+    <div class="col-md-3">
+        <h4>Export Inventory -> Download</h4>
+        <div class="input-group">
+            <a href="{% url 'export_stock' %}?export=1" class="btn btn-primary">Export Inventory</a>
+        </div>
+    </div>
 </div>
 
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-3">
         <h4>Print Label</h2>
         <form action="/print_label_only/" method="post" enctype="multipart/form-data">
             <div class="input-group">
@@ -76,9 +82,10 @@
         </form>
     </div>
 </div>
+<hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
 
 <div class="row mt-4">
-    <div class="col-md-4">
+    <div class="col-md-6">
         <h4>Email Content Preview</h4>
         <form method="post" action="{% url 'preview_email' number=4 %}">
             {% csrf_token %}
@@ -122,7 +129,7 @@
         </div>
     </div>
 
-    <div class="col-md-8">
+    <div class="col-md-6">
         <h4>Inventory Count Number</h4>
         <a href="{% url 'inventory_summary' %}" class="btn btn-primary mb-3">Inventory Summary</a>
         <table class="table table-bordered table-striped">
@@ -158,7 +165,5 @@
         </div>
     </div>
 </div>
-
-
 
 {% endblock %}

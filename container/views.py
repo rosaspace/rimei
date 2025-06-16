@@ -6,6 +6,12 @@ from .models import UserAndPermission
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, F
+from django.template.loader import get_template
+from django.http import HttpResponse
+from weasyprint import HTML
+import tempfile
+from datetime import datetime
+from django.utils import timezone
 
 @login_required
 def home(request):
@@ -42,6 +48,63 @@ def invoice_finished(request):
 
     user_permissions = get_user_permissions(request.user)
     return render(request, template, {'containers': containers,'user_permissions': user_permissions})
+
+def invoice_unpaid(request):
+    template = "container/invoice.html"
+    containers = Container.objects.filter(
+        Q(ispay=False, customer_ispay=True) |
+        Q(customer = 3, ispay=False, invoice_id__isnull=False) |
+        Q(customer = 12, ispay=False, invoice_id__isnull=False)
+    ).order_by('-due_date')
+    user_permissions = get_user_permissions(request.user)
+    return render(request, template, {'containers': containers,'user_permissions': user_permissions})
+
+def generate_selected_invoices(request):
+    if request.method == "POST":
+        selected_ids = request.POST.getlist('selected_ids')
+        containers = Container.objects.filter(id__in=selected_ids)
+        total_price = sum([c.price for c in containers if c.price])
+        return render(request, "container/invoiceManager/generated_invoice_preview.html", {
+            "containers": containers, 
+            "total_price": total_price,
+            "current_date": datetime.now().strftime("%m/%d/%Y"),},)
+    return redirect("invoice_unpaid")
+
+def paid_invoice(request):
+    ids = request.POST.getlist('all_ids')
+    date_str = request.POST.get('payment_date')
+    payment_date = timezone.now().date()  # 默认今天
+
+    if date_str:
+        try:
+            payment_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass  # 如果解析失败就用默认
+
+    Container.objects.filter(id__in=ids).update(
+        ispay=True,
+        payment_date=payment_date
+    )
+    template = "container/invoice.html"
+    return render(request, template)
+
+def paid_invoice_customer(request):
+    ids = request.POST.getlist('all_ids')
+    date_str = request.POST.get('payment_date')
+    customer_payment_date = timezone.now().date()
+
+    if date_str:
+        try:
+            customer_payment_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    Container.objects.filter(id__in=ids).update(
+        customer_ispay=True,
+        customer_payment_date=customer_payment_date
+    )
+    template = "container/invoice.html"
+    return render(request, template)
 
 def payment_view(request):
     template = "container/payment.html"  
@@ -136,6 +199,7 @@ def rimeiorder_cancel(request):
         'user_permissions': user_permissions
         })
 
+@login_required
 def inventory_view(request):
     inventory_items = RMInventory.objects.all()  # 获取所有库存信息
     user_permissions = get_user_permissions(request.user)

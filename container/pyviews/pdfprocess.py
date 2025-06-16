@@ -13,7 +13,7 @@ from ..models import RMCustomer
 from datetime import datetime,date
 from ..models import RMOrder,Container,ContainerItem,OrderItem
 from .pdfextract import extract_invoice_data, extract_customer_invoice_data, extract_order_info, extract_items_from_pdf,get_product_qty_with_inventory
-from .pdfgenerate import extract_text_from_pdf, print_pickuplist, print_weekly_pickuplist, containerid_lot, print_weekly_pickuplist_on_one_page
+from .pdfgenerate import extract_text_from_pdf, print_pickuplist, print_weekly_pickuplist, containerid_lot, print_weekly_pickuplist_on_one_page,generate_customer_invoice
 from django.http import HttpResponse
 
 from datetime import datetime, timedelta
@@ -22,6 +22,15 @@ from reportlab.lib.utils import ImageReader
 
 from django.shortcuts import render, redirect, get_object_or_404
 from decimal import Decimal
+import re
+import io
+from reportlab.platypus  import SimpleDocTemplate
+from reportlab.platypus import Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+import tempfile
+from reportlab.lib.styles import ParagraphStyle
 
 UPLOAD_DIR = "uploads/"
 UPLOAD_DIR_order = "orders/"
@@ -39,6 +48,7 @@ CHECKLIST_FOLDER = "checklist/"
 DO_FOLDER = "DO/"
 # INVOICE
 INVOICE_FOUDER = "INVOICE"
+CUSTOMER_INVOICE_FOLDER = "CustomerInvoice"
 ORIGINAL_DO_FOUDER = "original"
 
 # 替换文本 & 插入图片
@@ -50,6 +60,7 @@ NEW_TITLE = "Packing Slip"
 # logo
 Rimei_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/remei.jpg')
 SSA_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/ssa.jpg')
+GF_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/goldenfeather.jpg')
 
 # Label
 PAGE_WIDTH, PAGE_HEIGHT = letter  # Letter size (8.5 x 11 inches)
@@ -64,6 +75,11 @@ FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size
 LINE_SPACING = 40
 DRAW_BORDERS = False  # Set to True to draw borders, False to hide the
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Table, TableStyle, Paragraph
+from reportlab.lib import colors
 
 
 # 一行的文字长度
@@ -363,6 +379,114 @@ def print_order_bol(request, so_num):
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
         return response
 
+def print_order_mcd(request, so_num):
+    order = get_object_or_404(RMOrder, so_num=so_num)
+    order_items = OrderItem.objects.filter(order=order)
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    y = height - 80
+
+    LOT_MAPPING = {
+        "07604-034": "GF041124-S",
+        "07605-039": "GF100524-M",
+        "07606-039": "GF100524-L",
+        "07607-024": "GF100524-XL",
+        "07326-024": "GF072124B",
+        # Add more mappings if needed
+    }
+
+    # ✅ Logo 和标题
+    if os.path.exists(GF_LOGO_PATH):
+        p.drawImage(GF_LOGO_PATH, 40, y - 60, width=100, height=50, preserveAspectRatio=True, mask='auto')
+    p.setFont("Helvetica-Bold", 20)
+    p.drawString(220, y, "Packing Slip")
+    y -= 80
+
+    # ✅ 公司地址
+    p.setFont("Helvetica", 11)
+    company_info = [
+        "Golden Feather Supplies LLC",
+        "1285 101st St",
+        "Lemont, IL 60439"
+    ]
+    for line in company_info:
+        p.drawString(40, y, line)
+        y -= 15
+
+    # ✅ 订单信息框
+    offset = 50
+    p.rect(370, height - 120 - offset, 160, 50)
+    p.drawString(375, height - 85 - offset, "Order Date")
+    p.drawString(445, height - 85 - offset, order.order_date.strftime("%m/%d/%Y"))
+    p.drawString(375, height - 100 - offset, "Omar SO#")
+    p.drawString(445, height - 100 - offset, str(order.so_num))
+    p.drawString(375, height - 115 - offset, "PO#")
+    p.drawString(445, height - 115 - offset, order.po_num or "")
+
+    # 收货地址框
+    box_x = 40
+    box_top_y = y  # 顶部 y 坐标
+    line_height = 16
+    ship_lines = (order.ship_to or "").split('\n')
+    row_count = len(ship_lines) + 1  # 地址行数 + 标题行
+    box_height = line_height * row_count + 10  # 每行 12，高度留出 10 点 padding
+
+    # 绘制框
+    p.rect(box_x, box_top_y - box_height, 300, box_height)
+
+    # 绘制标题行 “Ship to:”
+    p.setFont("Helvetica-Bold", 11)
+    p.drawString(box_x + 5, box_top_y - line_height, "Ship to:")
+
+    # 写入文字（从 top_y - line_height 开始写入）
+    p.setFont("Helvetica", 11)
+    text_y = box_top_y - (2 * line_height)
+    for line in ship_lines:
+        p.drawString(box_x + 5, text_y, line.strip())  # 加点 padding
+        text_y -= line_height
+
+    # 更新 y 位置，为后面内容留空间
+    y = box_top_y - box_height - 200
+
+    # ✅ 表格头和数据
+    table_data = [["Item code", "Description", "Quantities(case)"]]
+    total_qty = 0
+    for item in order_items:
+        lot_number = LOT_MAPPING.get(item.product.shortname, "LOT-UNKNOWN")
+        description = f"{item.product.name} 200PC/BOX\nBATCH# {lot_number}"
+        table_data.append([item.product.shortname, description, item.quantity])
+        total_qty += item.quantity
+
+    table_data.append(["", "Total", total_qty])
+
+    table = Table(table_data, colWidths=[100, 300, 100], rowHeights=50)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.white),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'), 
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+    ]))
+
+    table.wrapOn(p, width, height)
+    table.drawOn(p, 40, y - (20 * len(table_data)))
+
+    # ✅ 底部公司名
+    p.drawString(40, 145, "Golden Feather Supplies LLC")
+    p.drawString(40, 130, "1285 101st St")
+    p.drawString(40, 115, "Lemont, IL 60439")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    return HttpResponse(buffer, content_type='application/pdf')
+ 
 def print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes):
     # 创建 PDF 文件
     c = canvas.Canvas(filename, pagesize=letter)
@@ -1143,6 +1267,233 @@ def print_converted_invoice(request, container_id):
         response = HttpResponse(pdf.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{container.customer_invoice_pdfname}"'
         return response
+
+def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0):
+    print("----------print_customer_invoice----------")
+    print("isEmptyContainerRelocate: ", isEmptyContainerRelocate)
+    container = get_object_or_404(Container, container_id=container_id)
+
+    if not container.invoice_pdfname:
+        return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
+
+    # 构建PDF文件路径
+    input_pdf_path  = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_invoice, INVOICE_FOUDER, container.invoice_pdfname)    
+    # 检查文件是否存在
+    if not os.path.exists(input_pdf_path ):
+        return HttpResponse("PDF文件未找到", status=404)
+    
+    # 打开原始 PDF
+    original_doc  = fitz.open(input_pdf_path)
+    amount_items = []
+    total_original = 0
+    lines = []
+    # 提取所有行文本
+    for page in original_doc:
+        lines += page.get_text().splitlines()
+
+    # 清洗空行
+    lines = [line.strip() for line in lines if line.strip()]
+    
+    i = 0
+    while i < len(lines) - 4:
+        # 特例：Flat rate 前面是有效描述行
+        if lines[i+1].lower() == "flat rate":
+            desc = lines[i]  # 正确描述
+            try:
+                units = float(lines[i+2])
+                rate = float(lines[i+3])
+                amount = float(lines[i+4])
+
+                amount_items.append((desc.strip(), units, rate, amount))
+                total_original += amount
+
+                print(f"✔✔ {desc} | Units: {units} | Rate: {rate} | Amount: {amount}")
+                i += 5  # 向后跳 5 行
+            except (ValueError, IndexError):
+                i += 1
+        else:
+            desc_line = lines[i].strip()
+
+            # ✅ 特例修正：INTERM1 的正确格式
+            if desc_line == "INTERM1":
+                try:
+                    # 跳过无用的 weight 行
+                    units = 1
+                    rate = float(lines[i + 3])  # 应该跳过几行到金额
+                    amount = float(lines[i + 4])
+
+                    amount_items.append((desc_line, units, rate, amount))
+                    total_original += amount
+
+                    print(f"✔ [FIXED] {desc_line} | Units: {units} | Rate: {rate} | Amount: {amount}")
+                    i += 5
+                    continue
+                except (ValueError, IndexError):
+                    i += 1
+                    continue
+
+            # 通用解析逻辑（小心不要误入）
+            if re.match(r'^[A-Za-z][A-Za-z0-9 \-/]+$', desc_line) and not desc_line.lower().startswith("min"):
+                try:
+                    units = float(lines[i + 1])
+                    rate = float(lines[i + 2])
+                    amount = float(lines[i + 3])
+
+                    amount_items.append((desc_line, int(units), rate, amount))
+                    total_original += amount
+
+                    print(f"✔ {desc_line} | Units: {units} | Rate: {rate} | Amount: {amount}")
+                    i += 4
+                except (ValueError, IndexError):
+                    i += 1
+            else:
+                i += 1
+
+    print(f"✅ 共抓取 {len(amount_items)} 条价格记录，总金额: {total_original:.2f}")
+    original_doc.close()
+
+    # 构造新的文件路径
+    new_filename = f"{container.container_id}.pdf"
+    output_dir = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_invoice, CUSTOMER_INVOICE_FOLDER)
+    output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
+    generate_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate)
+    
+    # 打开并读取PDF文件
+    with open(output_file_path , 'rb') as pdf:
+        response = HttpResponse(pdf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{new_filename}"'
+        return response
+
+def generate_invoice_pdf(request):
+    if request.method == "POST":
+        selected_ids = request.POST.getlist("selected_ids")
+        containers = Container.objects.filter(id__in=selected_ids)
+        total_price = sum([c.price or 0 for c in containers])
+
+        # ✅ 创建临时文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+            temp_path = temp_pdf.name
+
+        # ✅ 使用 ReportLab 写入该 PDF 文件
+        doc = SimpleDocTemplate(temp_path, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # 标题
+        large_title_style = ParagraphStyle(
+            name="LargeTitle",
+            parent=styles["Title"],
+            fontSize=20,  # 设置大标题字体大小
+            leading=24
+        )
+        elements.append(Paragraph(f"Payment Statement - {datetime.now().strftime('%m/%d/%Y')}", large_title_style))
+        elements.append(Spacer(1, 12))
+
+        # 表格数据
+        index = 0
+        data = [["ID", "Container#", "Customer", "Invoice#", "Price", "Invoice Date", "Due Date"]]
+        for c in containers:
+            index += 1
+            data.append([
+                index,
+                c.container_id,
+                c.customer.name,
+                c.invoice_id,
+                f"${c.price or 0:.2f}",
+                c.invoice_date.strftime("%m/%d/%Y") if c.invoice_date else "",
+                c.due_date.strftime("%m/%d/%Y") if c.due_date else "",
+                # c.payment_date.strftime("%m/%d/%Y") if c.payment_date else "",
+            ])
+        # 合计行
+        data.append(["", "Total", "", "", f"${total_price:.2f}", "", ""])
+
+        table = Table(data, colWidths=[50, 100, 90, 70, 60, 70, 70, 70])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 12),  # ✅ 设置字体大小为12
+            ("LEADING", (0, 0), (-1, -1), 14),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),              # 增加下边距
+            ("TOPPADDING", (0, 0), (-1, -1), 6),                 # 增加上边距
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+
+        elements.append(table)
+        doc.build(elements)
+
+        # ✅ 读取 PDF 文件并返回
+        new_filename = "invoice_statement.pdf"
+        with open(temp_path, "rb") as pdf_file:
+            response = HttpResponse(pdf_file.read(), content_type="application/pdf")
+            response["Content-Disposition"] = f'inline; filename="{new_filename}"'
+
+        # 删除临时文件
+        os.remove(temp_path)
+
+        return response
+
+
+def generate_invoice_pdf_old(request):
+    print("generate_invoice_pdf")
+    if request.method == "POST":
+        selected_ids = request.POST.getlist('selected_ids')
+        containers = Container.objects.filter(id__in=selected_ids)
+        total_price = sum([c.price for c in containers if c.price])
+        
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # 标题
+        elements.append(Paragraph("Invoice Statement", styles["Title"]))
+        elements.append(Spacer(1, 12))
+
+        # 表格数据
+        data = [["ID", "Container#", "Customer", "Invoice#", "Price", "Invoice Date", "Due Date"]]
+
+        for c in containers:
+            data.append([
+                c.id,
+                c.container_id,
+                c.customer.name,
+                c.invoice_id,
+                f"${c.price or 0:.2f}",
+                c.invoice_date.strftime("%m/%d/%Y") if c.invoice_date else "",
+                c.due_date.strftime("%m/%d/%Y") if c.due_date else "",
+            ])
+
+        # 合计
+        data.append(["", "", "", "Total", f"${total_price:.2f}", "", ""])
+
+        # 创建表格
+        table = Table(data, colWidths=[50, 100, 80, 60, 60, 70, 70])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+
+        elements.append(table)
+
+        # 生成 PDF
+        doc.build(elements)
+
+        pdf = buffer.getvalue()
+        buffer.close()
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="invoice_statement.pdf"'
+        response.write(pdf)
+        return response
+
+    return HttpResponse("Invalid Request", status=400)
 
 def edit_invoice(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)

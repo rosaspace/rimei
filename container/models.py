@@ -76,7 +76,7 @@ class RMProduct(models.Model):
     TI = models.IntegerField(default=0) # 一层数量
     HI = models.IntegerField(default=0) # 层数
     Pallet = models.IntegerField(default=0) # 一个托盘数量
-    Color = models.CharField(max_length=255, default='Red')
+    Color = models.CharField(max_length=255, default='Other')
     Location = models.CharField(max_length=255, blank=True, null=True, default='')
     ShelfRecord = models.CharField(max_length=255, blank=True, null=True, default='')
     description = models.TextField(blank=True, null=True)  # 客户描述

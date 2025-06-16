@@ -37,6 +37,9 @@ class ContainerItemAdmin(admin.ModelAdmin):
 class RMCustomerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name','description')
 
+class InvoiceCustomerAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name','description')
+
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
 admin.site.register(Permission)
@@ -44,7 +47,7 @@ admin.site.register(UserAndPermission)
 admin.site.register(RMOrder, RMOrderAdmin)
 admin.site.register(RMCustomer,RMCustomerAdmin)
 admin.site.register(OrderImage)
-admin.site.register(InvoiceCustomer)
+admin.site.register(InvoiceCustomer,InvoiceCustomerAdmin)
 admin.site.register(RMProduct, RMProductdAdmin)
 admin.site.register(RMInventory, RMInventoryAdmin)
 admin.site.register(ClockRecord,ClockRecordAdmin)

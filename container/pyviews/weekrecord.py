@@ -371,7 +371,7 @@ def export_week_records(request):
         if os.path.exists(full_path):
             with open(full_path, 'rb') as f:
                 file_data = f.read()
-                response = HttpResponse(
+                response = HttpResponse( 
                     file_data,
                     content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )

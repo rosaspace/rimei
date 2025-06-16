@@ -151,6 +151,8 @@
         {% if user.is_authenticated %}
             {% if 'Invoice' in user_permissions %}
             <span class="divider">|</span>    
+            <a class="nav-link {% if request.resolver_match.url_name == 'invoice_unpaid' %}active{% endif %}" href="{% url 'invoice_unpaid' %}">Unpaid</a>
+            <span class="divider">|</span>    
             <a class="nav-link {% if request.resolver_match.url_name == 'invoice' %}active{% endif %}" href="{% url 'invoice' %}">Invoice</a>
             <span class="divider">|</span>    
             <a class="nav-link {% if request.resolver_match.url_name == 'invoice_finished' %}active{% endif %}" href="{% url 'invoice_finished' %}">InvoiceFinished</a>
@@ -186,13 +188,16 @@
             <a class="nav-link {% if request.resolver_match.url_name == 'temporary' %}active{% endif %}" href="{% url 'temporary' %}">Temporary</a>            
             {% endif %}
 
-            {% if 'Permission' in user_permissions %}
+            {% if 'RimeiInventory' in user_permissions %}
             <!-- <span class="divider">|</span> -->
             <!-- <a class="nav-link {% if request.resolver_match.url_name == 'rimeiorder_cancel' %}active{% endif %}" href="{% url 'rimeiorder_cancel' %}">Cancel</a> -->
             <span class="divider">|</span>
             <a class="nav-link {% if request.resolver_match.url_name == 'inventory_diff' %}active{% endif %}" href="{% url 'inventory_diff' %}">InventoryDiff</a>
             <span class="divider">|</span>
             <a class="nav-link {% if request.resolver_match.url_name == 'inventory' %}active{% endif %}" href="{% url 'inventory' %}">Inventory</a>
+            {% endif %}
+
+            {% if 'Permission' in user_permissions %}            
             <span class="divider">|</span>
             <a class="nav-link {% if request.resolver_match.url_name == 'permission' %}active{% endif %}" href="{% url 'permission' %}">Permission</a>            
             {% endif %}
@@ -216,7 +221,7 @@
                     ordering: false,
                     info: true,
                     searching: true,
-                    pageLength: 21
+                    pageLength: 22
                 });
             }
         });

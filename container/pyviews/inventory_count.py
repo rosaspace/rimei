@@ -275,7 +275,7 @@ def sort_by_date(entry, field_name):
 def export_inventory_to_excel(items):
     wb = openpyxl.Workbook()
     ws = wb.active
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = datetime.now().strftime("%Y_%m_%d")
     ws.title = f"Inventory_{today_str}"
 
     # Define headers
