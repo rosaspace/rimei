@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Container, RMOrder,RMCustomer,RMInventory,AlineOrderRecord
+from .models import Container, RMOrder,RMCustomer,RMInventory,AlineOrderRecord,ContainerStatement
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .models import UserAndPermission
@@ -12,6 +12,7 @@ from weasyprint import HTML
 import tempfile
 from datetime import datetime
 from django.utils import timezone
+from collections import defaultdict
 
 @login_required
 def home(request):
@@ -28,7 +29,8 @@ def invoice_view(request):
 
     containers = Container.objects.exclude(
         Q(ispay=True, customer_ispay=True) |
-        Q(customer = 3, ispay=True)
+        Q(customer = 3, ispay=True) | 
+        Q(customer = 12, ispay=True)
     ).exclude(
         logistics=2
     ).order_by('-due_date')
@@ -41,7 +43,8 @@ def invoice_finished(request):
 
     containers = Container.objects.filter(
         Q(ispay=True, customer_ispay=True) |
-        Q(customer = 3, ispay=True)
+        Q(customer = 3, ispay=True) |
+        Q(customer = 12, ispay=True)
     ).exclude(
         logistics=2
     ).order_by('-due_date')
@@ -59,21 +62,71 @@ def invoice_unpaid(request):
     user_permissions = get_user_permissions(request.user)
     return render(request, template, {'containers': containers,'user_permissions': user_permissions})
 
-def generate_selected_invoices(request):
+def statement_selected_invoices(request):
     if request.method == "POST":
         selected_ids = request.POST.getlist('selected_ids')
-        containers = Container.objects.filter(id__in=selected_ids)
-        total_price = sum([c.price for c in containers if c.price])
-        return render(request, "container/invoiceManager/generated_invoice_preview.html", {
-            "containers": containers, 
-            "total_price": total_price,
-            "current_date": datetime.now().strftime("%m/%d/%Y"),},)
+        statement_number = request.POST.get("statement_number")
+        
+        for item in selected_ids:
+            print('item: ', item)
+
+        # ✅ 如果是查看现有 Statement（通过 statement_number）
+        if statement_number and not selected_ids:
+            container_statements = ContainerStatement.objects.filter(statement_number=statement_number)
+            containers = [cs.container for cs in container_statements]
+            total_price = sum([c.price for c in containers if c.price])
+
+            return render(request, "container/invoiceManager/statement_invoice_preview.html", {
+                "containers": containers,
+                "total_price": total_price,
+                "current_date": datetime.now(),
+                "statement_number": statement_number,
+            })
+        # ✅ 如果是新建 Statement（通过 selected_ids）
+        elif selected_ids:
+            containers = Container.objects.filter(container_id__in=selected_ids)
+            total_price = sum([c.price for c in containers if c.price])
+            statement_number = "STM" + datetime.now().strftime("%Y%m%d")
+
+            for container in containers:
+                print('container_id: ', container.container_id)
+                exists = ContainerStatement.objects.filter(
+                    container_id_str=container.container_id,
+                    statement_number=statement_number
+                ).exists()
+                if not exists:
+                    ContainerStatement.objects.create(
+                        container=container,
+                        statement_number=statement_number,
+                        statement_date=datetime.now().date(),
+                        created_at=timezone.now(),
+                        created_user=request.user,  # ✅ 保存创建人
+                )
+
+            return render(request, "container/invoiceManager/statement_invoice_preview.html", {
+                "containers": containers, 
+                "total_price": total_price,
+                "current_date": datetime.now(),
+                "statement_number" : statement_number,
+                },)
     return redirect("invoice_unpaid")
 
+def delete_statement(request):
+    print("---------delete_statement---------")
+    statement_number = request.POST.get("statement_number")
+    print("statement_number: ",statement_number)
+    if statement_number:
+        ContainerStatement.objects.filter(statement_number=statement_number).delete()
+        return redirect("invoice_statement")
+    return JsonResponse({"success": False, "error": "No statement number provided"})
+
 def paid_invoice(request):
+    print("POST data:", request.POST)  # 🔍 打印全部 POST 数据
     ids = request.POST.getlist('all_ids')
     date_str = request.POST.get('payment_date')
     payment_date = timezone.now().date()  # 默认今天
+
+    print("Received container_ids:", ids)  # 检查你是否收到了 container_id 列表
 
     if date_str:
         try:
@@ -85,10 +138,11 @@ def paid_invoice(request):
         ispay=True,
         payment_date=payment_date
     )
-    template = "container/invoice.html"
-    return render(request, template)
+
+    return redirect("invoice_statement")
 
 def paid_invoice_customer(request):
+    
     ids = request.POST.getlist('all_ids')
     date_str = request.POST.get('payment_date')
     customer_payment_date = timezone.now().date()
@@ -103,8 +157,54 @@ def paid_invoice_customer(request):
         customer_ispay=True,
         customer_payment_date=customer_payment_date
     )
-    template = "container/invoice.html"
-    return render(request, template)
+    return redirect("invoice_statement")
+
+def invoice_statement(request):
+    statements = ContainerStatement.objects.all().order_by('statement_date')
+    container_ids = [stmt.container_id_str for stmt in statements if stmt.container_id_str]
+    containers_map = {
+        c.container_id: c for c in Container.objects.filter(container_id__in=container_ids)
+    }
+
+    # 使用 defaultdict 按日期分组
+    grouped = defaultdict(list)
+    for statement in statements:
+        container = containers_map.get(statement.container_id_str)  # 用 container_id 找对应 Container 实例
+        if container:
+            grouped[(statement.statement_date, statement.statement_number)].append((container,statement))
+            print("group:", container.container_id)
+
+    # 构建合并后的结构，每个日期只显示一条
+    merged_statements = []
+    for (date, statement_number), container_statement_pairs  in grouped.items():
+        containers = [c for c, _ in container_statement_pairs]
+        total_amount = sum(c.price for c in containers )
+
+        # ✅ 判断是否全部已付款
+        all_paid = all(c.ispay for c in containers)
+        paid_status = "Paid" if all_paid else "Unpaid"
+
+        # 从任意一个 statement 获取 created_user
+        _, sample_statement = container_statement_pairs[0]
+        operator = sample_statement.created_user
+
+        merged_entry = {
+            "statement_number": statement_number,
+            "statement_date": date,
+            "container_count": len(containers),
+            "total_amount": total_amount,
+            "paid_status": paid_status,  # 如果需要动态取，可额外查询或改逻辑
+            "operator" : operator,
+            "containers": containers,
+        }
+        merged_statements.append(merged_entry)
+
+    # 按日期排序（可选，因 defaultdict 顺序可能不是稳定的）
+    merged_statements.sort(key=lambda x: x["statement_date"])
+
+    template = "container/payment/statement.html"
+    user_permissions = get_user_permissions(request.user)
+    return render(request, template,{"statements":merged_statements,'user_permissions': user_permissions})
 
 def payment_view(request):
     template = "container/payment.html"  

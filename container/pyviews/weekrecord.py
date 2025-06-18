@@ -55,7 +55,7 @@ def week_record(request):
         })
     
     # 获取所有员工的周统计数据
-    employees = Employee.objects.all()
+    employees = Employee.objects.filter(belongTo="CabinetsDepot")
     employee_records = []
     
     for employee in employees:

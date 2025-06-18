@@ -279,16 +279,13 @@ def export_inventory_to_excel(items):
     ws.title = f"Inventory_{today_str}"
 
     # Define headers
-    headers = ["Product", "Quantity", "New Order", "In Preparation", "Diff","Show Number","Each","Color", "Location", "Pallets", "Cases","ShelfRecord"]
+    headers = ["Product", "Diff","Show Number","Each","Color", "Location", "Pallets", "Cases","ShelfRecord"]
     ws.append(headers)
 
     # Write data rows
     for item in items:
         ws.append([
             str(item.product),  # Or item.product.name if it's a ForeignKey
-            item.quantity,
-            item.quantity_for_neworder,
-            item.quantity_to_stock,
             item.quantity_diff,
             item.shownumber,
             item.pallet,

@@ -3,27 +3,27 @@
 
 {% block content %}
 
-<div class="mb-3 d-flex flex-wrap align-items-center w-100">
+<div class="mb-2 d-flex flex-wrap align-items-center w-100">
     <!-- 左侧按钮 -->
-    <div class="me-2 mb-2">
+    <div class="me-2">
         <a href="{% url 'add_week_records' %}" class="btn btn-primary">Add Weekly Records</a>
     </div>
     <!-- 右侧按钮组 -->
     <div class="d-flex flex-wrap gap-2 ms-auto">
-        <div class="mb-2">
+        <div>
             <a href="{% url 'export_week_records' %}?brand=CabinetsDepot" class="btn btn-primary">Export CabinetsDepot</a>
         </div>
-        <div class="mb-2">
+        <!-- <div class="mb-2">
             <a href="{% url 'export_week_records' %}?brand=Lowes" class="btn btn-primary">Export Lowes</a>
         </div>
         <div class="mb-2">
             <a href="{% url 'export_week_records' %}?brand=Aline" class="btn btn-primary">Export Aline</a>
-        </div>
+        </div> -->
     </div>
 </div>
 
-<div class="mb-3">
-    <form method="get" class="mb-3">
+<div class="mb-2">
+    <form method="get">
         <div class="input-group">
             <select name="year" action="{% url 'week_record' %}" class="form-control">
                 {% for year in years %}
@@ -40,34 +40,36 @@
     </form>
 </div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Date Range</th>
-            <th>Hours</th>
-            <th>hour/day</th>
-            <th>Rate/week</th>
-            <th>BelongTo</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for employee_record in employee_records %}
-        <tr>
-            <td>{{ employee_record.id }}</td>
-            <td>
-                <a href="{% url 'edit_week_records' employee_record.id %}">{{ employee_record.name }}</a>
-            </td>
-            <td>{{ employee_record.period_start|date:"Y-m-d" }} To {{ employee_record.period_end|date:"Y-m-d" }}</td>
-            <td>{{ employee_record.total_hours }}</td>
-            <td>{{ employee_record.average_hours }}</td>
-            <td>{{ employee_record.attendance_rate }}%</td>
-            <td>{{ employee_record.belongTo }}</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="table-container">
+    <table class="table table-striped table-bordered table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Date Range</th>
+                <th>Hours</th>
+                <th>hour/day</th>
+                <th>Rate/week</th>
+                <th>BelongTo</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for employee_record in employee_records %}
+            <tr>
+                <td style="height: 40px;">{{ employee_record.id }}</td>
+                <td>
+                    <a href="{% url 'edit_week_records' employee_record.id %}">{{ employee_record.name }}</a>
+                </td>
+                <td>{{ employee_record.period_start|date:"Y-m-d" }} To {{ employee_record.period_end|date:"Y-m-d" }}</td>
+                <td>{{ employee_record.total_hours }}</td>
+                <td>{{ employee_record.average_hours }}</td>
+                <td>{{ employee_record.attendance_rate }}%</td>
+                <td>{{ employee_record.belongTo }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
 </div>
 
 {% endblock %} 

@@ -2,9 +2,9 @@
 {% load static %}
 
 {% block content %}
-<div class="mb-3 d-flex flex-wrap align-items-center w-100">
+<div class="d-flex flex-wrap align-items-center w-100  mb-2">
     <!-- 左侧按钮 -->
-    <div class="me-2 mb-2">
+    <div class="me-2">
         <a href="{% url 'add_order' %}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Add Order
         </a>
@@ -12,22 +12,22 @@
 
     <!-- 右侧按钮组 -->
     <div class="d-flex flex-wrap gap-2 ms-auto">
-        <div class="mb-2">
+        <div>
             <a href="{% url 'pickup_fourth' %}" class="btn btn-primary">PICKUP LIST Fourth</a>
         </div>
-        <div class="mb-2">
+        <div>
             <a href="{% url 'pickup_third' %}" class="btn btn-primary">PICKUP LIST Third</a>
         </div>
-        <div class="mb-2">
+        <div>
             <a href="{% url 'pickup_tomorrow' %}" class="btn btn-primary">PICKUP LIST Tomorrow</a>
         </div>
-        <div class="mb-2">
+        <div>
             <a href="{% url 'pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
         </div>
-        <div class="mb-2">
+        <div>
             <a href="{% url 'pickup_week' %}" class="btn btn-primary">PICKUP LIST Week</a>
         </div>
-    </div>
+    </div> 
 </div>
 
 <!-- 订单列表 -->
@@ -70,11 +70,11 @@
                     {% endif %} -->
                     <form method="post" action="{% url 'order_is_allocated_to_stock' order.so_num %}?next={{ request.get_full_path }}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm p-0" title="Toggle Pay">
+                        <button type="submit" class="btn btn-sm p-0 m-0" title="Toggle Pay" style="all: unset; line-height: 1; display: inline; cursor: pointer;">
                             {% if order.is_allocated_to_stock %}
-                            <i class="fas fa-toggle-on text-success" style="font-size: 1.5em;"></i>
+                            <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
                             {% else %}
-                            <i class="fas fa-toggle-off text-secondary" style="font-size: 1.5em;"></i>
+                            <i class="far fa-circle text-muted" style="font-size: 1.2em;"></i>
                             {% endif %}
                         </button>
                     </form>
@@ -83,7 +83,7 @@
                     {% if order.is_updateInventory %}
                     <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
                     {% else %}
-                    <i class="far fa-circle text-muted"></i>
+                    <i class="far fa-circle text-muted" style="font-size: 1.2em;"></i>
                     {% endif %}
                 </td>
             </tr>

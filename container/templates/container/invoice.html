@@ -2,14 +2,10 @@
 
 {% block content %}
 
-<div class="mb-3 d-flex flex-wrap align-items-center w-100">
-    <button id="toggle-selection-btn"type="button" class="btn btn-primary me-2">Toggle Selection</button>
-</div>
-
-<form method="post" action="{% url 'generate_selected_invoices' %}">
+<form method="post" action="{% url 'statement_selected_invoices' %}">
     {% csrf_token %}
-    <div class="mb-3 d-flex flex-wrap align-items-center w-100">
-        <div class="me-2 mb-2">
+    <div class="d-flex flex-wrap align-items-center w-100  mb-2">
+        <div class="me-2">
             <button type="submit" class="btn btn-primary">Generate Payment</button>
         </div>
     </div>
@@ -40,7 +36,7 @@
             <tbody>
                 {% for container in containers %}
                 <tr>
-                    <td><input type="checkbox" name="selected_ids" value="{{ container.id }}"></td>
+                    <td><input type="checkbox" name="selected_ids" value="{{ container.container_id }}"></td>
                     <td>{{ container.id }}</td>
                     <td>
                         {% if container.container_id %}
@@ -60,9 +56,9 @@
                     <td>{{ container.payment_date |date:"m/d/Y"}}</td>
                     <td class="text-center">
                         {% if container.ispay %}
-                        <i class="fas fa-toggle-on text-success" style="font-size: 1.5em;"></i>
+                        <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
                         {% else %}
-                        <i class="fas fa-toggle-off text-secondary" style="font-size: 1.5em;"></i>
+                        <i class="far fa-circle text-muted" style="font-size: 1.2em;"></i>
                         {% endif %}
                     </td>
 
@@ -105,9 +101,9 @@
                     <td class="text-center">
                         {% if container.customer.name != "GoldenFeather" and container.customer.name != "Metal Studs"%}
                             {% if container.customer_ispay %}
-                            <i class="fas fa-toggle-on text-success" style="font-size: 1.5em;"></i>
+                            <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
                             {% else %}
-                            <i class="fas fa-toggle-off text-secondary" style="font-size: 1.5em;"></i>
+                            <i class="far fa-circle text-muted"  style="font-size: 1.2em;"></i>
                             {% endif %}
                         {% else %}
                             -

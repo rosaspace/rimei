@@ -56,16 +56,25 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 0px; /* 控制链接间距 */
+            font-size: 14;            /* 整体减小文字大小 */
         }
 
         /* 链接样式统一处理 */
         .topnav a,
         .topnav .nav-link {
             color: #f2f2f2;
-            padding: 14px 16px;
+            padding: 8px 10px;
             text-decoration: none;
-            font-size: 17px;
+            font-size: 20;
             display: inline-block;
+        }
+
+        /* 分隔符样式 */
+        .topnav .divider {
+            color: #888;
+            font-size: 14;
+            padding: 0 0px;
+            user-select: none;
         }
 
         /* 悬浮效果 */
@@ -80,15 +89,7 @@
         .topnav .nav-link.active {
             background-color: #04AA6D;
             color: white;
-        }
-
-        /* 分隔符样式 */
-        .topnav .divider {
-            color: #888;
-            font-size: 18px;
-            padding: 0 0px;
-            user-select: none;
-        }
+        }        
 
         .divider {
             color: #999;
@@ -97,7 +98,7 @@
 
         /* 主体内容区域 */
         .main-content {
-            padding: 20px;
+            padding: 16px;
         }
         /* 必填项样式 */
         .required-label::after {
@@ -108,27 +109,39 @@
 
         /* Style the table header */
         .table th {
-            padding: 10px;
-            border-bottom: 2px solid #ddd;
+            padding: 4px 8px !important; /* ✅ 缩小内边距 */
+            border-bottom: 1px solid #ddd;
             font-size: 1.0em;
             text-transform: uppercase; /* Uppercase text */
             background-color: lightyellow;
             border: 1px solid gray; /* Dark border */
+            line-height: 1.6 !important; /* ✅ 控制行高 */
         }
 
         .table td{
+            padding: 2px 6px !important; /* ✅ 缩小内边距 */
             border: 1px solid gray; /* Dark border */
+            line-height: 1.2 !important; /* ✅ 控制行高 */
+            vertical-align: middle !important;       /* ✅ 垂直居中文字 */
         }
 
         /* Make the table scrollable */
         .table-container {
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 200px); /* 适应剩余高度 */
-            overflow-y: auto;
+            margin-top: 0px;
+            margin-bottom: 0px;
         }
 
-        
+        /* 设置 DataTables 分页、信息和搜索区域文字大小 */        
+        .dataTables_wrapper .dataTables_paginate{
+            font-size: 14px;  /* 你可以调整为 12px、13px 等 */
+            margin-top: 4px;
+        }
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            font-size: 14px;  /* 你可以调整为 12px、13px 等 */
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 
@@ -150,6 +163,8 @@
         <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
         {% if user.is_authenticated %}
             {% if 'Invoice' in user_permissions %}
+            <span class="divider">|</span>    
+            <a class="nav-link {% if request.resolver_match.url_name == 'invoice_statement' %}active{% endif %}" href="{% url 'invoice_statement' %}">Statement</a>
             <span class="divider">|</span>    
             <a class="nav-link {% if request.resolver_match.url_name == 'invoice_unpaid' %}active{% endif %}" href="{% url 'invoice_unpaid' %}">Unpaid</a>
             <span class="divider">|</span>    
@@ -221,7 +236,7 @@
                     ordering: false,
                     info: true,
                     searching: true,
-                    pageLength: 22
+                    pageLength: 25
                 });
             }
         });

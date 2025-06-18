@@ -1,8 +1,8 @@
 {% extends "container/base.html" %}
 {% block content %}
 
-<div class="container mt-4">
-    <h4 class="mb-4">Print Container</h4>
+<div class="container">
+    <h4>Print Container</h4>
     <div class="row">
         <div class="d-flex flex-wrap align-items-start">
             <div class="me-2 mb-2">
@@ -56,13 +56,13 @@
     <div class="container-form">
         <form id="edit-container-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_container' container.container_id %}">
             {% csrf_token %}
-            <div class="row">
-                <div class="col-md-3 mb-3">
+            <div class="row mb-2">
+                <div class="col-md-3">
                     <label class="form-label">Container ID</label>
                     <div class="container-id-display">{{ container.container_id }}</div>
                     <input type="hidden" id="container-id" value="{{ container.container_id }}">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label class="form-label">Container Type</label>
                     <select class="form-select" id="inbound_category" name="inbound_category" required>
                         <option value="">Select Type...</option>
@@ -73,20 +73,20 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="pickup-number" class="form-label">Pickup Number</label>
                     <input type="text" class="form-control" id="pickup-number" name="pickup_number" 
                         value="{{ container.pickup_number }}">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="lot_number" class="form-label">Lot Number</label>
                     <input type="text" class="form-control" id="lot_number" name="lot_number" 
                         value="{{ container.lot }}">
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-3 mb-3">
+            <div class="row mb-2">
+                <div class="col-md-3">
                     <label for="customer_name" class="form-label">Customer</label>
                     <select class="form-select" id="customer_name" name="customer_name" required>
                         <option value="">Select Customer...</option>
@@ -97,7 +97,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="logistics_name" class="form-label">Logistics</label>
                     <select class="form-select" id="logistics_name" name="logistics_name" required>
                         <option value="">Select Logistics...</option>
@@ -108,7 +108,7 @@
                         {% endfor %}
                     </select>
                 </div>            
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="station_name" class="form-label">Railway Station</label>
                     <select class="form-select" id="station_name" name="station_name" required>
                         <option value="">Select Railway Station...</option>
@@ -119,7 +119,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="carrier_name" class="form-label">Carrier</label>
                     <select class="form-select" id="carrier_name" name="carrier_name" required>
                         <option value="">Select Carrier...</option>
@@ -132,23 +132,23 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-3 mb-3">
+            <div class="row mb-2">
+                <div class="col-md-3">
                     <label for="railway-date" class="form-label">Railway Date</label>
                     <input type="date" class="form-control" id="railway-date" name="railway_date" 
                         value="{{ container.railway_date|date:'Y-m-d' }}">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="pickup-date" class="form-label">Pickup Date</label>
                     <input type="date" class="form-control" id="pickup-date" name="pickup_date" 
                         value="{{ container.pickup_date|date:'Y-m-d' }}">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="delivery-date" class="form-label">Delivery Date</label>
                     <input type="date" class="form-control" id="delivery-date" name="delivery_date" 
                         value="{{ container.delivery_date|date:'Y-m-d' }}">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="empty-date" class="form-label">Empty Date</label>
                     <input type="date" class="form-control" id="empty-date" name="empty_date" 
                         value="{{ container.empty_date|date:'Y-m-d' }}">
@@ -156,36 +156,37 @@
             </div>
 
             <div class="row">
-                <div class="col-md-1 mb-3">
+                <div class="col-md-1">
                     <label for="plts" class="form-label">PLTS</label>
                     <input type="number" class="form-control" id="plts" name="plts" 
                         value="{{ container.plts }}" required>
                 </div>
-                <div class="col-md-2 mb-3">
+                <div class="col-md-2">
                     <label for="plts" class="form-label">Weight</label>
                     <input type="number" class="form-control" id="weight" name="weight" min="1"
                         value="{{ container.weight }}" required>
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="pickup-number" class="form-label">REF NO</label>
                     <input type="text" class="form-control" id="ref_number" name="ref_number" 
                         value="{{ container.refnumber }}">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="lot_number" class="form-label">MBL</label>
                     <input type="text" class="form-control" id="mbl" name="mbl" 
                         value="{{ container.mbl }}">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3">
                     <label for="container-pdf" class="form-label">Container PDF</label>
                     <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
                     {% if container.container_pdfname %}
-                        <p class="text-muted">Current file: {{ container.container_pdfname }}</p>
+                        <p class="text-muted mb-0">{{ container.container_pdfname }}</p>
                     {% endif %}                    
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-12 mb-3">
+
+            <div class="row mb-2">
+                <div class="col-md-12">
                     <label for="description" class="form-label">Description</label>
                     <input type="text" class="form-control" id="description" name="description" 
                         value="{{ container.content }}">
@@ -193,18 +194,18 @@
             </div>
 
             <!-- 添加Container项目表格 -->
-            <div class="row mt-4">
+            <div class="row">
                 <div class="col-12">
-                    <div class="row align-items-center mb-2">
+                    <div class="row align-items-center">
                         <div class="col d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Container Items</h5>
+                            <h5>Container Items</h5>
                             <button type="button" class="btn btn-primary" id="addRow">
                                 ➕ Add New Line
                             </button>
                             <input type="hidden" name="containeritems" id="containeritems-field">
                         </div>
                     </div>
-                    <table class="table table-bordered"  id="orderTable">
+                    <table class="table table-bordered mb-0"  id="orderTable">
                         <thead>
                             <tr>
                                 <th>Product Name</th>
@@ -239,7 +240,7 @@
             </div>
 
             <!-- Save -->
-            <div class="mt-4">
+            <div class="mt-2">
                 <button type="submit" class="btn btn-primary">Save Container</button>          
             </div>
         </form>

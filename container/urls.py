@@ -3,7 +3,7 @@ from django.views.generic import TemplateView
 
 from . import views
 from .pyviews import container, invoice, rmorder, inventory,pdfprocess,weekrecord,payment
-from .pyviews import user, login, inventory_count
+from .pyviews import user, login, inventory_count,temporary
 
 urlpatterns = [
     # main page
@@ -12,10 +12,12 @@ urlpatterns = [
     path("invoice/", views.invoice_view, name="invoice"),
     path("invoice_finished/", views.invoice_finished, name="invoice_finished"),
     path("invoice_unpaid/", views.invoice_unpaid, name="invoice_unpaid"),
-    path("generate_selected_invoices/", views.generate_selected_invoices, name="generate_selected_invoices"),
+    path("statement_selected_invoices/", views.statement_selected_invoices, name="statement_selected_invoices"),
+    path('delete_statement/', views.delete_statement, name='delete_statement'),
     path("paid_invoice/", views.paid_invoice, name="paid_invoice"),
     path("paid_invoice_customer/", views.paid_invoice_customer, name="paid_invoice_customer"),
-    path("generate_invoice_pdf/", pdfprocess.generate_invoice_pdf, name="generate_invoice_pdf"),
+    
+    path("invoice_statement/", views.invoice_statement, name="invoice_statement"),
     path("payment/", views.payment_view, name="payment"),
     path("aline_payment/", views.aline_payment_view, name="aline_payment"),    
     path("permission/", views.permission_view, name ="permission"),
@@ -30,9 +32,9 @@ urlpatterns = [
 
     # inventory count
     path("inventory/", inventory_count.inventory_view, name="inventory"),
-    path("inventory_diff/", inventory_count.inventory_diff_view, name="inventory_diff"),
-    path("export_stock/", inventory_count.export_stock, name="export_stock"),    
+    path("inventory_diff/", inventory_count.inventory_diff_view, name="inventory_diff"), 
     path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),
+    path("export_stock/", inventory_count.export_stock, name="export_stock"),    
     path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),
 
     # login
@@ -47,13 +49,20 @@ urlpatterns = [
     path("receivedin_inventory/<str:container_id>/", container.receivedin_inventory, name="receivedin_inventory"), 
     path('container_ispay/<str:container_id>/', container.container_ispay, name='container_ispay'), 
     path('container_customer_ispay/<str:container_id>/', container.container_customer_ispay, name='container_customer_ispay'),
-    path('container_email/<str:container_id>/', container.container_email, name='container_email'),     
 
+    path('print_container_detail/<str:container_num>/', container.print_container_detail, name='print_container_detail'),
+    path('print_container_label/<str:container_num>/', container.print_container_label, name='print_container_label'),
+    path('print_container_color_label/<str:container_num>/', container.print_container_color_label, name='print_container_color_label'),
+    path('print_container_delivery_order/<str:container_num>/', container.print_container_delivery_order, name='print_container_delivery_order'),
+    
     # Invoice    
-    path('add_invoice/', invoice.add_invoice, name='add_invoice'),
-    path('add_invoice_view/', invoice.add_invoice_view, name='add_invoice_view'),
-    path("edit_invoice/<str:container_id>/", pdfprocess.edit_invoice, name="edit_invoice"),
-    path("edit_customer_invoice/<str:container_id>/", pdfprocess.edit_customer_invoice, name="edit_customer_invoice"),
+    path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
+    path("edit_customer_invoice/<str:container_id>/", invoice.edit_customer_invoice, name="edit_customer_invoice"),
+    path("print_statement_invoice_pdf/", invoice.print_statement_invoice_pdf, name="print_statement_invoice_pdf"),
+    path('print_original_do/<str:container_id>/', invoice.print_original_do, name='print_original_do'),
+    path('print_original_invoice/<str:container_id>/', invoice.print_original_invoice, name='print_original_invoice'),
+    path('print_converted_invoice/<str:container_id>/', invoice.print_converted_invoice, name='print_converted_invoice'),
+    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/', invoice.print_customer_invoice, name='print_customer_invoice'),
     
     # Payment
     path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
@@ -67,42 +76,32 @@ urlpatterns = [
     # rimei order
     path('add_order/', rmorder.add_order, name='add_order'),
     path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
+    path("upload_orderpdf/", rmorder.upload_orderpdf, name="upload_orderpdf"),
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
-    path('order_email/<str:so_num>/', rmorder.order_email, name='order_email'),
+    
 
     # Temporary
-    path("import_inventory/", rmorder.import_inventory, name="import_inventory"), 
-    path("import_aline/", rmorder.import_aline, name="import_aline"), 
-    path('export_pallet/',rmorder.export_pallet,name='export_pallet'),
-    path("preview_email/<int:number>/", rmorder.preview_email,name="preview_email"), 
-    path('print_label_only/', pdfprocess.print_label_only, name='print_label_only'),
-    path('print_label_containerid_lot/', pdfprocess.print_label_containerid_lot, name='print_label_containerid_lot'),  
+    path("import_inventory/", temporary.import_inventory, name="import_inventory"), 
+    path("import_aline/", temporary.import_aline, name="import_aline"), 
+    path('export_pallet/',temporary.export_pallet,name='export_pallet'),
+    path("preview_email/<int:number>/", temporary.preview_email,name="preview_email"), 
+    path('order_email/<str:so_num>/', temporary.order_email, name='order_email'),
+    path('container_email/<str:container_id>/', temporary.container_email, name='container_email'),     
+    path('print_label_only/', temporary.print_label_only, name='print_label_only'),
+    path('print_label_containerid_lot/', temporary.print_label_containerid_lot, name='print_label_containerid_lot'),
   
     # Inventory    
     path("add_stock/", inventory.add_stock_view, name="add_stock"),  # 入库路径
     path("remove_stock/", inventory.remove_stock_view, name="remove_stock"),  # 出库路径
     
-    # pdf
-    path("upload_pdf/", pdfprocess.upload_pdf, name="upload_pdf"),
-    path("upload_orderpdf/", pdfprocess.upload_orderpdf, name="upload_orderpdf"),
-     
-    path('print_original_do/<str:container_id>/', pdfprocess.print_original_do, name='print_original_do'),
-    path('print_original_invoice/<str:container_id>/', pdfprocess.print_original_invoice, name='print_original_invoice'),
-    path('print_converted_invoice/<str:container_id>/', pdfprocess.print_converted_invoice, name='print_converted_invoice'),
-    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/', pdfprocess.print_customer_invoice, name='print_customer_invoice'),
-
+    # pdf     
     path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),
     path('print_converted_order/<str:so_num>/', pdfprocess.print_converted_order, name='print_converted_order'),
     path('print_order_label/<str:so_num>/', pdfprocess.print_order_label, name='print_order_label'),    
     path('print_order_bol/<str:so_num>/', pdfprocess.print_order_bol, name='print_order_bol'),
     path('print_order_mcd/<str:so_num>/', pdfprocess.print_order_mcd, name='print_order_mcd'),
 
-    path('print_container_detail/<str:container_num>/', pdfprocess.print_container_detail, name='print_container_detail'),
-    path('print_container_label/<str:container_num>/', pdfprocess.print_container_label, name='print_container_label'),
-    path('print_container_color_label/<str:container_num>/', pdfprocess.print_container_color_label, name='print_container_color_label'),
-    path('print_container_delivery_order/<str:container_num>/', pdfprocess.print_container_delivery_order, name='print_container_delivery_order'),
-    
     path('pickup_tomorrow/', pdfprocess.pickup_tomorrow, name='pickup_tomorrow'),
     path('pickup_today/', pdfprocess.pickup_today, name='pickup_today'),
     path('pickup_third/', pdfprocess.pickup_third, name='pickup_third'),   

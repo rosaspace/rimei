@@ -1,0 +1,59 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+    <table class="table table-striped table-bordered table-hover">
+        <thead>
+            <tr>
+                <th>Statement ID</th>
+                <th>Statement Date</th>
+                <th>Container QTY</th>
+                <th>Total Price</th>
+                <th>Paid Status</th>
+                <th>Operater</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in statements %}
+            <tr>
+                 <td>
+                    <form method="post" action="{% url 'statement_selected_invoices' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="statement_number" value="{{ item.statement_number }}">
+                        <button type="submit" class="btn btn-link p-0" style="text-decoration: underline;">
+                            {{ item.statement_number }}
+                        </button>
+                    </form>
+                </td>
+                <td>{{ item.statement_date }}</td>
+                <td>{{ item.container_count }}</td>
+                <td>${{ item.total_amount }}</td>
+                <td>{{ item.paid_status }}</td>
+                <td>{{ item.operator }}</td>
+                <td>
+                    <form method="post" action="{% url 'delete_statement' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="statement_number" value="{{ item.statement_number }}">
+                        <button type="submit" class="btn btn-danger btn-sm remove-row" data-statement-number="{{ item.statement_number }}">
+                            Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No statement available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+
+</script>
+{% endblock %}

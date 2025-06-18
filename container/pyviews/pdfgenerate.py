@@ -1,8 +1,10 @@
-from django.db.models import Q
-import re
 import os
-from django.conf import settings
 import fitz  # PyMuPDF 解析 PDF
+import textwrap
+
+from django.conf import settings
+from django.db.models import Q
+
 from django.http import HttpResponse
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
@@ -17,21 +19,11 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 
 from ..models import RMOrder
-
-FONT_SIZE = 46  # Larger font size
-# FONT_SIZE = 46  # Larger font size
-FONT_SIZE_Lot = 20
-
-# Label
-PAGE_WIDTH, PAGE_HEIGHT = letter  # Letter size (8.5 x 11 inches)
-MARGIN_TOP = 25  # Top margin
-MARGIN_LEFT = 5  # Left margin
-LABEL_WIDTH = (PAGE_WIDTH - MARGIN_LEFT * 2) / 2  # Two labels per row
-LABEL_HEIGHT = (PAGE_HEIGHT - MARGIN_TOP * 2) / 5  # Five rows per page
-
-DRAW_BORDERS = False  # Set to True to draw borders, False to hide them
-GF_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/ssa.jpg')
-
+from ..constants import FONT_SIZE,FONT_SIZE_Lot
+from ..constants import PAGE_WIDTH,PAGE_HEIGHT,MARGIN_TOP,MARGIN_LEFT,LABEL_WIDTH,LABEL_HEIGHT
+from ..constants import SSA_LOGO_PATH, DRAW_BORDERS
+from ..constants import max_line_width
+from ..constants import SSA_ADDRESS,address_mapping,CONSIGNEE,description_mapping
 
 # PDF 解析函数
 def extract_text_from_pdf(pdf_path):
@@ -146,8 +138,8 @@ def print_weekly_pickuplist_on_one_page(start_date):
                 pickup_list = [f"{o.so_num} / {o.plts} plts / {o.customer_name}" for o in pickup_orders]
             else:
                 pickup_list = ["N/A"]
-            if current_date.weekday() == 0:
-                pickup_list.append("Office Depot")
+            # if current_date.weekday() == 0:
+            #     pickup_list.append("Office Depot")
 
             # 编号列表
             c.setFont("Helvetica", item_font_size)
@@ -226,7 +218,7 @@ def print_weekly_pickuplist(start_date):
     c.save()
     return response
 
-def containerid_lot(c, so_num, label_count, container_id, lot_number, current_date):
+def print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date):
     try:
         label_count = int(label_count) if label_count is not None else 0
     except ValueError:
@@ -282,7 +274,7 @@ def containerid_lot(c, so_num, label_count, container_id, lot_number, current_da
             y_position -= LABEL_HEIGHT  # Move to next row
             labels_on_page += 2  # Two labels per row
 
-def generate_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate):
+def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate):
     # 构建新的PDF文件（使用 reportlab）
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -292,8 +284,8 @@ def generate_customer_invoice(container, amount_items, output_dir, new_filename,
     y_offset = 30  # ✅ 向下移动整体内容高度
 
     # ✅ Logo 和标题
-    if os.path.exists(GF_LOGO_PATH):
-        c.drawImage(GF_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
+    if os.path.exists(SSA_LOGO_PATH):
+        c.drawImage(SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
     
     # c.setFont("Helvetica-Bold", 20)
     # c.drawString(220, y, "Packing Slip")
@@ -308,20 +300,6 @@ def generate_customer_invoice(container, amount_items, output_dir, new_filename,
         c.line(x, y - 2, x + 150, y - 2)
         c.setFont("Helvetica", 11)
 
-    address_mapping = {
-        "Speedier": [
-            "SPEEDIER LOGISTIC INC.",
-            "175-01 Rockaway Blvd. Ste. 305",
-            "Jamaica, NY 11434",
-            "Tel: 7183735400"
-        ],
-        "Trans Knights": [
-            "TRANS KNIGHTS INC",
-            "18030 CORTNEY CT",
-            "CITY OF INDUSTRY, CA 91748"
-        ]
-    }
-
     def draw_address_block(c, label, address_lines, x, y_start):
         draw_section_header(label, x, y_start)
         line_height = 15
@@ -331,17 +309,8 @@ def generate_customer_invoice(container, amount_items, output_dir, new_filename,
             y -= line_height
 
     ADDRESS_MAPPING = {
-        "SHIPPER": [
-            "Secure Source America LLC",
-            "1285 101 st Street, Lemont, IL 60439",
-            "TEL: 708-882-1188",
-            "accounting@securesourceamerica.com"
-        ],
-        "CONSIGNEE": [
-            "OMAR",
-            "1285 101st",
-            "LEMONT, IL 60439"
-        ]
+        "SHIPPER": SSA_ADDRESS,
+        "CONSIGNEE": CONSIGNEE
     }
 
     invoice_prefix = {
@@ -396,24 +365,7 @@ def generate_customer_invoice(container, amount_items, output_dir, new_filename,
         ["Drop Off", "", "", ""],
         ["Dry Run", "", "", ""],
         ["", "", "TOTAL", ""]
-    ]
-
-    # 描述映射：原始 → 表格描述
-    description_mapping = {
-        "INTERM1": "Drayage (FSC all included)",
-        "Chassis use": "Chassis",
-        "Chassis split": "Chassis split",
-        "Storage": "Yard storage",
-        "Prepull": "Pre-pull",
-        "Rail storage + fee": "Rail storage",
-        "Rail storage + 20% fee": "Rail storage",
-        "OW citation":"OW TICKET",
-        "OW ticket - citation":"OW",
-        "flip":"Flip",
-        "Dry run":"Dry Run",
-        "Drop Off":"Drop Off",
-        # 可继续扩展其他映射项
-    }
+    ]    
 
     # 建立描述到行的映射，方便更新
     desc_to_row = {row[0]: row for row in data[1:-1]}  # 跳过表头和TOTAL
@@ -523,3 +475,249 @@ def generate_customer_invoice(container, amount_items, output_dir, new_filename,
     # 写入 PDF 文件
     with open(output_path, "wb") as f:
         f.write(buffer.read())
+
+def print_checklist_template(title,filename, contentTitle, container_info,can_liner_details, note_lines, issign = False):
+  
+    # 创建 PDF 文件
+    c = canvas.Canvas(filename, pagesize=letter)
+    c.setTitle(title)
+    width, height = letter
+
+    # 设置标题居中
+    c.setFont("Helvetica-Bold", 16)
+    title = contentTitle
+    c.drawCentredString(width / 2, height - 40, title)
+
+    # 内容起始位置
+    x_label = 60         # 标签起始 x
+    x_line_start = 180   # 填空线起始 x
+    line_length = 340    # 下划线长度
+    y = height - 80     # 初始 y 坐标
+    line_spacing = 30
+    x_sub_table = 100   #子表起始点
+
+    # 设置正文字体
+    c.setFont("Helvetica", 12)
+
+    for key, value in container_info.items():
+        # 写字段标签
+        c.drawString(x_label, y, f"{key}:")
+        # c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)
+
+        # 处理多行地址
+        if key in ["Ship To", "Bill To", "Ship From"] and isinstance(value, str):
+            address_lines = value.splitlines()
+            for i, line in enumerate(address_lines):
+                c.drawString(x_line_start + 20, y, line)
+                if i == len(address_lines) - 1:
+                    c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)  # 只画最后一行的下划线
+                    y -= 26
+                else:
+                    y -= 18  # 多行地址行间距
+        else:
+            # 单行字段值
+            c.drawString(x_line_start + 20, y, str(value))
+            c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)
+            y -= line_spacing
+
+        if key == "Total Pallets":
+            # 插入子表头
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(x_sub_table + 0, y, "Size")
+            c.drawString(x_sub_table + 100, y, "Name")
+            c.drawString(x_sub_table + 220, y, "CTNS")
+            # c.drawString(x_sub_table + 280, y, "CTNS")
+            c.drawString(x_sub_table + 340, y, "PLTS")
+            y -= 20
+
+            c.setFont("Helvetica", 11)
+            for item in can_liner_details:
+                c.drawString(x_sub_table, y, item["Size"])
+
+                c.drawString(x_sub_table + 100, y, item["Name"])
+                c.line(x_sub_table + 80, y - 2, x_sub_table + 180, y - 2)  # Name 下划线
+
+                c.drawString(x_sub_table + 220, y, item["Qty"])
+                c.line(x_sub_table + 200, y - 2, x_sub_table + 300, y - 2)  # QTY 下划线
+
+                # c.drawString(x_sub_table + 280, y, "CTNS")
+
+                c.drawString(x_sub_table + 340, y, item["PLTS"])
+                c.line(x_sub_table + 320, y - 2, x_sub_table + 400, y - 2)  # QTY 下划线
+
+                y -= 20
+
+            # 在子表格之后添加三组文字和空行
+            y -= 10
+            line_spacing_extra = 35  # 每组行距
+            
+
+            c.setFont("Helvetica", 12)
+            for i, note in enumerate(note_lines):
+                wrapped_lines = textwrap.wrap(note, width=max_line_width)
+                for line in wrapped_lines:
+                    c.drawString(x_label, y, line)
+                    y -= 18  # 行间距适当紧凑一点
+
+                # 如果是第2段开始，加下划线和额外间距
+                if i >= 1:
+                    c.line(x_label, y, x_label + 490, y)
+                    y -= line_spacing_extra
+                else:
+                    y -= 10  # 如果不画线就只空一点行距
+            
+            if issign :
+                # 添加附加说明
+                certification_notes = [
+                    "Checker: All pallets are in good condition, with no visible damage.",
+                    "Shipper: Materials are properly classified, packaged, and labeled per DOT regulations, and in good condition for transport.",
+                    "Carrier: Receipt of goods and placards; emergency info provided or accessible. Goods received in apparent good order unless noted.",
+                ]
+
+                for note in certification_notes:
+                    wrapped_lines = textwrap.wrap(note, width=90)
+                    for line in wrapped_lines:
+                        c.drawString(x_label, y, line)
+                        y -= 16
+                    y -= 6  # 每段间距
+
+                # 添加签名和日期区域
+                y -= 10  # 签名上方稍作间隔
+                signature_labels = ["Checker", "Shipper","Carrier"]
+                signature_spacing = 160  # 每组签名之间的水平间距
+                signature_y = y     # 签名区开始的 Y 坐标
+                signature_x_start = x_label
+
+                c.setFont("Helvetica", 12)
+                for i, label in enumerate(signature_labels):
+                    x_pos = signature_x_start + i * signature_spacing
+                    c.drawString(x_pos, signature_y, f"{label}:")
+                    c.line(x_pos + 60, signature_y, x_pos + 150, signature_y)  # 签名字下划线
+
+                    c.drawString(x_pos, signature_y - 30, "Date:")
+                    c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
+
+    # 保存 PDF
+    c.save()
+
+def print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes):
+    # 创建 PDF 文件
+    c = canvas.Canvas(filename, pagesize=letter)
+    c.setTitle(title)
+    width, height = letter
+
+    # 设置标题居中
+    c.setFont("Helvetica-Bold", 16)
+    title = contentTitle
+    c.drawCentredString(width / 2, height - 80, title)
+
+    # 内容起始位置
+    x_label = 60         # 标签起始 x
+    line_length = 210    # 下划线长度
+    y = height - 120     # 初始 y 坐标
+    line_spacing = 30
+    x_sub_table = 100   #子表起始点
+
+    # 设置正文字体
+    c.setFont("Helvetica", 12)
+
+    regular_font = "Helvetica"
+    bold_font = "Helvetica-Bold"
+    font_size = 10
+    left_margin = 0.8 * inch
+    line_height = 18
+
+    def draw_text(x, y, text, font=regular_font, size=font_size):
+        c.setFont(font, size)
+        c.drawString(x, y, text)
+
+    part1_Y = y
+    items_Y = 0
+    for key, value in container_info.items():
+        # 左上角多行地址
+        if key in ["Ship To", "Bill To", "Ship From"] and isinstance(value, str):
+            draw_text(x_label, y, f"{key}:")
+            address_lines = value.splitlines()
+            for i, line in enumerate(address_lines):
+                draw_text(x_label + 60, y, line)
+                if i == len(address_lines) - 1:
+                    # c.line(x_label + 60, y - 2, x_label + line_length, y - 2)  # 只画最后一行的下划线
+                    y -= 18
+                    items_Y = y
+                else:
+                    y -= 14  # 多行地址行间距
+        else:
+            # 右上角信息
+            right_x = width - 280
+            draw_text(right_x, part1_Y, f"{key}:")            
+            draw_text(right_x + 80, part1_Y, str(value))
+            # c.line(right_x + 60, part1_Y - 2, right_x + line_length, part1_Y - 2)
+            part1_Y -= line_spacing
+
+    # 产品条目表头
+    y = items_Y - line_height
+
+    # 添加表头上方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y + line_height -2, width - left_margin, y + line_height -2)
+
+    table_headers = ["Size", "ShortName", "Name", "Qty", "PLTS"]
+    col_widths = [60, 80, 270, 60, 60]
+    x = left_margin
+    for header, w in zip(table_headers, col_widths):
+        draw_text(x, y, header, bold_font)
+        x += w
+
+    # 添加表头下方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y - 4, width - left_margin, y - 4)
+    
+    # 产品条目
+    y -= line_height 
+    for item in order_details:
+        row_values = [
+            item['Size'],
+            item['ShortName'],
+            item['Name'],
+            item['Qty'],
+            item['PLTS'],
+        ]
+        x = left_margin  # 每行开始时重置 x 坐标
+        for value, w in zip(row_values, col_widths):
+            draw_text(x, y, str(value))
+            x += w
+        y -= line_height  # 向下移一行
+
+    # 添加数据行下方横线
+    y += line_height
+    c.setLineWidth(1)
+    c.line(left_margin, y - 4, width - left_margin, y - 4)
+
+    # 提示信息
+    y -= line_height * 2
+    for note in certification_notes:
+        wrapped_lines = textwrap.wrap(note, width=max_line_width)
+        for line in wrapped_lines:
+            draw_text(x_label, y, line)
+            y -= 16
+        y -= 6  # 每段间距
+
+    # 添加签名和日期区域
+    y -= line_height  # 签名上方稍作间隔
+    signature_labels = ["Checker", "Shipper","Carrier"]
+    signature_spacing = 160  # 每组签名之间的水平间距
+    signature_y = y     # 签名区开始的 Y 坐标
+    signature_x_start = x_label
+
+    c.setFont("Helvetica", 12)
+    for i, label in enumerate(signature_labels):
+        x_pos = signature_x_start + i * signature_spacing
+        c.drawString(x_pos, signature_y, f"{label}:")
+        c.line(x_pos + 60, signature_y, x_pos + 150, signature_y)  # 签名字下划线
+
+        c.drawString(x_pos, signature_y - 30, "Date:")
+        c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
+
+    # 保存 PDF
+    c.save()
+

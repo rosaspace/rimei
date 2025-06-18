@@ -41,9 +41,9 @@
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm p-0" title="Toggle Pay">
                             {% if container.ispay %}
-                            <i class="fas fa-toggle-on text-success" style="font-size: 1.5em;"></i>
+                            <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
                             {% else %}
-                            <i class="fas fa-toggle-off text-secondary" style="font-size: 1.5em;"></i>
+                            <i class="far fa-circle text-muted" style="font-size: 1.2em;"></i>
                             {% endif %}
                         </button>
                     </form>

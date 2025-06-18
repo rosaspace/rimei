@@ -1,6 +1,6 @@
 from django.db import models
-from django.utils import timezone
 from datetime import datetime
+from .constants import rimei_address
 
 class Permission(models.Model):
     index = models.AutoField(primary_key=True)  # 自动生成的主键
@@ -202,7 +202,7 @@ class LogisticsCompany(models.Model):
 
 class Carrier(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 公司名称
-    address = models.CharField(max_length=255, default='1285 101st St\nLemont IL 60439')
+    address = models.CharField(max_length=255, default=rimei_address)
 
     def __str__(self):
         return self.name
@@ -246,6 +246,7 @@ def get_default_logistics():
     return default.pk if default else None
 
 class Container(models.Model):
+    id = models.AutoField(primary_key=True)  # 默认自增整数主键
     container_id = models.CharField(max_length=255)  # Container ID
     container_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
     content = models.TextField(blank=True, null=True)  # 解析出的内容
@@ -312,4 +313,25 @@ class AlineOrderRecord(models.Model):
     def __str__(self):
         return f"{self.order_number} - {self.po_number} - {self.price}"
     
+class ContainerStatement(models.Model):
+    container = models.ForeignKey(Container, on_delete=models.CASCADE, null=True,blank=True)
+    container_id_str = models.CharField(max_length=255, blank=True, null=True)
+    statement_number = models.CharField(max_length=100, unique=True)
+    statement_date = models.DateField(auto_now_add=True)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
+    created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
 
+    def save(self, *args, **kwargs):
+        if self.container:
+            self.container_id_str = self.container.container_id
+        super().save(*args, **kwargs)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['statement_number']),
+            models.Index(fields=['container']),  # 正确引用外键字段名
+        ]
+
+    def __str__(self):
+        return f"{self.statement_number} - {self.container_id_str}"

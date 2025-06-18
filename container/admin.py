@@ -4,7 +4,7 @@ from .models import RMOrder, RMCustomer,OrderImage
 from .forms import OrderForm
 from .models import InvoiceCustomer,RMProduct,RMInventory
 from .models import Employee, LogisticsCompany,OrderItem,ClockRecord,ContainerItem
-from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation
+from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation,ContainerStatement
 
 class ContainerAdmin(admin.ModelAdmin):
     list_display = ('container_id', 'plts','railway_date', 'pickup_date', 'delivery_date','empty_date',
@@ -59,4 +59,5 @@ admin.site.register(AlineOrderRecord)
 admin.site.register(Carrier)
 admin.site.register(InboundCategory)
 admin.site.register(RailwayStation)
+admin.site.register(ContainerStatement)
 

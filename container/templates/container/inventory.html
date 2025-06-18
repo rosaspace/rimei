@@ -9,8 +9,7 @@
                 <th>Quantity</th>
                 <th>ForNewOrder</th>
                 <th>InPreparation</th>
-                <th>Diff</th>
-                
+                <th>Diff</th>                
                 <th>Each</th>
                 <th>Color</th>
                 <th>Show</th>
@@ -23,7 +22,7 @@
         </thead>
         <tbody>
             {% for item in inventory_items %}
-            <tr {% if item.quantity_for_neworder < 0 %}class="table-danger"{% endif %}>
+            <tr {% if item.quantity_for_neworder < 0 %}class="table-danger"{% endif %} >
                 <td>{{ item.product.name }}</td>
                 <td>{{ item.quantity }}</td>
                 <td>{{ item.quantity_for_neworder }}</td>
@@ -37,8 +36,8 @@
                 <td>{{ item.case }}</td>
                 <td>{{ item.Location }}</td>
                 <td>{{ item.product.blongTo.name|default:"-" }}</td>
-                <td>
-                    <a href="{% url 'order_history' item.product.id %}" class="btn btn-sm btn-outline-primary">
+                <td style="height: 23px;">
+                    <a href="{% url 'order_history' item.product.id %}" class="text-primary text-decoration-underline">
                         View
                     </a>
                 </td>
