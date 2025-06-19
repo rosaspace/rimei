@@ -109,6 +109,7 @@ def edit_order(request, so_num):
             # ✅ 计算总重量（假设每项是字典，键名为 'weight'）
             total_weight = sum(float(item.weight) for item in orderitems_new if item.weight)
             total_quantity = sum(int(item.quantity) for item in orderitems_new)
+            total_pallet = sum(int(item.pallet_qty) for item in orderitems_new)
             products = RMProduct.objects.all().order_by('name')
             return render(request, 'container/rmorder/edit_order.html', {
                 'order': order,
@@ -117,6 +118,7 @@ def edit_order(request, so_num):
                 'products': products,  # 加上这行
                 'total_weight': total_weight,  # ✅ 加入模板变量
                 'total_quantity': total_quantity,  # ✅ 加入模板变量
+                'total_pallet':total_pallet,
             })
         elif request.method == "POST":
             try:

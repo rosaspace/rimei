@@ -21,7 +21,8 @@ from ..constants import BOL_FOLDER,ORDER_FOLDER,ORDER_CONVERTED_FOLDER,LABEL_FOL
 from ..constants import Rimei_LOGO_PATH,SSA_LOGO_PATH,GF_LOGO_PATH
 from ..constants import PAGE_WIDTH,PAGE_HEIGHT,MARGIN_TOP,MARGIN_LEFT,LABEL_WIDTH,LABEL_HEIGHT,FONT_SIZE,FONT_SIZE_Lot,FONT_SIZE_Container,LINE_SPACING,DRAW_BORDERS
 from ..constants import max_line_width
-from ..email_constants import RECIPIENT_OMAR, ORDER_EMAIL_TEMPLATES,CONTAINER_EMAIL_TEMPLATES,get_preview_email_template
+from ..email_constants import RECIPIENT_OMAR_rimei,RECIPIENT_OMAR_rosa, SIGNATURE_AVA, SIGNATURE_JING
+from ..email_constants import ORDER_EMAIL_TEMPLATES,CONTAINER_EMAIL_TEMPLATES, INVENTORY_EMAIL_TEMPLATES
 from .pdfgenerate import print_containerid_lot
 from ..models import Container,RMProduct,RMInventory,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation,Carrier
 
@@ -268,23 +269,20 @@ def format_worksheet(ws):
         ws.column_dimensions[column_letter].width = adjusted_width
 
     
-def preview_email(request, number):
+def preview_email(request):
+    email_type = request.GET.get("type", "inventory")
     template = "container/temporary.html"
     officedepot_id = request.POST.get('officedepot_number')
     print("officedepot_id: ",officedepot_id)
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    recipient = "omarorders@omarllc.com;order@rimeius.com" if is_rimei_user else RECIPIENT_OMAR
-    signature = "Ava" if is_rimei_user else "Jing"
+    recipient = RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa
+    signature = SIGNATURE_AVA if is_rimei_user else SIGNATURE_JING
 
-    context = get_preview_email_template(
-        email_type=number,
-        signature=signature,
-        recipient=recipient,
-        officedepot_id=officedepot_id
-    )
+    template_func = INVENTORY_EMAIL_TEMPLATES.get(email_type, INVENTORY_EMAIL_TEMPLATES["default"])
+    email_data = template_func(officedepot_id, signature, is_rimei_user)
 
-    return render(request, template, context)
+    return render(request, template, email_data)
 
 def order_email(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
@@ -292,13 +290,12 @@ def order_email(request, so_num):
     template = "container/temporary.html"
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    signature = "Ava" if is_rimei_user else "Jing"
-    recipient = "omarorders@omarllc.com;order@rimeius.com" if is_rimei_user else RECIPIENT_OMAR
+    signature = SIGNATURE_AVA if is_rimei_user else SIGNATURE_JING
+    recipient = RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa
 
     # 获取模板（默认为 shippedout）
     template_func = ORDER_EMAIL_TEMPLATES.get(email_type, ORDER_EMAIL_TEMPLATES["shippedout"])
-    email_data = template_func(order, signature)
-    email_data["recipient"] = recipient  # override if necessary
+    email_data = template_func(order, signature, is_rimei_user)
 
     return render(request, template, email_data)
 
@@ -308,12 +305,11 @@ def container_email(request, container_id):
     template = "container/temporary.html"
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    signature = "Ava" if is_rimei_user else "Jing"
-    recipient = "omarorders@omarllc.com;order@rimeius.com" if is_rimei_user else RECIPIENT_OMAR
+    signature = SIGNATURE_AVA if is_rimei_user else SIGNATURE_JING
+    recipient = RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa
 
     # 获取模板（默认使用 default）
     email_template_func = CONTAINER_EMAIL_TEMPLATES.get(email_type, CONTAINER_EMAIL_TEMPLATES["default"])
-    email_data = email_template_func(container, signature)
-    email_data["recipient"] = recipient  # override if necessary
+    email_data = email_template_func(container, signature, is_rimei_user)
 
-    return render(request, template, email_data)
+    return render(request, template, email_data) 

@@ -219,8 +219,9 @@
                     </tbody>
                 </table>
                 <div>
-                    <p class="mb-0">Total Weight: {{ total_weight|floatformat:2 }} LBS</p>
-                    <p class="mb-0">Total Quantity: {{ total_quantity }} cases</p>
+                    <p class="mb-0">Total Weight: <strong>{{ total_weight|floatformat:0 }}</strong> LBS</p>
+                    <p class="mb-0">Total Quantity: <strong>{{ total_quantity }}</strong> cases</p>
+                    <p class="mb-0">Total Pallet: <strong>{{ total_pallet }}</strong> plts</p>
                 </div>
             </div>
         </div>

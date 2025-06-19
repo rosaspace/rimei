@@ -15,7 +15,7 @@ def login_view(request):
             return redirect('index')  # 登录后跳转
     else:
         form = AuthenticationForm()
-    return render(request, 'container/login/login.html', {'form': form})
+    return render(request, 'container/user/login.html', {'form': form})
 
 def register_view(request):
     if request.method == 'POST':
@@ -26,7 +26,7 @@ def register_view(request):
             return redirect('home')
     else:
         form = UserCreationForm()
-    return render(request, 'container/login/register.html', {'form': form})
+    return render(request, 'container/user/register.html', {'form': form})
 
 @login_required
 def logout_view(request):

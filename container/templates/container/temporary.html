@@ -87,27 +87,25 @@
 <div class="row mt-4">
     <div class="col-md-6">
         <h4>Email Content Preview</h4>
-        <form method="post" action="{% url 'preview_email' number=4 %}">
+        <form method="post" action="{% url 'preview_email'%}?type=officedepot"> 
             {% csrf_token %}
             <div class="row">
-                <div class="col-12"> 
+                <div class="col-6"> 
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                         <input type="text" name="officedepot_number" id="officedepot_number" class="form-control w-auto" placeholder="Enter OfficeDepot Number" required style="min-width: 200px;">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-plus"></i> OfficeDepot
                         </button>
+                    </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-12 mb-3"> 
-                    <a href="{% url 'preview_email' number=1 %}" class="btn btn-primary">
+                <div class="col-6"> 
+                    <a href="{% url 'preview_email'%}?type=inventory" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Inventory
                     </a>
-                    <a href="{% url 'preview_email' number=5 %}" class="btn btn-primary">
+                    <a href="{% url 'preview_email'%}?type=default" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Order Received
                     </a>
                     <a href="{% url 'container' %}" class="btn btn-secondary ms-2">Back</a>
-                </div>
                 </div>
             </div>
         </form>
@@ -116,7 +114,7 @@
                 <div class="mb-3">
                     <div class="container-id-display">{{ recipient }}</div>
                     <div class="container-id-display">{{ subject }}</div>
-                    <textarea id="emailContent" class="form-control" rows="6" readonly>{{ body }}</textarea>
+                    <textarea id="emailContent" class="form-control" rows="8" readonly>{{ body }}</textarea>
                 </div>
 
                 <div class="mb-3">

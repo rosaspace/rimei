@@ -40,6 +40,9 @@ class RMCustomerAdmin(admin.ModelAdmin):
 class InvoiceCustomerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name','description')
 
+class InboundCategoryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'Type','Name','Manufacturer','Carrier')
+
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
 admin.site.register(Permission)
@@ -57,7 +60,7 @@ admin.site.register(OrderItem,OrderItemAdmin)
 admin.site.register(ContainerItem,ContainerItemAdmin)
 admin.site.register(AlineOrderRecord)
 admin.site.register(Carrier)
-admin.site.register(InboundCategory)
+admin.site.register(InboundCategory,InboundCategoryAdmin)
 admin.site.register(RailwayStation)
 admin.site.register(ContainerStatement)
 

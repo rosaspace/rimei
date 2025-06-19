@@ -250,6 +250,7 @@ def get_product_qty_with_inventory_from_order(order_items):
         item.inventory_qty = product.quantity
         item.pallet_qty = item.quantity //product.product.Pallet
         item.case_qty = item.quantity % product.product.Pallet
+
         if(product.product.shortname == "20HBC"):
             item.weight = item.quantity * 17.5
             print("20HBC: ",item.weight, product.quantity)
@@ -259,3 +260,13 @@ def get_product_qty_with_inventory_from_order(order_items):
             item.weight = item.quantity * 14
 
     return order_items
+
+def get_product_qty_with_inventory_from_container(container_items):
+    for item in container_items:
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = inventory_count.get_quality(item.product)
+        inventory = RMInventory.objects.filter(product=item.product).first()
+        product = inventory_count.get_product_qty(inventory, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+
+        item.pallet_qty = item.quantity //product.product.Pallet
+        item.case_qty = item.quantity % product.product.Pallet
+    return container_items

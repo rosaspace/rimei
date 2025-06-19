@@ -149,8 +149,15 @@
             formData.append("delivery_date", document.getElementById("delivery-date").value);
             formData.append("empty_date", document.getElementById("empty-date").value);
             formData.append("plts", document.getElementById("plts").value);
-            formData.append('customer_name', document.getElementById('customer_name').value);
+            formData.append("mbl", document.getElementById("mbl").value);
+            formData.append("weight", document.getElementById("weight").value);
+            formData.append("ref_number", document.getElementById("ref_number").value);
+            formData.append("lot_number", document.getElementById("lot_number").value);
+            formData.append("inbound_category", document.getElementById("inbound_category").value);
+            // formData.append('customer_name', document.getElementById('customer_name').value);
+            formData.append('station_name', document.getElementById('station_name').value);
             formData.append('logistics_name', document.getElementById('logistics_name').value);
+            console.log("inbound_category to send:", document.getElementById("inbound_category").value);
             console.log("----------Save Container1-----------")
             const containerPdf = document.getElementById("container-pdf").files[0];
             if (containerPdf) {

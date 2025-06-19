@@ -64,42 +64,43 @@
     </style>
 
     <!-- Information Section -->
-    <div class="info-section border p-3 rounded mb-2">
-        <div class="d-flex justify-content-between">
-            <div class="left-info">
+    <div class="info-section border p-3 rounded mb-4">
+        <div class="row">
+            <div class="col-6 left-info">
                 {% if container %}
-                    <p>Container ID: <strong>{{ container.container_id }}</strong></p> <!-- 显示 Container ID -->                
-                    <p>Container File Name: <strong>{{ container.container_pdfname }}</strong></p>
+                    <p>Container ID: <strong>{{ container.container_id }}</strong></p>
+                    <p>Container File Name: <strong class="ellipsis">{{ container.container_pdfname }}</strong></p>
                     <p>Pickup Number: <strong>{{ container.pickup_number }}</strong></p>
                     <hr class="my-2 opacity-100">
                     <p>Invoice ID: <strong>{{ container.invoice_id }}</strong></p>
                     <p>Invoice File Name: <strong>{{ container.invoice_pdfname }}</strong></p>
-                    <p>Invoice Price: <strong>{{ container.price }}</strong></p>                    
+                    <p>Invoice Price: <strong>{{ container.price }}</strong></p>
                     <hr class="my-2 opacity-100">
                     <p>Customer Invoice ID: <strong>{{ container.customer_invoiceId }}</strong></p>
                     <p>Customer Invoice File Name: <strong>{{ container.customer_invoice_pdfname }}</strong></p>
                     <p>Customer Invoice Price: <strong>{{ container.customer_price }}</strong></p>
                 {% endif %}
             </div>
-            <div class="right-info">
+            <div class="col-6 right-info">
                 {% if container %}
                     <!-- <p>Railway Date: <strong>{{ container.railway_date }}</strong></p>
                     <p>Pickup Date: <strong>{{ container.pickup_date }}</strong></p> -->
-                    <p>Delivery Date: <strong>{{ container.delivery_date }}</strong></p>
-                    <p>Empty Date: <strong>{{ container.empty_date }}</strong></p>
-                    <p>Created At: <strong>{{ container.created_at }}</strong></p>
+                    <p>Delivery Date: <strong>{{ container.delivery_date |date:'m/d/Y'}}</strong></p>
+                    <p>Empty Date: <strong>{{ container.empty_date |date:'m/d/Y'}}</strong></p>
+                    <p>Created At: <strong>{{ container.created_at |date:'m/d/Y'}}</strong></p>
                     <hr class="my-2 opacity-100">
-                    <p>Invoice Date: <strong>{{ container.invoice_date }}</strong></p>
-                    <p>Invoice Due Date: <strong>{{ container.due_date }}</strong></p>
-                    <p>Invoice Pay Date: <strong>{{ container.payment_date }}</strong></p>
+                    <p>Invoice Date: <strong>{{ container.invoice_date |date:'m/d/Y'}}</strong></p>
+                    <p>Invoice Due Date: <strong>{{ container.due_date |date:'m/d/Y'}}</strong></p>
+                    <p>Invoice Pay Date: <strong>{{ container.payment_date |date:'m/d/Y'}}</strong></p>
                     <hr class="my-2 opacity-100">
-                    <p>Customer Invoice Date: <strong>{{ container.customer_invoice_date }}</strong></p>
-                    <p>Customer Invoice Due Date: <strong>{{ container.customer_due_date }}</strong></p>
-                    <p>Customer Invoice Pay Date: <strong>{{ container.customer_payment_date }}</strong></p>
+                    <p>Customer Invoice Date: <strong>{{ container.customer_invoice_date |date:'m/d/Y'}}</strong></p>
+                    <p>Customer Invoice Due Date: <strong>{{ container.customer_due_date |date:'m/d/Y'}}</strong></p>
+                    <p>Customer Invoice Pay Date: <strong>{{ container.customer_payment_date |date:'m/d/Y'}}</strong></p>
                 {% endif %}
             </div>
         </div>
     </div>
+    
 
     <div class="row">
 
@@ -107,7 +108,7 @@
             <h4>Upload Advance77 Invoice PDF</h4>  
             <!--编辑Advance77发票-->
             <div class="info-section border p-3 rounded mb-2">              
-                <form method="POST" enctype="multipart/form-data" action="{% url 'edit_invoice' container.container_id %}" class="needs-validation" novalidate>
+                <form method="POST" enctype="multipart/form-data" action="{% url 'edit_invoice_file' container.container_id %}" class="needs-validation" novalidate>
                     {% csrf_token %}
 
                     <div class="row">                
@@ -129,11 +130,11 @@
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label" for="invoice_date">Invoice Date</label>
-                            <input type="text" id="invoice_date" name="invoice_date" class="form-control" value="{{ container.invoice_date |date:'Y-m-d'}}" readonly>
+                            <input type="text" id="invoice_date" name="invoice_date" class="form-control" value="{{ container.invoice_date |date:'m/d/Y'}}" readonly>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label" for="invoice_duedate">Due Date</label>
-                            <input type="text" id="invoice_duedate" name="invoice_duedate" class="form-control" value="{{ container.due_date |date:'Y-m-d'}}" readonly>
+                            <input type="text" id="invoice_duedate" name="invoice_duedate" class="form-control" value="{{ container.due_date |date:'m/d/Y'}}" readonly>
                         </div>
                     </div>
                 </form>
@@ -143,12 +144,20 @@
             <div class="container-form">
                 <form id="edit-container-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_invoice' container.container_id %}">
                     {% csrf_token %}
+                    <div class="row mb-2">
+                        <div class="col-md-2 d-flex align-items-center" >
+                            <label class="form-label mb-0" for="pay_date">Price</label>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" id="invoice_price" name="invoice_price_new" class="form-control" value="{{ container.price }}">
+                        </div>
+                    </div>
                     <div class="row">
                         <div class="col-md-2 d-flex align-items-center" >
                             <label class="form-label mb-0" for="pay_date">Pay Date</label>
                         </div>
                         <div class="col-md-4">
-                            <input type="date" id="pay_date" name="pay_date" class="form-control" value="{{ container.payment_date |date:'Y-m-d'}}">
+                            <input type="date" id="pay_date" name="pay_date" class="form-control" value="{{ container.payment_date |date:'m/d/Y'}}">
                         </div>
                         <div class="col-md-3 d-flex align-items-center">
                             <div class="form-check mb-0">
@@ -171,7 +180,7 @@
             <h4>Upload Customer Invoice PDF</h4>  
             <!--编辑客户发票-->
             <div class="info-section border p-3 rounded mb-2">  
-                <form method="POST" enctype="multipart/form-data" action="{% url 'edit_customer_invoice' container.container_id %}" class="needs-validation" novalidate>
+                <form method="POST" enctype="multipart/form-data" action="{% url 'edit_customer_invoice_file' container.container_id %}" class="needs-validation" novalidate>
                     {% csrf_token %}
 
                     <div class="row">                
@@ -193,11 +202,11 @@
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label" for="invoice_date">Invoice Date</label>
-                            <input type="text" id="invoice_date" name="invoice_date" class="form-control" value="{{ container.customer_invoice_date |date:'Y-m-d'}}" readonly>
+                            <input type="text" id="invoice_date" name="invoice_date" class="form-control" value="{{ container.customer_invoice_date |date:'m/d/Y'}}" readonly>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label" for="invoice_duedate">Due Date</label>
-                            <input type="text" id="invoice_duedate" name="invoice_duedate" class="form-control" value="{{ container.customer_due_date |date:'Y-m-d'}}" readonly>
+                            <input type="text" id="invoice_duedate" name="invoice_duedate" class="form-control" value="{{ container.customer_due_date |date:'m/d/Y'}}" readonly>
                         </div>
                     </div>
                 </form>
@@ -213,7 +222,7 @@
                         </div>
                         <div class="col-md-4 ">
                             <input type="date" id="pay_date" name="pay_date" class="form-control" 
-                                value="{{ container.customer_payment_date |date:'Y-m-d'}}">
+                                value="{{ container.customer_payment_date |date:'m/d/Y'}}">
                         </div>
                         <div class="col-md-3 d-flex align-items-center">
                             <div class="form-check mb-0">

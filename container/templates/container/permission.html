@@ -5,6 +5,8 @@
 
 <a href="{% url 'assign_permission' %}" class="btn btn-primary">🔒 Assign Permission</a>  <!-- 添加权限分配链接 -->
 
+<a href="{% url 'register' %}">Register here.</a>
+
 <h3>Existing Users and Permissions</h3>
 <ul class="list-group">
     {% for user in users_with_permissions %}

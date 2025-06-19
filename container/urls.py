@@ -2,10 +2,15 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 from . import views
-from .pyviews import container, invoice, rmorder, inventory,pdfprocess,weekrecord,payment
+from .pyviews import container, invoice, rmorder, pdfprocess,weekrecord,payment
 from .pyviews import user, login, inventory_count,temporary
 
 urlpatterns = [
+    # login
+    path('login/', login.login_view, name='login'),
+    path('register/', login.register_view, name='register'),
+    path("logout", login.logout_view, name="logout"),
+
     # main page
     path("", views.home, name="home"),
     path("index/", views.index, name="index"),    
@@ -18,7 +23,6 @@ urlpatterns = [
     path("paid_invoice_customer/", views.paid_invoice_customer, name="paid_invoice_customer"),
     
     path("invoice_statement/", views.invoice_statement, name="invoice_statement"),
-    path("payment/", views.payment_view, name="payment"),
     path("aline_payment/", views.aline_payment_view, name="aline_payment"),    
     path("permission/", views.permission_view, name ="permission"),
     path("temporary/", views.temporary_view, name="temporary"),    
@@ -37,11 +41,6 @@ urlpatterns = [
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    
     path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),
 
-    # login
-    path('login/', login.login_view, name='login'),
-    path('register/', login.register_view, name='register'),
-    path("logout", login.logout_view, name="logout"),
-
     # container
     path('add_container/', container.add_container, name='add_container'), 
     path('add_container_view/', container.add_container_view, name='add_container_view'),
@@ -55,8 +54,10 @@ urlpatterns = [
     path('print_container_color_label/<str:container_num>/', container.print_container_color_label, name='print_container_color_label'),
     path('print_container_delivery_order/<str:container_num>/', container.print_container_delivery_order, name='print_container_delivery_order'),
     
-    # Invoice    
+    # Invoice
+    path("edit_invoice_file/<str:container_id>/", invoice.edit_invoice_file, name="edit_invoice_file"),
     path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
+    path("edit_customer_invoice_file/<str:container_id>/", invoice.edit_customer_invoice_file, name="edit_customer_invoice_file"),
     path("edit_customer_invoice/<str:container_id>/", invoice.edit_customer_invoice, name="edit_customer_invoice"),
     path("print_statement_invoice_pdf/", invoice.print_statement_invoice_pdf, name="print_statement_invoice_pdf"),
     path('print_original_do/<str:container_id>/', invoice.print_original_do, name='print_original_do'),
@@ -85,15 +86,11 @@ urlpatterns = [
     path("import_inventory/", temporary.import_inventory, name="import_inventory"), 
     path("import_aline/", temporary.import_aline, name="import_aline"), 
     path('export_pallet/',temporary.export_pallet,name='export_pallet'),
-    path("preview_email/<int:number>/", temporary.preview_email,name="preview_email"), 
+    path("preview_email/", temporary.preview_email,name="preview_email"), 
     path('order_email/<str:so_num>/', temporary.order_email, name='order_email'),
     path('container_email/<str:container_id>/', temporary.container_email, name='container_email'),     
     path('print_label_only/', temporary.print_label_only, name='print_label_only'),
     path('print_label_containerid_lot/', temporary.print_label_containerid_lot, name='print_label_containerid_lot'),
-  
-    # Inventory    
-    path("add_stock/", inventory.add_stock_view, name="add_stock"),  # 入库路径
-    path("remove_stock/", inventory.remove_stock_view, name="remove_stock"),  # 出库路径
     
     # pdf     
     path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),

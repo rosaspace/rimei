@@ -1,11 +1,14 @@
+import openpyxl
+
 from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct,RMInventory, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission
-from datetime import datetime, date, time
+
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
-from openpyxl.utils import get_column_letter
-import openpyxl
-from io import BytesIO
 from django.http import HttpResponse
+
+from datetime import datetime, date, time
+from openpyxl.utils import get_column_letter
+from io import BytesIO
 from collections import defaultdict
 
 def inventory_view(request):
@@ -97,7 +100,8 @@ def order_history(request,product_id):
         'total_inbound_actual_quantity':total_inbound_actual_quantity,
         'total_outbound_actual_quantity':total_outbound_actual_quantity,
         'total_quantity': total_quality,
-        'total_stock': total_stock
+        'total_stock': total_stock,
+        "today": date.today(),
     })
 
 def inventory_summary(request):

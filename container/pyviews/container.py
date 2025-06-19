@@ -27,6 +27,7 @@ from ..constants import Rimei_LOGO_PATH,SSA_LOGO_PATH,GF_LOGO_PATH
 from ..constants import PAGE_WIDTH,PAGE_HEIGHT,MARGIN_TOP,MARGIN_LEFT,LABEL_WIDTH,LABEL_HEIGHT,FONT_SIZE,FONT_SIZE_Lot,FONT_SIZE_Container,LINE_SPACING,DRAW_BORDERS
 from ..constants import rimei_address,GF_ADDRESS,SSA_ADDRESS,Only_ADDRESS,note_lines,DO_CONTACT_LINES,DO_FOOTER_LINES_TEMPLATE,DO_SIGNATURE_LINES
 from .pdfgenerate import print_containerid_lot, print_checklist_template
+from .pdfextract import get_product_qty_with_inventory_from_container
 
 # 打开添加Container页面
 def add_container_view(request):
@@ -72,17 +73,24 @@ def add_container(request):
 
            
             # 设置默认值（建议放在函数顶部）
-            # DEFAULT_INBOUND_CATEGORY = InboundCategory.objects.get(Type="Default Category")
+            DEFAULT_INBOUND_CATEGORY = InboundCategory.objects.get(Type="BLUE GRILL")
             DEFAULT_STATION = RailwayStation.objects.get(name="CPRR/ BENSENVILLE")
             # DEFAULT_CARRIER = Carrier.objects.get(name="Default Carrier")
             DEFAULT_CUSTOMER = InvoiceCustomer.objects.get(name="GoldenFeather")
-            DEFAULT_LOGISTICS = LogisticsCompany.objects.get(name="Advance77")
-
-            # inbound_category_id = request.POST.get('inbound_category')
-            # inbound_category = InboundCategory.objects.get(id=inbound_category_id) if inbound_category_id else DEFAULT_INBOUND_CATEGORY
+            DEFAULT_LOGISTICS = LogisticsCompany.objects.get(name="Advance77")            
 
             station_id = request.POST.get('station_name')
             station_name = RailwayStation.objects.get(id=station_id) if station_id else DEFAULT_STATION
+            print("MBL: ",mbl)
+            print("weight: ",weight)
+            print("station_id: ",station_id)
+            print("station_name: ",station_name)
+
+            inbound_category_id = request.POST.get('inbound_category')
+            print("inbound_category_id: ",inbound_category_id)
+            inbound_category = InboundCategory.objects.get(id=inbound_category_id) if inbound_category_id else DEFAULT_INBOUND_CATEGORY
+            
+            print("inbound_category: ",inbound_category)
 
             # carrier_id = request.POST.get('carrier_name')
             # carrier_name = Carrier.objects.get(id=carrier_id) if carrier_id else DEFAULT_CARRIER
@@ -106,7 +114,7 @@ def add_container(request):
                 refnumber = refnumber,
                 mbl = mbl,
                 weight = weight,
-                # inboundCategory= inbound_category,
+                inboundCategory= inbound_category,
                 customer = customer_name,
                 logistics = logistics_name,
                 railwayStation = station_name,
@@ -153,6 +161,9 @@ def edit_container(request, container_id):
     if request.method == 'GET':
         products = RMProduct.objects.all().order_by('name')
         container_items = ContainerItem.objects.filter(container=container)
+        container_items_new = get_product_qty_with_inventory_from_container(container_items)
+        total_quantity = sum(int(item.quantity) for item in container_items_new)
+        total_pallet = sum(int(item.pallet_qty) for item in container_items_new)
         customers = InvoiceCustomer.objects.all()
         logistics = LogisticsCompany.objects.all()
         inboundCategory = InboundCategory.objects.all()
@@ -161,14 +172,17 @@ def edit_container(request, container_id):
 
         # 显示编辑页面
         return render(request, 'container/containerManager/edit_container.html', {
-            'container': container,
+            'container': container, 
             "products": products,
             'customers': customers,
             'logistics': logistics,
             'inboundCategory':inboundCategory,
             'railstation':railstation,
             'carrier':carrier,
-            "container_items":container_items})
+            "container_items":container_items_new,
+            'total_quantity': total_quantity,  # ✅ 加入模板变量
+            'total_pallet':total_pallet,
+        })
         
     elif request.method == 'POST':
         try:

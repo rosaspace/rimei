@@ -3,20 +3,8 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div>
-        <h3>Inventory History : {{ product.name }}</h3>
-    </div>
-    <!-- 显示入库和出库的总数量 -->
-    <div>
-        <div>Total Inbound Quantity: {{ total_inbound_quantity }}</div>
-        <div>Total Outbound Quantity: {{ total_outbound_quantity }}</dic>
-        <div>Total Surplus Quantity: {{ total_surplus_quantity }}</div>
-        <div>Total Actual Inbound Quality: {{ total_inbound_actual_quantity }}</div>
-        <div>Total Actual Outbound Quality: {{ total_outbound_actual_quantity }}</div>
-        <div>Total Quantity: {{ total_quantity }}</div>
-        <div>Total Stock: {{ total_stock }}</div>
-    </div>
-    <div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Inventory History : {{ product.name }}</h3>
         <a href="{% url 'inventory_diff' %}" class="btn btn-secondary">Back</a>
     </div>
 
@@ -29,7 +17,7 @@
             <table class="table table-bordered table-sm">
                 <thead>
                     <tr>
-                        <th>Date</th>
+                        <th>Delivery Date</th>
                         <th>Quantity</th>
                         <th>Operator</th>
                         <th>Source</th>
@@ -37,7 +25,7 @@
                 </thead>
                 <tbody>
                     {% for record in inbound_logs %}
-                    <tr>
+                    <tr {% if record.date < today %}class="table-secondary"{% endif %}>
                         <td>{{ record.date }}</td>
                         <td>{{ record.quantity }}</td>
                         <td>{{ record.operator }}</td>
@@ -50,6 +38,18 @@
                     {% endfor %}
                 </tbody>
             </table>
+
+            <hr>
+            <!-- 显示入库和出库的总数量 -->
+            <div>
+                <div>Total Inbound Quantity: {{ total_inbound_quantity }}</div>
+                <div>Total Outbound Quantity: {{ total_outbound_quantity }}</div>
+                <div>Total Surplus Quantity: {{ total_surplus_quantity }}</div>
+                <div>Total Actual Inbound Quality: {{ total_inbound_actual_quantity }}</div>
+                <div>Total Actual Outbound Quality: {{ total_outbound_actual_quantity }}</div>
+                <div>Total Quantity: {{ total_quantity }}</div>
+                <div>Total Stock: {{ total_stock }}</div>                
+            </div>
         </div>
 
         <!-- Outbound History -->
@@ -67,7 +67,7 @@
                 </thead>
                 <tbody>
                     {% for record in outbound_logs %}
-                    <tr>
+                    <tr {% if record.pickup_date < today %}class="table-secondary"{% endif %}>
                         <td>{{ record.date }}</td>                        
                         <td>{{ record.pickup_date }}</td>
                         <td>{{ record.quantity }}</td>

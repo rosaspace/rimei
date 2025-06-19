@@ -209,7 +209,9 @@
                         <thead>
                             <tr>
                                 <th>Product Name</th>
-                                <th>Quantity</th>
+                                <th>Quantity</th> 
+                                <th>Pallet</th>
+                                <th>Case</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -229,6 +231,12 @@
                                 <td>
                                     <input type="number" class="form-control quantity-input" value="{{ item.quantity }}" min="1">
                                 </td>
+                                <td class="align-middle">
+                                    <div class="d-flex align-items-center" ><span>{{ item.pallet_qty }}</span></div>
+                                </td>
+                                <td class="align-middle">
+                                    <div class="d-flex align-items-center" ><span>{{ item.case_qty }}</span></div>
+                                </td>
                                 <td>
                                     <button class="btn btn-danger btn-sm remove-row">Remove</button>
                                 </td>
@@ -236,6 +244,10 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    <div>
+                        <p class="mb-0">Total Quantity: <strong>{{ total_quantity }}</strong> cases</p>
+                        <p class="mb-0">Total Pallet: <strong>{{ total_pallet }}</strong> plts</p>
+                    </div>
                 </div>
             </div>
 

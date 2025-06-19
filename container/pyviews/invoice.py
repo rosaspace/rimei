@@ -257,6 +257,83 @@ def print_statement_invoice_pdf(request):
     os.remove(temp_path)
     return response
 
+def edit_invoice_file(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+    invoice_file = request.FILES.get('invoice_file')
+
+    if not invoice_file:
+        return JsonResponse({"error": "No file uploaded."}, status=400)
+
+    try:
+        # 保存文件
+        container.invoice_pdfname = invoice_file.name
+        file_path = os.path.join(UPLOAD_DIR_invoice, INVOICE_FOUDER, invoice_file.name)
+        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+        with open(full_path, 'wb+') as destination:
+            for chunk in invoice_file.chunks():
+                destination.write(chunk)
+
+        # 解析发票内容
+        text = extract_text_from_pdf(file_path)
+        data = extract_invoice_data(text)
+
+        # 更新 container 部分字段（不保存付款相关信息）
+        if data['invoice_id']:
+            container.invoice_id = data['invoice_id']
+        if data['invoice_date']:
+            container.invoice_date = data['invoice_date']
+        if data['due_date']:
+            container.due_date = data['due_date']
+        if data['price']:
+            container.price = Decimal(data['price'])
+        container.save()
+
+        return render(request, 'container/invoiceManager/edit_invoice.html', {
+            'container': container,
+        })
+    
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to process invoice: {e}"}, status=500)
+
+def edit_customer_invoice_file(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+    invoice_file = request.FILES.get('invoice_file')
+
+    if not invoice_file:
+        return JsonResponse({"error": "No file uploaded."}, status=400)
+
+    try:        
+        container.customer_invoice_pdfname = invoice_file.name
+        file_path = os.path.join(UPLOAD_DIR_invoice, ORDER_CONVERTED_FOLDER, invoice_file.name) 
+        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+
+        # 保存文件
+        with open(full_path, 'wb+') as destination:
+            for chunk in invoice_file.chunks():
+                destination.write(chunk)
+
+        # 解析 PDF 内容
+        text = extract_text_from_pdf(file_path)
+        data = extract_customer_invoice_data(text)
+
+        # 更新模型字段
+        if data['invoice_id']:
+            container.customer_invoiceId = data['invoice_id']
+        if data['invoice_date']:
+            container.customer_invoice_date = data['invoice_date']
+        if data['due_date']:
+            container.customer_due_date = data['due_date']
+        if data['price']:
+            container.customer_price = Decimal(data['price'])
+        container.save()
+
+        return render(request, 'container/invoiceManager/edit_invoice.html', {
+            'container': container,
+            'container_id': container_id
+        })
+
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to process invoice: {e}"}, status=500)
 
 def edit_invoice(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
@@ -268,41 +345,17 @@ def edit_invoice(request, container_id):
         })
 
     elif request.method == 'POST':
-        invoice_file = request.FILES.get('invoice_file')
+
+        # 获取并更新价格
+        price  = request.POST.get('invoice_price_new')
         is_pay = 'is_pay' in request.POST
+        pay_date = request.POST.get('pay_date')
 
-        if invoice_file:
-            container.invoice_pdfname = invoice_file.name
-            file_path = os.path.join(UPLOAD_DIR_invoice, INVOICE_FOUDER, invoice_file.name) 
-            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
-
-            # 保存文件
-            with open(full_path, 'wb+') as destination:
-                for chunk in invoice_file.chunks():
-                    destination.write(chunk)
-
-            # 解析 PDF 内容
-            try:
-                text = extract_text_from_pdf(file_path)
-                data = extract_invoice_data(text)
-
-                # 更新模型字段
-                if data['invoice_id']:
-                    container.invoice_id = data['invoice_id']
-                if data['invoice_date']:
-                    container.invoice_date = data['invoice_date']
-                if data['due_date']:
-                    container.due_date = data['due_date']
-                if data['price']:
-                    container.price = Decimal(data['price'])
-            except Exception as e:
-                return render(request, 'container/invoiceManager/edit_invoice.html', {
-                    'container': container,
-                    'error': f"解析失败：{e}"
-                })
+        if price :
+            container.price = Decimal(price)
 
         container.ispay = is_pay
-        container.payment_date = request.POST.get('pay_date') or None
+        container.payment_date = pay_date or None
         container.save()
 
         return render(request, 'container/invoiceManager/edit_invoice.html', {
@@ -313,44 +366,11 @@ def edit_customer_invoice(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
 
     if request.method == 'POST':
-        invoice_file = request.FILES.get('invoice_file')
         is_pay = 'is_pay' in request.POST
-
-        if invoice_file:
-            container.customer_invoice_pdfname = invoice_file.name
-            file_path = os.path.join(UPLOAD_DIR_invoice, ORDER_CONVERTED_FOLDER, invoice_file.name) 
-            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
-
-            # 保存文件
-            with open(full_path, 'wb+') as destination:
-                for chunk in invoice_file.chunks():
-                    destination.write(chunk)
-
-            # 解析 PDF 内容
-            try:
-                text = extract_text_from_pdf(file_path)
-                print("---:",text)
-                data = extract_customer_invoice_data(text)
-
-                # 更新模型字段
-                if data['invoice_id']:
-                    container.customer_invoiceId = data['invoice_id']
-                if data['invoice_date']:
-                    container.customer_invoice_date = data['invoice_date']
-                if data['due_date']:
-                    container.customer_due_date = data['due_date']
-                if data['price']:
-                    container.customer_price = Decimal(data['price'])
-                    print(container.customer_price)
-            except Exception as e:
-                return render(request, 'container/invoiceManager/edit_invoice.html', {
-                    'container': container,
-                    'container_id': container_id,
-                    'error': f"解析失败：{e}"
-                })
+        pay_date = request.POST.get('pay_date')
 
         container.customer_ispay = is_pay
-        container.customer_payment_date = request.POST.get('pay_date') or None
+        container.customer_payment_date = pay_date or None
         container.save()
 
         return render(request, 'container/invoiceManager/edit_invoice.html', {
