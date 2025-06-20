@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  # db:
+  #   image: postgres:14
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data/
+  #   environment:
+  #     POSTGRES_DB: ljdb
+  #     POSTGRES_USER: lj
+  #     POSTGRES_PASSWORD: mengxiang0425
+
+  web:
+    build: .
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+    # depends_on:
+    #   - db
+    environment:
+      - PYTHONUNBUFFERED=1
+      # - DB_NAME=ljdb
+      # - DB_USER=lj
+      # - DB_PASSWORD=mengxiang0425
+      # - DB_HOST=db
+    command: python manage.py runserver 0.0.0.0:8001
+
+# volumes:
+#   postgres_data:
