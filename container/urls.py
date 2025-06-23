@@ -12,7 +12,7 @@ urlpatterns = [
     path("logout", login.logout_view, name="logout"),
 
     # main page
-    path("", views.home, name="home"),
+    path("", views.home, name="index"),
     path("index/", views.index, name="index"),    
     path("invoice/", views.invoice_view, name="invoice"),
     path("invoice_finished/", views.invoice_finished, name="invoice_finished"),

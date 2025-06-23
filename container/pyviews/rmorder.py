@@ -139,7 +139,7 @@ def edit_order(request, so_num):
                 order.customer_name = customer
                 order.bill_to = request.POST.get('bill_to')
                 order.ship_to = request.POST.get('ship_to')
-                order.pickup_date = request.POST.get('pickup_date') or None
+                order.pickup_date = request.POST.get('pickup_date') or None 
                 order.outbound_date = request.POST.get('outbound_date') or None
                 order.is_sendemail = request.POST.get('is_sendemail') == 'on'
                 order.is_updateInventory = request.POST.get('is_updateInventory') == 'on'

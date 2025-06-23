@@ -82,7 +82,7 @@ DATABASES = {
         'NAME': 'ljdb',
         'USER': 'lj',
         'PASSWORD': 'mengxiang0425',
-        'HOST': 'localhost',  # or IP address of your PostgreSQL server
+        'HOST': '192.168.122.1',  # or IP address of your PostgreSQL server
         'PORT': '5432',       # Default PostgreSQL port
     }
 }

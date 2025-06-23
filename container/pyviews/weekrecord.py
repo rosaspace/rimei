@@ -1,13 +1,17 @@
+import os
+import pandas as pd
+
 from datetime import date, datetime, timedelta,time
-from ..models import ClockRecord,Employee,UserAndPermission
+from openpyxl.styles import Border, Side, PatternFill, Alignment
+
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
-import pandas as pd
 from django.http import HttpResponse
-from openpyxl.styles import Border, Side, PatternFill, Alignment
-import os
+
+from ..models import ClockRecord,Employee,UserAndPermission
+
 
 def week_record(request):
     # 获取当前年份和周数（ISO标准）
