@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from ..models import RMOrder,Container,RMInventory,RMProduct,ContainerItem,OrderItem
+from ..models import RMOrder,Container,RMProduct,ContainerItem,OrderItem
 from . import inventory_count
 
 
@@ -226,7 +226,7 @@ def get_product_qty_with_inventory(product_qty_list):
 
         if matched_product:
             
-            inventory = RMInventory.objects.filter(product=matched_product).first()
+            inventory = RMProduct.objects.filter(name=matched_product).first()
             # print("---",inventory.quantity, inventory.quantity_for_neworder, inventory.quantity_to_stock)
             inventory_qty = inventory.quantity_for_neworder if inventory else 0
         else:
@@ -244,17 +244,17 @@ def get_product_qty_with_inventory_from_order(order_items):
     for item in order_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = inventory_count.get_quality(item.product)
-        inventory = RMInventory.objects.filter(product=item.product).first()
+        inventory = RMProduct.objects.filter(name=item.product).first()
         product = inventory_count.get_product_qty(inventory, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
         item.inventory_qty = product.quantity
-        item.pallet_qty = item.quantity //product.product.Pallet
-        item.case_qty = item.quantity % product.product.Pallet
+        item.pallet_qty = item.quantity //product.Pallet
+        item.case_qty = item.quantity % product.Pallet
 
-        if(product.product.shortname == "20HBC"):
+        if(product.shortname == "20HBC"):
             item.weight = item.quantity * 17.5
             print("20HBC: ",item.weight, product.quantity)
-        elif(product.product.shortname == "FM003"):
+        elif(product.shortname == "FM003"):
             item.weight = item.quantity * 19
         else:
             item.weight = item.quantity * 14
@@ -264,9 +264,9 @@ def get_product_qty_with_inventory_from_order(order_items):
 def get_product_qty_with_inventory_from_container(container_items):
     for item in container_items:
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = inventory_count.get_quality(item.product)
-        inventory = RMInventory.objects.filter(product=item.product).first()
+        inventory = RMProduct.objects.filter(name=item.product).first()
         product = inventory_count.get_product_qty(inventory, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
-        item.pallet_qty = item.quantity //product.product.Pallet
-        item.case_qty = item.quantity % product.product.Pallet
+        item.pallet_qty = item.quantity //product.Pallet
+        item.case_qty = item.quantity % product.Pallet
     return container_items

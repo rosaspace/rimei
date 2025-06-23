@@ -81,6 +81,8 @@ class RMProduct(models.Model):
     ShelfRecord = models.CharField(max_length=255, blank=True, null=True, default='')
     description = models.TextField(blank=True, null=True)  # 客户描述
     blongTo = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)  # 关联到 RMOrder
+    quantity_init =  models.IntegerField(blank=True, null=True)  # 初始数量
+    quantity_diff =  models.IntegerField(default=0)  # 初始差异
 
     def __str__(self):
         return self.name

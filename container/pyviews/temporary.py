@@ -24,7 +24,7 @@ from ..constants import max_line_width
 from ..email_constants import RECIPIENT_OMAR_rimei,RECIPIENT_OMAR_rosa, SIGNATURE_AVA, SIGNATURE_JING
 from ..email_constants import ORDER_EMAIL_TEMPLATES,CONTAINER_EMAIL_TEMPLATES, INVENTORY_EMAIL_TEMPLATES
 from .pdfgenerate import print_containerid_lot
-from ..models import Container,RMProduct,RMInventory,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation,Carrier
+from ..models import Container,RMProduct,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation,Carrier
 
 # Temp
 def print_label_only(request):
@@ -135,14 +135,8 @@ def import_inventory(request):
                 name=row["Display Name"],
                 shortname = row["Short Name"],
                 size = row["Size"],
-                description=""  # description 为空
-            )
-            # Create RMInventory instance
-            RMInventory.objects.create(
-                product=product,
-                quantity=row["Quantity On Hand"],
-                quantity_for_neworder=row["Quantity On Hand"],
-                quantity_to_stock=row["Quantity On Hand"],
+                description="",  # description 为空
+                quantity_init=row["Quantity On Hand"],
             )
 
         return JsonResponse({"message": "Excel data imported successfully!"})

@@ -1,6 +1,6 @@
 import openpyxl
 
-from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct,RMInventory, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission
+from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission
 
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
@@ -12,28 +12,28 @@ from io import BytesIO
 from collections import defaultdict
 
 def inventory_view(request):
-    inventory_items = RMInventory.objects.all()  # 获取所有库存信息
+    inventory_items = RMProduct.objects.all()  # 获取所有库存信息
     print("----------inventory_view------------",len(inventory_items))
     inventory_items_converty = []
     for product in inventory_items:
         # 查询库存记录
-        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product.product)
-        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
-        inventory_items_converty.append(product)
+        inventory_items_converty.append(productTemp)
 
-        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.product.name)
+        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
     user_permissions = get_user_permissions(request.user)
     return render(request, "container/inventory.html", {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
 
 def inventory_diff_view(request):
-    inventory_items = RMInventory.objects.all()  # 获取所有库存信息
+    inventory_items = RMProduct.objects.all()  # 获取所有库存信息
 
     diff_items = []  # 用来存储有差异的库存记录
     for product in inventory_items:
         # 查询库存记录
-        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product.product)
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
 
         product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
@@ -46,18 +46,18 @@ def inventory_diff_view(request):
     return render(request, "container/inventory.html", {"inventory_items": diff_items,'user_permissions': user_permissions})
 
 def export_stock(request):
-    inventory_items = RMInventory.objects.all()
+    inventory_items = RMProduct.objects.all()
     print("----------export_stock------------", len(inventory_items))
     inventory_items_converty = []
 
     for product in inventory_items:
-        inbound_list, outbound_list, outbound_actual_list, outbound_stock_list, inbound_actual_list = get_quality(product.product)
+        inbound_list, outbound_list, outbound_actual_list, outbound_stock_list, inbound_actual_list = get_quality(product)
 
         product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
         inventory_items_converty.append(product)
 
-    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.product.name)
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
     user_permissions = get_user_permissions(request.user)
 
     # 🔽 Export to Excel if requested
@@ -105,20 +105,20 @@ def order_history(request,product_id):
     })
 
 def inventory_summary(request):
-    inventory_items = RMInventory.objects.all()  # 获取所有库存信息
+    inventory_items = RMProduct.objects.all()  # 获取所有库存信息
     print("----------inventory_summary------------",len(inventory_items))
     inventory_items_converty = []
     employee_data = {}
 
     for product in inventory_items:
         # 查询库存记录
-        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product.product)
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
         product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
         inventory_items_converty.append(product)
 
         # 统计员工库存
-        employee = product.product.blongTo.name if product.product.blongTo else "Unknown"
+        employee = product.blongTo.name if product.blongTo else "Unknown"
         qty = product.quantity
         
         if employee not in employee_data:
@@ -130,7 +130,7 @@ def inventory_summary(request):
 
         employee_data[employee]['total_qty'] += qty
         employee_data[employee]['qty_list'].append(qty)
-        employee_data[employee]['product_set'].add(product.product.id)
+        employee_data[employee]['product_set'].add(product.id)
 
     # 总数量
     total_qty_all = sum(v['total_qty'] for v in employee_data.values())
@@ -159,11 +159,11 @@ def inventory_summary(request):
 def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list):
      
       # 计算入库总数量
-    total_inbound_quantity = sum(item['quantity'] for item in inbound_list)
+    total_inbound_quantity = sum(item['quantity'] or 0 for item in inbound_list)
     # 计算出库总数量
     total_outbound_quantity = sum(item['quantity'] for item in outbound_list)
     # 计算实际入库数量
-    total_inbound_actual_quantity = sum(item['quantity'] for item in inbound_actual_list)
+    total_inbound_actual_quantity = sum(item['quantity'] or 0 for item in inbound_actual_list)
     # 计算实际出库数量
     total_outbound_actual_quantity = sum(item['quantity'] for item in outbound_actual_list)
     # 计算备货区数量
@@ -173,23 +173,21 @@ def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,o
     product.quantity = total_inbound_actual_quantity - total_outbound_actual_quantity
     product.quantity_to_stock = product.quantity - total_outbound_stock_quantity
     product.shownumber  = product.quantity_to_stock + product.quantity_diff
-    product.pallet = product.product.Pallet
-    product.color = product.product.Color
-    product.palletnumber = product.shownumber//product.product.Pallet
-    product.case = product.shownumber % product.product.Pallet
-    product.Location = product.product.Location
-    product.ShelfRecord = product.product.ShelfRecord
+    product.pallet = product.Pallet
+    product.color = product.Color
+    product.palletnumber = product.shownumber//product.Pallet
+    product.case = product.shownumber % product.Pallet
+    product.Location = product.Location
+    product.ShelfRecord = product.ShelfRecord
 
     return product
 
 def get_quality(product):
-    # 获取 RMInventory 中的初始库存记录
-    inventory = RMInventory.objects.filter(product=product).first()
     
     # 创建一个“初始记录”对象，模拟一个类似入库日志的结构
     initial_log = {
         'date': 'Initial',
-        'quantity': inventory.quantity_init if inventory else 0,
+        'quantity': product.quantity_init,
         'operator': 'System',
         'note': 'Initial stock quantity'
     }
@@ -289,7 +287,7 @@ def export_inventory_to_excel(items):
     # Write data rows
     for item in items:
         ws.append([
-            str(item.product),  # Or item.product.name if it's a ForeignKey
+            str(item),  # Or item.product.name if it's a ForeignKey
             item.quantity_diff,
             item.shownumber,
             item.pallet,

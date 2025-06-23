@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Container, RMOrder,RMCustomer,RMInventory,AlineOrderRecord,ContainerStatement
+from .models import Container, RMOrder,RMCustomer,AlineOrderRecord,ContainerStatement
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from .models import UserAndPermission
@@ -310,13 +310,13 @@ def rimeiorder_cancel(request):
 
 @login_required(login_url='/login/')
 def inventory_view(request):
-    inventory_items = RMInventory.objects.all()  # 获取所有库存信息
+    inventory_items = RMProduct.objects.all()  # 获取所有库存信息
     user_permissions = get_user_permissions(request.user)
     return render(request, "container/inventory.html", {"inventory_items": inventory_items,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def inventory_diff_view(request):
-    inventory_items = RMInventory.objects.filter(
+    inventory_items = RMProduct.objects.filter(
         ~Q(quantity=F('quantity_for_neworder'))
     ).order_by('quantity_for_neworder')
     user_permissions = get_user_permissions(request.user)

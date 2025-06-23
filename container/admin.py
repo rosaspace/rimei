@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import Container,Permission,UserAndPermission  # 导入 Container 模型
 from .models import RMOrder, RMCustomer,OrderImage
 from .forms import OrderForm
-from .models import InvoiceCustomer,RMProduct,RMInventory
+from .models import InvoiceCustomer,RMProduct
 from .models import Employee, LogisticsCompany,OrderItem,ClockRecord,ContainerItem
 from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation,ContainerStatement
 
@@ -16,14 +16,11 @@ class RMOrderAdmin(admin.ModelAdmin):
                    'outbound_date', 'is_sendemail', 'is_updateInventory','is_allocated_to_stock','is_canceled',
                    'order_pdfname','created_user')
 
-class RMInventoryAdmin(admin.ModelAdmin):
-    list_display = ('product','quantity_init', 'quantity','quantity_for_neworder','quantity_to_stock','quantity_diff')
-
 class ClockRecordAdmin(admin.ModelAdmin):
     list_display = ('employee_name', 'date',"weekday","total_hours")
 
 class RMProductdAdmin(admin.ModelAdmin):
-    list_display = ('name', 'id','shortname','size','TI','HI','Pallet','Color',"Location","ShelfRecord","blongTo")
+    list_display = ('name', 'id','shortname','size','TI','HI','Pallet','Color',"Location","ShelfRecord","blongTo","quantity_init","quantity_diff")
 
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'id','belongTo')
@@ -52,7 +49,7 @@ admin.site.register(RMCustomer,RMCustomerAdmin)
 admin.site.register(OrderImage)
 admin.site.register(InvoiceCustomer,InvoiceCustomerAdmin)
 admin.site.register(RMProduct, RMProductdAdmin)
-admin.site.register(RMInventory, RMInventoryAdmin)
+# admin.site.register(RMInventory, RMInventoryAdmin)
 admin.site.register(ClockRecord,ClockRecordAdmin)
 admin.site.register(Employee,EmployeeAdmin)
 admin.site.register(LogisticsCompany)
