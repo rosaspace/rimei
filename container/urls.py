@@ -30,6 +30,8 @@ urlpatterns = [
     path("container/", views.container_view, name="container"),    
     path("container_finished/", views.container_view_finished, name="container_finished"),
     path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
+    path("metalorder/", views.metalorder, name="metalorder"),
+    
     path("rimeiorder_finished/", views.rimeiorder_view_finished, name="rimeiorder_finished"),
     path("rimeiorder_officedepot/", views.rimeiorder_officedepot, name="rimeiorder_officedepot"),
     path("rimeiorder_cancel/", views.rimeiorder_cancel, name="rimeiorder_cancel"),    

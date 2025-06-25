@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard</title>
 
-    <!-- Bootstrap 5 -->
+    <!-- Bootstrap 5 JS and CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -47,49 +47,23 @@
             z-index: 1000;
         }
 
-        /* 顶部导航背景和基本设置 */
-        .topnav {
-            background-color: #333;
-            overflow: hidden;
-            padding: 0 4px;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0px; /* 控制链接间距 */
-            font-size: 14;            /* 整体减小文字大小 */
+        /* 设置当前激活菜单项为绿色背景、白色文字 */
+        .nav-link.active {
+            background-color: #198754 !important;  /* Bootstrap 5 的绿色 */
+            color: #fff !important;
+            border-radius: 0.25rem;
         }
 
-        /* 链接样式统一处理 */
-        .topnav a,
-        .topnav .nav-link {
-            color: #f2f2f2;
-            padding: 8px 10px;
-            text-decoration: none;
-            font-size: 20;
-            display: inline-block;
+        /* 鼠标悬停时仍保持可读 */
+        .nav-link.active:hover {
+            background-color: #157347 !important; /* 深一点的绿 */
+            color: #fff !important;
         }
-
-        /* 分隔符样式 */
-        .topnav .divider {
-            color: #888;
-            font-size: 14;
-            padding: 0 0px;
-            user-select: none;
+        .dropdown-item.active,
+        .dropdown-item:active {
+            background-color: #198754;
+            color: #fff;
         }
-
-        /* 悬浮效果 */
-        .topnav a:hover,
-        .topnav .nav-link:hover {
-            background-color: #ddd;
-            color: black;
-        }
-
-        /* 当前激活链接 */
-        .topnav a.active,
-        .topnav .nav-link.active {
-            background-color: #04AA6D;
-            color: white;
-        }        
 
         .divider {
             color: #999;
@@ -168,65 +142,97 @@
     </header>
 
     <!-- 横向导航栏（Sidebar） -->
-    <div class="topnav">
-        <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
-        {% if user.is_authenticated %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid ">
+          <a class="navbar-brand {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
+      
+          {% if user.is_authenticated %}
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+      
             {% if 'Invoice' in user_permissions %}
-            <span class="divider">|</span>    
-            <a class="nav-link {% if request.resolver_match.url_name == 'invoice_statement' %}active{% endif %}" href="{% url 'invoice_statement' %}">Statement</a>
-            <span class="divider">|</span>    
-            <a class="nav-link {% if request.resolver_match.url_name == 'invoice_unpaid' %}active{% endif %}" href="{% url 'invoice_unpaid' %}">Unpaid</a>
-            <span class="divider">|</span>    
-            <a class="nav-link {% if request.resolver_match.url_name == 'invoice' %}active{% endif %}" href="{% url 'invoice' %}">Invoice</a>
-            <span class="divider">|</span>    
-            <a class="nav-link {% if request.resolver_match.url_name == 'invoice_finished' %}active{% endif %}" href="{% url 'invoice_finished' %}">InvoiceFinished</a>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_unpaid invoice invoice_finished' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Invoice
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'invoice_statement' %}">Statement</a></li>
+                <li><a class="dropdown-item" href="{% url 'invoice_unpaid' %}">Unpaid</a></li>
+                <li><a class="dropdown-item" href="{% url 'invoice' %}">Invoice</a></li>
+                <li><a class="dropdown-item" href="{% url 'invoice_finished' %}">Finished</a></li>
+              </ul>
+            </li>
             {% endif %}
-
+      
             {% if 'Payment' in user_permissions %}
-            <span class="divider">|</span>    
-            <a class="nav-link {% if request.resolver_match.url_name == 'aline_payment' %}active{% endif %}" href="{% url 'aline_payment' %}">AlinePay</a>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'aline_payment' %}active{% endif %}" href="{% url 'aline_payment' %}">AlinePay</a>
+            </li>
             {% endif %}
-
+      
             {% if 'WeekRecord' in user_permissions %}
-            <span class="divider">|</span>    
-            <a class="nav-link {% if request.resolver_match.url_name == 'week_record' %}active{% endif %}" href="{% url 'week_record' %}">WeekRecord</a>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'week_record' %}active{% endif %}" href="{% url 'week_record' %}">Week Record</a>
+            </li>
             {% endif %}
-
+      
             {% if 'Container' in user_permissions %}
-            <span class="divider">|</span>    
-            <a class="nav-link {% if request.resolver_match.url_name == 'container' %}active{% endif %}" href="{% url 'container' %}">Container</a>
-            <span class="divider">|</span>    
-            <a class="nav-link {% if request.resolver_match.url_name == 'container_finished' %}active{% endif %}" href="{% url 'container_finished' %}">ContainerStocked</a>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'container container_finished' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Container
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'container' %}">Container</a></li>
+                <li><a class="dropdown-item" href="{% url 'container_finished' %}">Stocked</a></li>
+              </ul>
+            </li>
             {% endif %}
-
+      
             {% if 'RiMeiOrder' in user_permissions %}
-            <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'rimeiorder' %}active{% endif %}" href="{% url 'rimeiorder' %}">Order</a>
-            <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'rimeiorder_officedepot' %}active{% endif %}" href="{% url 'rimeiorder_officedepot' %}">OfficeDepot</a>
-            <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'rimeiorder_finished' %}active{% endif %}" href="{% url 'rimeiorder_finished' %}">OrderFinished</a>
-            <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'temporary' %}active{% endif %}" href="{% url 'temporary' %}">Temporary</a>            
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder rimeiorder_officedepot rimeiorder_finished metalorder' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Orders
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'rimeiorder' %}">Rimei Order</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_officedepot' %}">Office Depot</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_finished' %}">Finished</a></li>
+                <li><a class="dropdown-item" href="{% url 'metalorder' %}">Metal Order</a></li>
+              </ul>
+            </li>
             {% endif %}
 
+            {% if 'Temporary' in user_permissions %}
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'temporary' %}active{% endif %}" href="{% url 'temporary' %}">Temporary</a>
+            </li>
+            {% endif %}
+      
             {% if 'RimeiInventory' in user_permissions %}
-            <!-- <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'rimeiorder_cancel' %}active{% endif %}" href="{% url 'rimeiorder_cancel' %}">Cancel</a> -->
-            <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'inventory_diff' %}active{% endif %}" href="{% url 'inventory_diff' %}">InventoryDiff</a>
-            <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'inventory' %}active{% endif %}" href="{% url 'inventory' %}">InventoryRimei</a>
-            <a class="nav-link {% if request.resolver_match.url_name == 'inventory_metal' %}active{% endif %}" href="{% url 'inventory_metal' %}">InventoryMetal</a>
-            <a class="nav-link {% if request.resolver_match.url_name == 'inventory_mcd' %}active{% endif %}" href="{% url 'inventory_mcd' %}">InventoryMcd</a>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'inventory inventory_diff inventory_metal inventory_mcd' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Inventory
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'inventory' %}">Rimei</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_diff' %}">Diff Rimei</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_metal' %}">Metal</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_mcd' %}">Mcd</a></li>
+              </ul>
+            </li>
             {% endif %}
-
-            {% if 'Permission' in user_permissions %}            
-            <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'permission' %}active{% endif %}" href="{% url 'permission' %}">Permission</a>            
+      
+            {% if 'Permission' in user_permissions %}
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'permission' %}active{% endif %}" href="{% url 'permission' %}">Permission</a>
+            </li>
             {% endif %}
-        {% endif %}
-    </div>    
+      
+          </ul>
+          {% endif %}
+        </div>
+      </nav>
+      
+    
 
     <!-- 主体内容区 -->
     <div class="main-content">

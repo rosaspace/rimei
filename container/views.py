@@ -247,13 +247,28 @@ def container_view_finished(request):
 @login_required(login_url='/login/')
 def rimeiorder_view(request):
     template = "container/rmorder2.html"
-    orders = RMOrder.objects.exclude(customer_name='4').annotate(image_count=Count('images')).order_by('pickup_date')
+    orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('pickup_date')
     user_permissions = get_user_permissions(request.user) 
     unfinished_orders = orders.filter(
         is_updateInventory=False, 
         is_canceled=False
     )
     print("unfinished_orders, ",len(unfinished_orders))
+
+    return render(request, template, {
+        'rimeiorders': unfinished_orders,
+        'user_permissions': user_permissions
+        })
+
+@login_required(login_url='/login/')
+def metalorder(request):
+    template = "container/rmorder2.html"
+    orders = RMOrder.objects.filter(customer_name='19').annotate(image_count=Count('images')).order_by('pickup_date')
+    user_permissions = get_user_permissions(request.user) 
+    unfinished_orders = orders.filter(
+        is_updateInventory=False, 
+        is_canceled=False
+    )
 
     return render(request, template, {
         'rimeiorders': unfinished_orders,
