@@ -10,9 +10,7 @@
     </div>
     <!-- 右侧按钮组 -->
     <div class="d-flex flex-wrap gap-2 ms-auto">
-        <div>
-            <a href="{% url 'export_week_records' %}?brand=CabinetsDepot" class="btn btn-primary">Export CabinetsDepot</a>
-        </div>
+        
         <!-- <div class="mb-2">
             <a href="{% url 'export_week_records' %}?brand=Lowes" class="btn btn-primary">Export Lowes</a>
         </div>
@@ -23,9 +21,9 @@
 </div>
 
 <div class="mb-2">
-    <form method="get">
+    <form method="get" action="{% url 'week_record' %}">
         <div class="input-group">
-            <select name="year" action="{% url 'week_record' %}" class="form-control">
+            <select name="year" class="form-control">
                 {% for year in years %}
                     <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>Year {{ year }}</option>
                 {% endfor %}
@@ -36,6 +34,9 @@
                 {% endfor %}
             </select>
             <button type="submit" class="btn btn-primary">Select</button>
+            <div class="ms-2">
+                <a href="{% url 'export_week_records' %}?brand=CabinetsDepot&year={{ selected_year }}&week={{ selected_week }}" class="btn btn-primary">Export CabinetsDepot</a>
+            </div>
         </div>
     </form>
 </div>

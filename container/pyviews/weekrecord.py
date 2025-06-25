@@ -249,19 +249,18 @@ def edit_week_records(request, employee_id=None):
 
 def export_week_records(request):
 
-    today = timezone.now().date()
-    last_week_start = today - timedelta(days=today.weekday() + 7)  # 上周的周一
-    last_week_end = last_week_start + timedelta(days=6)  # 上周的周日
-    print("export working hours:", last_week_start, last_week_end)
-
-    weekdays = getWeek(last_week_start)
-
     # 获取所有员工
     employees = Employee.objects.all()
 
     # 获取前端传来的 group 参数，例如 Aline 或 CabinetsDepot
     group_param = request.GET.get('brand')
+    year = int(request.GET.get("year"))
+    week = int(request.GET.get("week"))
+    select_week_start = date.fromisocalendar(year, week, 1)  # 周一
+    select_week_end =  date.fromisocalendar(year, week, 7)    # 周日
+    weekdays = getWeek(select_week_start)
     print("export_week_records:",group_param)
+    print("year: ",year," week: ",week)
 
     # 按照 belongTo 字段分组员工
     grouped_employees = {}
@@ -289,7 +288,7 @@ def export_week_records(request):
     # 为每个组创建一个工作表
     for group, group_employees in grouped_employees.items():
         print("---group: ",group)
-        filename = f'Working_Hours_{group}_{last_week_start.strftime("%m.%d")}-{last_week_end.strftime("%m.%d")}.2025.xlsx'
+        filename = f'Working_Hours_{group}_{select_week_start.strftime("%m.%d")}-{select_week_end.strftime("%m.%d")}.2025.xlsx'
         # 拼接完整路径
         save_dir = os.path.join(os.getcwd(), 'media/workrecord')
         os.makedirs(save_dir, exist_ok=True)
@@ -302,7 +301,7 @@ def export_week_records(request):
                 employee_records = []
 
                 # 获取该员工的上周打卡记录
-                records = ClockRecord.objects.filter(employee_name=employee, date__range=[last_week_start, last_week_end]).order_by('date')
+                records = ClockRecord.objects.filter(employee_name=employee, date__range=[select_week_start, select_week_end]).order_by('date')
 
                 for record in records:
                     # 计算每天的工作时长
