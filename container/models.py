@@ -83,6 +83,7 @@ class RMProduct(models.Model):
     blongTo = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)  # 关联到 RMOrder
     quantity_init =  models.IntegerField(blank=True, null=True)  # 初始数量
     quantity_diff =  models.IntegerField(default=0)  # 初始差异
+    type = models.CharField(max_length=255, default='Rimei')
 
     def __str__(self):
         return self.name
@@ -212,8 +213,8 @@ class Carrier(models.Model):
 class InboundCategory(models.Model):
     Type = models.CharField(max_length=255, default='')
     Name = models.CharField(max_length=255, default='')
-    Manufacturer = models.CharField(max_length=255, default='')
-    Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE)
+    # Manufacturer = models.CharField(max_length=255, default='')
+    # Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.Type}"
@@ -227,7 +228,13 @@ class RailwayStation(models.Model):
 
     def __str__(self):
         return f"{self.name}"
-    
+
+class Manufacturer(models.Model):    
+    name = models.CharField(max_length=255, default='')
+
+    def __str__(self):
+        return f"{self.name}"
+
 def get_default_inbound_category():
     first = InboundCategory.objects.first()
     return first.id if first else None  # 避免为空时报错
@@ -247,6 +254,10 @@ def get_default_logistics():
     default = LogisticsCompany.objects.first()
     return default.pk if default else None
 
+def get_default_manufacturer():
+    default = Manufacturer.objects.first()
+    return default.pk if default else None
+
 class Container(models.Model):
     id = models.AutoField(primary_key=True)  # 默认自增整数主键
     container_id = models.CharField(max_length=255)  # Container ID
@@ -264,6 +275,7 @@ class Container(models.Model):
     logistics = models.ForeignKey(LogisticsCompany, on_delete=models.CASCADE, default=get_default_logistics)  # 关联到 LogisticsCompany
     is_updateInventory = models.BooleanField(default=False) # 是否更新库存
     inboundCategory = models.ForeignKey(InboundCategory, on_delete=models.CASCADE,default=get_default_inbound_category)
+    manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE,default=get_default_manufacturer)
     lot = models.CharField(max_length=255, blank=True, null=True, default="")
     railwayStation = models.ForeignKey(RailwayStation, on_delete=models.CASCADE,default=get_default_railstation_category)
     refnumber = models.CharField(max_length=255, blank=True, default="")

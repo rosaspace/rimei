@@ -99,7 +99,7 @@ def extract_items_from_pdf(text):
     for line in items_part.split("\n"):
         line = line.strip()
         # 判断是否是新的一行（以数字、CAN、KLT、T 开头）
-        if re.match(r'^\s*(\d{4,}|CAN|KLT|TC|TCL|TLESIM|PC|LPC|FACE|TLUB|GXL|RPR)(?!x)', line, re.IGNORECASE):
+        if re.match(r'^\s*(\d{4,}|CAN|KLT|TC|TCL|TLESIM|PC|LPC|FACE|TLUB|TLRB|GXL|RPR)(?!x)', line, re.IGNORECASE):
             if current_item:
                 items.append(current_item.strip())
             current_item = line # 开始新的产品名称
@@ -226,9 +226,9 @@ def get_product_qty_with_inventory(product_qty_list):
 
         if matched_product:
             
-            inventory = RMProduct.objects.filter(name=matched_product).first()
+            # inventory = RMProduct.objects.filter(name=matched_product).first()
             # print("---",inventory.quantity, inventory.quantity_for_neworder, inventory.quantity_to_stock)
-            inventory_qty = inventory.quantity_for_neworder if inventory else 0
+            inventory_qty = matched_product.quantity_init if matched_product else 0
         else:
             print(f"⚠️ 未找到匹配产品: {item_cleaned}")
             inventory_qty = 0

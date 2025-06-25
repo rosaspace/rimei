@@ -216,7 +216,9 @@
             <span class="divider">|</span>
             <a class="nav-link {% if request.resolver_match.url_name == 'inventory_diff' %}active{% endif %}" href="{% url 'inventory_diff' %}">InventoryDiff</a>
             <span class="divider">|</span>
-            <a class="nav-link {% if request.resolver_match.url_name == 'inventory' %}active{% endif %}" href="{% url 'inventory' %}">Inventory</a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'inventory' %}active{% endif %}" href="{% url 'inventory' %}">InventoryRimei</a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'inventory_metal' %}active{% endif %}" href="{% url 'inventory_metal' %}">InventoryMetal</a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'inventory_mcd' %}active{% endif %}" href="{% url 'inventory_mcd' %}">InventoryMcd</a>
             {% endif %}
 
             {% if 'Permission' in user_permissions %}            

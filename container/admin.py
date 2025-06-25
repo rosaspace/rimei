@@ -4,7 +4,7 @@ from .models import RMOrder, RMCustomer,OrderImage
 from .forms import OrderForm
 from .models import InvoiceCustomer,RMProduct
 from .models import Employee, LogisticsCompany,OrderItem,ClockRecord,ContainerItem
-from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation,ContainerStatement
+from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation,ContainerStatement,Manufacturer
 
 class ContainerAdmin(admin.ModelAdmin):
     list_display = ('container_id', 'plts','railway_date', 'pickup_date', 'delivery_date','empty_date',
@@ -20,7 +20,7 @@ class ClockRecordAdmin(admin.ModelAdmin):
     list_display = ('employee_name', 'date',"weekday","total_hours")
 
 class RMProductdAdmin(admin.ModelAdmin):
-    list_display = ('name', 'id','shortname','size','TI','HI','Pallet','Color',"Location","ShelfRecord","blongTo","quantity_init","quantity_diff")
+    list_display = ('name', 'id','shortname','size','TI','HI','Pallet','Color',"Location","ShelfRecord","blongTo","quantity_init","quantity_diff","type")
 
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'id','belongTo')
@@ -38,7 +38,7 @@ class InvoiceCustomerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name','description')
 
 class InboundCategoryAdmin(admin.ModelAdmin):
-    list_display = ('id', 'Type','Name','Manufacturer','Carrier')
+    list_display = ('id', 'Type','Name')
 
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
@@ -60,4 +60,4 @@ admin.site.register(Carrier)
 admin.site.register(InboundCategory,InboundCategoryAdmin)
 admin.site.register(RailwayStation)
 admin.site.register(ContainerStatement)
-
+admin.site.register(Manufacturer)

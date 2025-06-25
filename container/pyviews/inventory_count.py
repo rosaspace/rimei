@@ -10,9 +10,10 @@ from datetime import datetime, date, time
 from openpyxl.utils import get_column_letter
 from io import BytesIO
 from collections import defaultdict
+from django.db.models import Q
 
 def inventory_view(request):
-    inventory_items = RMProduct.objects.all()  # 获取所有库存信息
+    inventory_items = RMProduct.objects.filter(type = "Rimei")
     print("----------inventory_view------------",len(inventory_items))
     inventory_items_converty = []
     for product in inventory_items:
@@ -21,14 +22,13 @@ def inventory_view(request):
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
         inventory_items_converty.append(productTemp)
-
         inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
     user_permissions = get_user_permissions(request.user)
     return render(request, "container/inventory.html", {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
 
 def inventory_diff_view(request):
-    inventory_items = RMProduct.objects.all()  # 获取所有库存信息
+    inventory_items = RMProduct.objects.filter(type = "Rimei")
 
     diff_items = []  # 用来存储有差异的库存记录
     for product in inventory_items:
@@ -45,6 +45,38 @@ def inventory_diff_view(request):
     user_permissions = get_user_permissions(request.user)
     return render(request, "container/inventory.html", {"inventory_items": diff_items,'user_permissions': user_permissions})
 
+def inventory_metal(request):
+    inventory_items = RMProduct.objects.filter(type = "Metal")
+
+    inventory_items_converty = []  # 用来存储有差异的库存记录
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
+
+        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+
+        inventory_items_converty.append(product)
+        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, "container/inventory.html", {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
+
+def inventory_mcd(request):
+    inventory_items = RMProduct.objects.filter(Q(type="Mcdonalds") | Q(type="Other"))
+
+    inventory_items_converty = []  # 用来存储有差异的库存记录
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
+
+        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+
+        inventory_items_converty.append(product)
+        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: (x.type,x.name))
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, "container/inventory.html", {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
+
 def export_stock(request):
     inventory_items = RMProduct.objects.all()
     print("----------export_stock------------", len(inventory_items))
@@ -57,7 +89,7 @@ def export_stock(request):
 
         inventory_items_converty.append(product)
 
-    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: (x.type, x.name))
     user_permissions = get_user_permissions(request.user)
 
     # 🔽 Export to Excel if requested
@@ -281,7 +313,7 @@ def export_inventory_to_excel(items):
     ws.title = f"Inventory_{today_str}"
 
     # Define headers
-    headers = ["Product", "Diff","Show Number","Each","Color", "Location", "Pallets", "Cases","ShelfRecord"]
+    headers = ["Product", "Diff","Show Number","Each","Color", "Location", "Pallets", "Cases","ShelfRecord","Type"]
     ws.append(headers)
 
     # Write data rows
@@ -295,7 +327,8 @@ def export_inventory_to_excel(items):
             item.Location,
             item.palletnumber,
             item.case,
-            item.ShelfRecord,            
+            item.ShelfRecord,
+            item.type,
         ])
 
     # Auto-fit column width

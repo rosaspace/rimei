@@ -118,7 +118,7 @@ def print_weekly_pickuplist_on_one_page(start_date):
     # 仅打印周一至周五
     current_date = start_date
     printed_days = 0
-    while printed_days < 5:
+    while printed_days < 4:
         
         weekday = current_date.weekday()
         if weekday < 5:  # 周一到周五
@@ -138,8 +138,8 @@ def print_weekly_pickuplist_on_one_page(start_date):
                 pickup_list = [f"{o.so_num} / {o.plts} plts / {o.customer_name}" for o in pickup_orders]
             else:
                 pickup_list = ["N/A"]
-            # if current_date.weekday() == 0:
-            #     pickup_list.append("Office Depot")
+            if current_date.weekday() == 0:
+                pickup_list.append("Office Depot")
 
             # 编号列表
             c.setFont("Helvetica", item_font_size)

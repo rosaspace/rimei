@@ -57,10 +57,20 @@
         <form id="edit-container-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_container' container.container_id %}">
             {% csrf_token %}
             <div class="row mb-2">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Container ID</label>
                     <div class="container-id-display">{{ container.container_id }}</div>
                     <input type="hidden" id="container-id" value="{{ container.container_id }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="pickup-number" class="form-label">Pickup Number</label>
+                    <input type="text" class="form-control" id="pickup-number" name="pickup_number" 
+                        value="{{ container.pickup_number }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="lot_number" class="form-label">Lot Number</label>
+                    <input type="text" class="form-control" id="lot_number" name="lot_number" 
+                        value="{{ container.lot }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Container Type</label>
@@ -74,15 +84,16 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label for="pickup-number" class="form-label">Pickup Number</label>
-                    <input type="text" class="form-control" id="pickup-number" name="pickup_number" 
-                        value="{{ container.pickup_number }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="lot_number" class="form-label">Lot Number</label>
-                    <input type="text" class="form-control" id="lot_number" name="lot_number" 
-                        value="{{ container.lot }}">
-                </div>
+                    <label class="form-label">Manufacturer</label>
+                    <select class="form-select" id="manufacturer" name="manufacturer" required>
+                        <option value="">Select Manufacturer...</option>
+                        {% for category in manufacturer %}
+                        <option value="{{ category.id }}" {% if category.id == container.manufacturer.id %}selected{% endif %}>
+                            {{ category }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>                
             </div>
 
             <div class="row mb-2">

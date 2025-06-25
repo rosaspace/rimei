@@ -19,7 +19,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 
-from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory,RailwayStation,Carrier
+from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory,RailwayStation,Carrier,Manufacturer
 from ..constants import NEW_ADDRESS, NEW_TITLE
 from ..constants import UPLOAD_DIR_order,UPLOAD_DIR_container,UPLOAD_DIR_temp
 from ..constants import BOL_FOLDER,ORDER_FOLDER,ORDER_CONVERTED_FOLDER,LABEL_FOLDER,CHECKLIST_FOLDER,DO_FOLDER,INVOICE_FOUDER,CUSTOMER_INVOICE_FOLDER,ORIGINAL_DO_FOUDER
@@ -35,14 +35,17 @@ def add_container_view(request):
     customers = InvoiceCustomer.objects.all()
     logistics = LogisticsCompany.objects.all()
     inboundCategory = InboundCategory.objects.all()
+    manufacturer = Manufacturer.objects.all()
     railstation= RailwayStation.objects.all()
     carrier = Carrier.objects.all()
     return render(request, 'container/containerManager/add_container.html',{
         'customers': customers,
         'logistics':logistics,
         'inboundCategory':inboundCategory,
+        'manufacturer':manufacturer,
         'railstation':railstation,
-        'carrier':carrier,})
+        'carrier':carrier,
+    })
 
 # 新增Container
 def add_container(request):
@@ -75,7 +78,8 @@ def add_container(request):
             # 设置默认值（建议放在函数顶部）
             DEFAULT_INBOUND_CATEGORY = InboundCategory.objects.get(Type="BLUE GRILL")
             DEFAULT_STATION = RailwayStation.objects.get(name="CPRR/ BENSENVILLE")
-            # DEFAULT_CARRIER = Carrier.objects.get(name="Default Carrier")
+            DEFAULT_CARRIER = Carrier.objects.get(name="SECURE SOURCE AMERICA")
+            DEFAULT_Manufacturer = Manufacturer.objects.get(name="SUBIC MATERIALS LIMITED")
             DEFAULT_CUSTOMER = InvoiceCustomer.objects.get(name="GoldenFeather")
             DEFAULT_LOGISTICS = LogisticsCompany.objects.get(name="Advance77")            
 
@@ -87,13 +91,14 @@ def add_container(request):
             print("station_name: ",station_name)
 
             inbound_category_id = request.POST.get('inbound_category')
-            print("inbound_category_id: ",inbound_category_id)
             inbound_category = InboundCategory.objects.get(id=inbound_category_id) if inbound_category_id else DEFAULT_INBOUND_CATEGORY
             
-            print("inbound_category: ",inbound_category)
 
-            # carrier_id = request.POST.get('carrier_name')
-            # carrier_name = Carrier.objects.get(id=carrier_id) if carrier_id else DEFAULT_CARRIER
+            carrier_id = request.POST.get('carrier_name')
+            carrier_name = Carrier.objects.get(id=carrier_id) if carrier_id else DEFAULT_CARRIER
+
+            manufacturer_id = request.POST.get('manufacturer')
+            manufacturer_name = Manufacturer.objects.get(id=manufacturer_id) if manufacturer_id else DEFAULT_Manufacturer
 
             customer_id = request.POST.get('customer_name')
             customer_name = InvoiceCustomer.objects.get(id=customer_id) if customer_id else DEFAULT_CUSTOMER
@@ -118,7 +123,8 @@ def add_container(request):
                 customer = customer_name,
                 logistics = logistics_name,
                 railwayStation = station_name,
-                # Carrier = carrier_name,
+                Carrier = carrier_name,
+                manufacturer = manufacturer_name,
                 created_at=timezone.now(),
                 created_user=request.user,  # ✅ 保存创建人
             )
@@ -167,6 +173,7 @@ def edit_container(request, container_id):
         customers = InvoiceCustomer.objects.all()
         logistics = LogisticsCompany.objects.all()
         inboundCategory = InboundCategory.objects.all()
+        manufacturer = Manufacturer.objects.all()
         railstation = RailwayStation.objects.all()
         carrier = Carrier.objects.all()
 
@@ -177,6 +184,7 @@ def edit_container(request, container_id):
             'customers': customers,
             'logistics': logistics,
             'inboundCategory':inboundCategory,
+            'manufacturer':manufacturer,
             'railstation':railstation,
             'carrier':carrier,
             "container_items":container_items_new,
@@ -205,6 +213,7 @@ def edit_container(request, container_id):
             container.customer = InvoiceCustomer.objects.get(id=request.POST.get('customer_name'))
             container.logistics = LogisticsCompany.objects.get(id=request.POST.get('logistics_name'))
             container.inboundCategory= InboundCategory.objects.get(id=request.POST.get('inbound_category'))
+            container.manufacturer = Manufacturer.objects.get(id=request.POST.get('manufacturer'))
             container.railwayStation= RailwayStation.objects.get(id=request.POST.get('station_name'))
             container.Carrier = Carrier.objects.get(id=request.POST.get('carrier_name'))
             
@@ -253,7 +262,7 @@ def edit_container(request, container_id):
                     )
             
             messages.success(request, 'Container更新成功！')
-            return redirect('container')
+            return redirect('container_finished') 
             
         except Exception as e:
             return JsonResponse({
@@ -442,9 +451,9 @@ def print_container_detail(request, container_num):
 
     # 基本信息
     container_info = {
-        "Manufacturer": container.inboundCategory.Manufacturer,
+        "Manufacturer": container.manufacturer,
         "Container Number": container.container_id,
-        "Carrier": container.inboundCategory.Carrier.name,
+        "Carrier": container.Carrier.name,
         "LOT#": container.lot,
         "Date": datetime.now().strftime("%m/%d/%Y"),
         "Product Validity": "",

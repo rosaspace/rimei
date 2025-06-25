@@ -7,9 +7,17 @@
 
     <form id="add-container-form">
         <div class="row">
-            <div class="col-md-3 mb-3">
+            <div class="col-md-2 mb-3">
                 <label for="container-id" class="form-label">Container ID*</label>
                 <input type="text" class="form-control" id="container-id" name="container_id" required>
+            </div>
+            <div class="col-md-2 mb-3">
+                <label for="pickup-number" class="form-label">Pickup Number</label>
+                <input type="text" class="form-control" id="pickup-number" name="pickup_number">
+            </div>
+            <div class="col-md-2 mb-3">
+                <label for="lot_number" class="form-label">Lot Number</label>
+                <input type="text" class="form-control" id="lot_number" name="lot_number" >
             </div>
             <div class="col-md-3 mb-3">
                 <label class="form-label">Container Type</label>
@@ -23,12 +31,15 @@
                 </select>
             </div>
             <div class="col-md-3 mb-3">
-                <label for="pickup-number" class="form-label">Pickup Number</label>
-                <input type="text" class="form-control" id="pickup-number" name="pickup_number">
-            </div>
-            <div class="col-md-3 mb-3">
-                <label for="lot_number" class="form-label">Lot Number</label>
-                <input type="text" class="form-control" id="lot_number" name="lot_number" >
+                <label class="form-label">Manufacturer</label>
+                <select class="form-select" id="manufacturer" name="manufacturer" required>
+                    <option value="">Select Manufacturer...</option>
+                    {% for category in manufacturer %}
+                    <option value="{{ category.id }}" {% if category.id == container.manufacturer.id %}selected{% endif %}>
+                        {{ category }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
 
@@ -66,7 +77,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <!-- <div class="col-md-3 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="carrier_name" class="form-label">Carrier</label>
                 <select class="form-select" id="carrier_name" name="carrier_name" required>
                     <option value="">Select Carrier...</option>
@@ -76,7 +87,7 @@
                     </option>
                     {% endfor %}
                 </select>
-            </div> -->
+            </div>
         </div>
         
         <div class="row">
@@ -154,6 +165,7 @@
             formData.append("ref_number", document.getElementById("ref_number").value);
             formData.append("lot_number", document.getElementById("lot_number").value);
             formData.append("inbound_category", document.getElementById("inbound_category").value);
+            formData.append("manufacturer", document.getElementById("manufacturer").value);
             formData.append('customer_name', document.getElementById('customer_name').value);
             formData.append('station_name', document.getElementById('station_name').value);
             formData.append('logistics_name', document.getElementById('logistics_name').value);
