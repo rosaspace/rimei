@@ -65,6 +65,12 @@
             color: #fff;
         }
 
+        /* 悬浮展开 dropdown */
+        .nav-item.dropdown:hover .dropdown-menu {
+            display: block;
+            margin-top: 0; /* 防止跳动 */
+        }
+
         .divider {
             color: #999;
             margin: 0 0.1rem;
@@ -194,9 +200,9 @@
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'rimeiorder' %}">Rimei Order</a></li>
-                <li><a class="dropdown-item" href="{% url 'rimeiorder_officedepot' %}">Office Depot</a></li>
-                <li><a class="dropdown-item" href="{% url 'rimeiorder_finished' %}">Finished</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_officedepot' %}">Office Depot</a></li>                
                 <li><a class="dropdown-item" href="{% url 'metalorder' %}">Metal Order</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_finished' %}">Finished Order</a></li>
               </ul>
             </li>
             {% endif %}
@@ -214,9 +220,9 @@
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'inventory' %}">Rimei</a></li>
-                <li><a class="dropdown-item" href="{% url 'inventory_diff' %}">Diff Rimei</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_diff' %}">Rimei Diff</a></li>
                 <li><a class="dropdown-item" href="{% url 'inventory_metal' %}">Metal</a></li>
-                <li><a class="dropdown-item" href="{% url 'inventory_mcd' %}">Mcd</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_mcd' %}">Mcdonalds</a></li>
               </ul>
             </li>
             {% endif %}
