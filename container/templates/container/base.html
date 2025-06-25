@@ -47,6 +47,11 @@
             z-index: 1000;
         }
 
+        /* 主体内容区域 */
+        .main-content {
+            padding: 16px;
+        }
+
         /* 设置当前激活菜单项为绿色背景、白色文字 */
         .nav-link.active {
             background-color: #198754 !important;  /* Bootstrap 5 的绿色 */
@@ -70,16 +75,7 @@
             display: block;
             margin-top: 0; /* 防止跳动 */
         }
-
-        .divider {
-            color: #999;
-            margin: 0 0.1rem;
-        }
-
-        /* 主体内容区域 */
-        .main-content {
-            padding: 16px;
-        }
+        
         /* 必填项样式 */
         .required-label::after {
             content: " *";
@@ -123,6 +119,7 @@
             margin-bottom: 4px;
         }
 
+        /* 长文件名，显示为... */       
         .ellipsis {
             white-space: nowrap;
             overflow: hidden;
