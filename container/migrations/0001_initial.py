@@ -4,7 +4,7 @@ import container.models
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
-from ..constants import rimei_address
+from ..constants import constants_address
 
 class Migration(migrations.Migration):
 
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                 (
                     "address",
                     models.CharField(
-                        default=rimei_address, max_length=255
+                        default=constants_address.rimei_address, max_length=255
                     ),
                 ),
             ],

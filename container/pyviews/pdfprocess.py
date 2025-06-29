@@ -17,12 +17,7 @@ from io import BytesIO
 
 from ..models import RMOrder,OrderItem
 from .pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page,print_bol_template
-from ..constants import NEW_ADDRESS, NEW_TITLE
-from ..constants import UPLOAD_DIR_order
-from ..constants import BOL_FOLDER,ORDER_FOLDER,ORDER_CONVERTED_FOLDER,LABEL_FOLDER
-from ..constants import Rimei_LOGO_PATH,GF_LOGO_PATH
-from ..constants import PAGE_HEIGHT,MARGIN_TOP,MARGIN_LEFT,LABEL_WIDTH,LABEL_HEIGHT,FONT_SIZE,DRAW_BORDERS
-from ..constants import GF_ADDRESS,rimei_address
+from ..constants import constants_address
 
 # Order
 def print_original_order(request, so_num):
@@ -32,7 +27,7 @@ def print_original_order(request, so_num):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, ORDER_FOLDER, order.order_pdfname)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.ORDER_FOLDER, order.order_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -51,13 +46,13 @@ def print_converted_order(request, so_num):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, ORDER_FOLDER, order.order_pdfname)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.ORDER_FOLDER, order.order_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
         return HttpResponse("PDF文件未找到", status=404)
     
-    new_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, ORDER_CONVERTED_FOLDER, order.order_pdfname)
+    new_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.ORDER_CONVERTED_FOLDER, order.order_pdfname)
     base_name, ext = os.path.splitext(new_path)
     updated_pdf = f"{base_name}_updated.pdf"
     doc = fitz.open(pdf_path)
@@ -70,11 +65,11 @@ def print_converted_order(request, so_num):
 
         # 添加新 LOGO
         logo_width, logo_height = 130, 65  
-        page.insert_image(fitz.Rect(x, y, x + logo_width, y + logo_height), filename=Rimei_LOGO_PATH)
+        page.insert_image(fitz.Rect(x, y, x + logo_width, y + logo_height), filename=constants_address.Rimei_LOGO_PATH)
 
         # 添加新地址
         address_x, address_y = x, y + logo_height + 20  
-        page.insert_text((address_x, address_y), NEW_ADDRESS, fontsize=12, color=(0, 0, 0), fontfile="helvB")
+        page.insert_text((address_x, address_y), constants_address.NEW_ADDRESS, fontsize=12, color=(0, 0, 0), fontfile="helvB")
 
         # 修改右上角的 Packing Slip 文字
         page_width = page.rect.width  
@@ -86,7 +81,7 @@ def print_converted_order(request, so_num):
         erase_rect = fitz.Rect(page_width - erase_title_width, 30, page_width, 30 + erase_title_height)
         page.draw_rect(erase_rect, color=(1, 1, 1), fill=(1, 1, 1))
 
-        page.insert_text((packing_slip_x, packing_slip_y), NEW_TITLE, fontsize=18, color=(0, 0, 0), fontfile="helvB")
+        page.insert_text((packing_slip_x, packing_slip_y), constants_address.NEW_TITLE, fontsize=18, color=(0, 0, 0), fontfile="helvB")
 
     doc.save(updated_pdf)
     doc.close()
@@ -103,7 +98,7 @@ def print_order_label(request, so_num):
     original_label_count = label_count  # 用于总数显示
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, LABEL_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.LABEL_FOLDER)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -113,54 +108,56 @@ def print_order_label(request, so_num):
     c = canvas.Canvas(filename, pagesize=letter)
 
     # Set font
-    c.setFont("Helvetica-Bold", FONT_SIZE)
+    c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
     
-    y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
+    y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
     labels_on_page = 0  # Track labels per page
     first_page = True
     label_index = 1  # 当前标签序号
-
+    
     while label_count > 0:
         if not first_page:  
             c.showPage()  # Create a new page *only if necessary*
-            c.setFont("Helvetica-Bold", FONT_SIZE)  # Reset font on new page
-            y_position = PAGE_HEIGHT - MARGIN_TOP  # Reset y position
+            c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)  # Reset font on new page
+            y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
             labels_on_page = 0  # Reset row counter
 
         first_page = False 
-
+        
         for _ in range(5):  # Max 5 rows per page
             if label_count <= 0:
                 break  # Stop when all labels are printed
     
             # Two labels per row, calculate positions
-            x_positions = [MARGIN_LEFT, MARGIN_LEFT + LABEL_WIDTH]
+            x_positions = [constants_address.MARGIN_LEFT, constants_address.MARGIN_LEFT + constants_address.LABEL_WIDTH]
 
             for x in x_positions:
+                
                 if label_count <= 0:  
                     break  # Stop if all labels are printed
     
                 # Center text in each label
-                text_x = x + (LABEL_WIDTH / 2)
-                text_y = y_position  - (LABEL_HEIGHT / 2) - 20
+                text_x = x + (constants_address.LABEL_WIDTH / 2)
+                text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 20
                 
                 # Set font and draw text
-                c.setFont("Helvetica-Bold", FONT_SIZE)
+                c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
                 c.drawCentredString(text_x, text_y, so_num)
     
                 # Draw label borders (for testing)
-                if DRAW_BORDERS:
-                    c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
+                if constants_address.DRAW_BORDERS:
+                    c.rect(x, y_position - constants_address.LABEL_HEIGHT, constants_address.LABEL_WIDTH, constants_address.LABEL_HEIGHT)
 
                 # Add smaller text for container_id, lot_number, and current date below the label
-                c.setFont("Helvetica", FONT_SIZE - 30)  # Smaller font size for the new text
+                c.setFont("Helvetica", constants_address.FONT_SIZE - 30)  # Smaller font size for the new text
                 label_number_text = f"{label_index}/{original_label_count}"
+                
                 c.drawCentredString(text_x, text_y - 30, label_number_text)
 
                 label_index += 1
                 label_count -= 1  # Reduce remaining label count
 
-            y_position -= LABEL_HEIGHT  # Move to next row
+            y_position -= constants_address.LABEL_HEIGHT  # Move to next row
             labels_on_page += 2  # Two labels per row
 
     c.save()
@@ -192,7 +189,7 @@ def print_order_bol(request, so_num):
 
     # 基本信息
     container_info = {
-        "Ship From": rimei_address,
+        "Ship From": constants_address.rimei_address,
         "Ship To": order.ship_to,
         "Bill To": order.bill_to,
         "SO Number": order.so_num,
@@ -212,7 +209,7 @@ def print_order_bol(request, so_num):
     ]
 
     # 保存路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order, BOL_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.BOL_FOLDER)
     filename = os.path.join(pdf_path, f"{container_info['SO Number']}.pdf")
     title = f"Order - {container_info['SO Number']}"
     contentTitle =  f"Bill Of Lading - {order.so_num}"
@@ -244,15 +241,15 @@ def print_order_mcd(request, so_num):
     }
 
     # ✅ Logo 和标题
-    if os.path.exists(GF_LOGO_PATH):
-        p.drawImage(GF_LOGO_PATH, 40, y - 60, width=100, height=50, preserveAspectRatio=True, mask='auto')
+    if os.path.exists(constants_address.GF_LOGO_PATH):
+        p.drawImage(constants_address.GF_LOGO_PATH, 40, y - 60, width=100, height=50, preserveAspectRatio=True, mask='auto')
     p.setFont("Helvetica-Bold", 20)
     p.drawString(220, y, "Packing Slip")
     y -= 80
 
     # ✅ 公司地址
     p.setFont("Helvetica", 11)
-    for line in GF_ADDRESS:
+    for line in constants_address.GF_ADDRESS:
         p.drawString(40, y, line)
         y -= 15
 
@@ -318,7 +315,7 @@ def print_order_mcd(request, so_num):
     table.drawOn(p, 40, y - (20 * len(table_data)))
 
     # ✅ 底部公司名
-    for line in GF_ADDRESS:
+    for line in constants_address.GF_ADDRESS:
         p.drawString(40, y-220, line)
         y -= 15
 

@@ -12,6 +12,8 @@ from io import BytesIO
 from collections import defaultdict
 from django.db.models import Q
 
+from ..constants import constants_view
+
 def inventory_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
     print("----------inventory_view------------",len(inventory_items))
@@ -25,7 +27,7 @@ def inventory_view(request):
         inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
     user_permissions = get_user_permissions(request.user)
-    return render(request, "container/inventory.html", {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
 
 def inventory_diff_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
@@ -43,7 +45,7 @@ def inventory_diff_view(request):
         diff_items = sorted(diff_items, key=lambda x: x.quantity_for_neworder)
 
     user_permissions = get_user_permissions(request.user)
-    return render(request, "container/inventory.html", {"inventory_items": diff_items,'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {"inventory_items": diff_items,'user_permissions': user_permissions})
 
 def inventory_metal(request):
     inventory_items = RMProduct.objects.filter(type = "Metal")
@@ -59,7 +61,7 @@ def inventory_metal(request):
         inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
     user_permissions = get_user_permissions(request.user)
-    return render(request, "container/inventory.html", {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
 
 def inventory_mcd(request):
     inventory_items = RMProduct.objects.filter(Q(type="Mcdonalds") | Q(type="Other"))
@@ -75,7 +77,7 @@ def inventory_mcd(request):
         inventory_items_converty = sorted(inventory_items_converty, key=lambda x: (x.type,x.name))
 
     user_permissions = get_user_permissions(request.user)
-    return render(request, "container/inventory.html", {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
 
 def export_stock(request):
     inventory_items = RMProduct.objects.all()
@@ -96,7 +98,7 @@ def export_stock(request):
     if request.GET.get("export") == "1":
         return export_inventory_to_excel(inventory_items_converty)
 
-    return render(request, "container/inventory.html", {
+    return render(request, constants_view.template_inventory, {
         "inventory_items": inventory_items_converty,
         "user_permissions": user_permissions
     })
@@ -122,7 +124,7 @@ def order_history(request,product_id):
     total_quality = total_inbound_actual_quantity - total_outbound_actual_quantity
     total_stock = total_inbound_actual_quantity - total_outbound_actual_quantity - total_outbound_stock_quantity
 
-    return render(request, 'container/inventory/order_history.html', {
+    return render(request, constants_view.template_order_history, {
         'product': product,
         'inbound_logs': inbound_list,
         'outbound_logs': outbound_list,
@@ -186,7 +188,7 @@ def inventory_summary(request):
     user_permissions = get_user_permissions(request.user)
     years = [2025]
     months = list(range(1, 13))  # 1 到 12 月
-    return render(request, "container/temporary.html", {'user_permissions': user_permissions,'years':years,'months':months,'summary':summary,'total_qty_all': total_qty_all,})
+    return render(request, constants_view.template_temporary, {'user_permissions': user_permissions,'years':years,'months':months,'summary':summary,'total_qty_all': total_qty_all,})
 
 def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list):
      

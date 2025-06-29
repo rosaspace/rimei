@@ -1,7 +1,9 @@
 from django.contrib import admin
+
+from .forms import OrderForm
+
 from .models import Container,Permission,UserAndPermission  # 导入 Container 模型
 from .models import RMOrder, RMCustomer,OrderImage
-from .forms import OrderForm
 from .models import InvoiceCustomer,RMProduct
 from .models import Employee, LogisticsCompany,OrderItem,ClockRecord,ContainerItem
 from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation,ContainerStatement,Manufacturer

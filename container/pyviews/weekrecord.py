@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.http import HttpResponse
 
 from ..models import ClockRecord,Employee,UserAndPermission
-
+from ..constants import constants_address,constants_view
 
 def week_record(request):
     # 获取当前年份和周数（ISO标准）
@@ -49,7 +49,7 @@ def week_record(request):
 
     # 如果没有记录，返回空页面或消息
     if not weekly_records.exists():
-        return render(request, 'container/weekrecord.html', {
+        return render(request, constants_view.template_weekrecord, {
             'employee_records': None,  # 或者可以返回一个空的字典
             'years': years,
             'weeks': weeks,
@@ -95,7 +95,7 @@ def week_record(request):
     # ✅ 排序
     employee_records = sorted(employee_records, key=lambda x: (x['belongTo'] or '').lower())
     
-    return render(request, 'container/weekrecord.html', {
+    return render(request, constants_view.template_weekrecord, {
         'employee_records': employee_records,
         'years': years,
         'weeks': weeks,
@@ -172,7 +172,7 @@ def add_week_records(request):
         return redirect('week_record')
     
     employees = Employee.objects.all()
-    return render(request, 'container/weekrecord/add_record.html', {
+    return render(request, constants_view.template_add_record, {
         'weekdays': weekdays,
         'employees': employees,
     })
@@ -241,7 +241,7 @@ def edit_week_records(request, employee_id=None):
     
     work_record_dict = {record.date: record for record in work_records}
 
-    return render(request, 'container/weekrecord/edit_record.html', {
+    return render(request, constants_view.template_edit_record, {
         'weekdays': weekdays,
         'current_employee': current_employee,
         'work_records': work_record_dict,  # Pass the dictionary to the template

@@ -21,8 +21,7 @@ from decimal import Decimal
 
 from ..models import Container
 from .pdfextract import extract_invoice_data, extract_customer_invoice_data
-from ..constants import UPLOAD_DIR_container,UPLOAD_DIR_invoice
-from ..constants import ORDER_CONVERTED_FOLDER,INVOICE_FOUDER,CUSTOMER_INVOICE_FOLDER,ORIGINAL_DO_FOUDER
+from ..constants import constants_address, constants_view
 from .pdfgenerate import extract_text_from_pdf, converter_customer_invoice
 
 # Invoice
@@ -33,7 +32,7 @@ def print_original_do(request, container_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, ORIGINAL_DO_FOUDER, container.container_pdfname)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.ORIGINAL_DO_FOUDER, container.container_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -52,7 +51,7 @@ def print_original_invoice(request, container_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_invoice, INVOICE_FOUDER, container.invoice_pdfname)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, container.invoice_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -71,7 +70,7 @@ def print_converted_invoice(request, container_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_invoice, ORDER_CONVERTED_FOLDER, container.customer_invoice_pdfname)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.ORDER_CONVERTED_FOLDER, container.customer_invoice_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -92,7 +91,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    input_pdf_path  = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_invoice, INVOICE_FOUDER, container.invoice_pdfname)    
+    input_pdf_path  = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, container.invoice_pdfname)    
     # 检查文件是否存在
     if not os.path.exists(input_pdf_path ):
         return HttpResponse("PDF文件未找到", status=404)
@@ -169,7 +168,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0):
 
     # 构造新的文件路径
     new_filename = f"{container.container_id}.pdf"
-    output_dir = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_invoice, CUSTOMER_INVOICE_FOLDER)
+    output_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.CUSTOMER_INVOICE_FOLDER)
     output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
     converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate)
     
@@ -267,7 +266,7 @@ def edit_invoice_file(request, container_id):
     try:
         # 保存文件
         container.invoice_pdfname = invoice_file.name
-        file_path = os.path.join(UPLOAD_DIR_invoice, INVOICE_FOUDER, invoice_file.name)
+        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, invoice_file.name)
         full_path = os.path.join(settings.MEDIA_ROOT, file_path)
         with open(full_path, 'wb+') as destination:
             for chunk in invoice_file.chunks():
@@ -288,7 +287,7 @@ def edit_invoice_file(request, container_id):
             container.price = Decimal(data['price'])
         container.save()
 
-        return render(request, 'container/invoiceManager/edit_invoice.html', {
+        return render(request, constants_view.template_edit_invoice, {
             'container': container,
         })
     
@@ -304,7 +303,7 @@ def edit_customer_invoice_file(request, container_id):
 
     try:        
         container.customer_invoice_pdfname = invoice_file.name
-        file_path = os.path.join(UPLOAD_DIR_invoice, ORDER_CONVERTED_FOLDER, invoice_file.name) 
+        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.ORDER_CONVERTED_FOLDER, invoice_file.name) 
         full_path = os.path.join(settings.MEDIA_ROOT, file_path)
 
         # 保存文件
@@ -327,7 +326,7 @@ def edit_customer_invoice_file(request, container_id):
             container.customer_price = Decimal(data['price'])
         container.save()
 
-        return render(request, 'container/invoiceManager/edit_invoice.html', {
+        return render(request, constants_view.template_edit_invoice, {
             'container': container,
             'container_id': container_id
         })
@@ -340,7 +339,7 @@ def edit_invoice(request, container_id):
 
     if request.method == "GET":
         print("date: ",container.customer_payment_date, type(container.customer_payment_date))
-        return render(request, 'container/invoiceManager/edit_invoice.html', {
+        return render(request, constants_view.template_edit_invoice, {
             'container': container,
         })
 
@@ -358,7 +357,7 @@ def edit_invoice(request, container_id):
         container.payment_date = pay_date or None
         container.save()
 
-        return render(request, 'container/invoiceManager/edit_invoice.html', {
+        return render(request, constants_view.template_edit_invoice, {
             'container': container,
         })
 
@@ -373,12 +372,12 @@ def edit_customer_invoice(request, container_id):
         container.customer_payment_date = pay_date or None
         container.save()
 
-        return render(request, 'container/invoiceManager/edit_invoice.html', {
+        return render(request, constants_view.template_edit_invoice, {
             'container': container,
             'container_id': container_id
         })
 
-    return render(request, 'container/invoiceManager/edit_invoice.html', {
+    return render(request, constants_view.template_edit_invoice, {
         'container': container,
         'container_id': container_id,
     })

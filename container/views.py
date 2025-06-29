@@ -1,33 +1,34 @@
+import tempfile
+
 from django.shortcuts import render, redirect
-from .models import Container, RMOrder,RMCustomer,AlineOrderRecord,ContainerStatement
 from django.http import JsonResponse
 from django.contrib.auth.models import User
-from .models import UserAndPermission
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, F
 from django.template.loader import get_template
 from django.http import HttpResponse
+
 from weasyprint import HTML
-import tempfile
 from datetime import datetime
 from django.utils import timezone
 from collections import defaultdict
 
+from .models import Container, RMOrder,RMCustomer,AlineOrderRecord,ContainerStatement
+from .models import UserAndPermission
+from .constants import constants_view
+
 @login_required
 def home(request):
-    return render(request, "container/user/login.html")
+    return render(request, constants_view.template_login)
 
 @login_required
 def index(request):
-    template = "container/base.html"  
     user_permissions = get_user_permissions(request.user)
-    return render(request, template,{'user_permissions': user_permissions})
+    return render(request, constants_view.template_base,{'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def invoice_view(request):
-    template = "container/invoice.html"
-
     containers = Container.objects.exclude(
         Q(ispay=True, customer_ispay=True) |
         Q(customer = 3, ispay=True) | 
@@ -37,12 +38,10 @@ def invoice_view(request):
     ).order_by('-due_date')
     
     user_permissions = get_user_permissions(request.user)
-    return render(request, template, {'containers': containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def invoice_finished(request):
-    template = "container/invoice.html"
-
     containers = Container.objects.filter(
         Q(ispay=True, customer_ispay=True) |
         Q(customer = 3, ispay=True) |
@@ -52,18 +51,17 @@ def invoice_finished(request):
     ).order_by('-due_date')
 
     user_permissions = get_user_permissions(request.user)
-    return render(request, template, {'containers': containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def invoice_unpaid(request):
-    template = "container/invoice.html"
     containers = Container.objects.filter(
         Q(ispay=False, customer_ispay=True) |
         Q(customer = 3, ispay=False, invoice_id__isnull=False) |
         Q(customer = 12, ispay=False, invoice_id__isnull=False)
     ).order_by('-due_date')
     user_permissions = get_user_permissions(request.user)
-    return render(request, template, {'containers': containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def statement_selected_invoices(request):
@@ -80,7 +78,7 @@ def statement_selected_invoices(request):
             containers = [cs.container for cs in container_statements]
             total_price = sum([c.price for c in containers if c.price])
 
-            return render(request, "container/invoiceManager/statement_invoice_preview.html", {
+            return render(request, constants_view.template_statement_invoice_preview, {
                 "containers": containers,
                 "total_price": total_price,
                 "current_date": datetime.now(),
@@ -107,7 +105,7 @@ def statement_selected_invoices(request):
                         created_user=request.user,  # ✅ 保存创建人
                 )
 
-            return render(request, "container/invoiceManager/statement_invoice_preview.html", {
+            return render(request, constants_view.template_statement_invoice_preview, {
                 "containers": containers, 
                 "total_price": total_price,
                 "current_date": datetime.now(),
@@ -210,20 +208,17 @@ def invoice_statement(request):
     # 按日期排序（可选，因 defaultdict 顺序可能不是稳定的）
     merged_statements.sort(key=lambda x: x["statement_date"])
 
-    template = "container/invoiceManager/statement.html"
     user_permissions = get_user_permissions(request.user)
-    return render(request, template,{"statements":merged_statements,'user_permissions': user_permissions})
+    return render(request, constants_view.template_statement, {"statements":merged_statements,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def aline_payment_view(request):
-    template = "container/payment_aline.html"  
     alineOrders = AlineOrderRecord.objects.all().order_by('due_date')
     user_permissions = get_user_permissions(request.user)  
-    return render(request, template,{'orders':alineOrders, 'user_permissions': user_permissions})
+    return render(request, constants_view.template_payment_aline,{'orders':alineOrders, 'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def container_view(request):
-    template = "container/container.html"
     containers = Container.objects.all()
     user_permissions = get_user_permissions(request.user) 
     unfinished_containers = containers.filter(
@@ -231,10 +226,9 @@ def container_view(request):
     )    
     print("unfinished_containers, ",len(unfinished_containers))
 
-    return render(request, template, {'containers': unfinished_containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_container, {'containers': unfinished_containers,'user_permissions': user_permissions})
  
 def container_view_finished(request):
-    template = "container/container.html"
     containers = Container.objects.all().order_by('-delivery_date')
     user_permissions = get_user_permissions(request.user) 
     finished_containers = containers.exclude(
@@ -242,11 +236,10 @@ def container_view_finished(request):
     )
     print("finished_containers, ",len(finished_containers))
 
-    return render(request, template, {'containers': finished_containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_container, {'containers': finished_containers,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def rimeiorder_view(request):
-    template = "container/rmorder2.html"
     orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('pickup_date')
     user_permissions = get_user_permissions(request.user) 
     unfinished_orders = orders.filter(
@@ -255,14 +248,13 @@ def rimeiorder_view(request):
     )
     print("unfinished_orders, ",len(unfinished_orders))
 
-    return render(request, template, {
+    return render(request, constants_view.template_rmorder, {
         'rimeiorders': unfinished_orders,
         'user_permissions': user_permissions
         })
 
 @login_required(login_url='/login/')
 def metalorder(request):
-    template = "container/rmorder2.html"
     orders = RMOrder.objects.filter(customer_name='19').annotate(image_count=Count('images')).order_by('pickup_date')
     user_permissions = get_user_permissions(request.user) 
     unfinished_orders = orders.filter(
@@ -270,14 +262,13 @@ def metalorder(request):
         is_canceled=False
     )
 
-    return render(request, template, {
+    return render(request, constants_view.template_rmorder, {
         'rimeiorders': unfinished_orders,
         'user_permissions': user_permissions
         })
 
 @login_required(login_url='/login/')
 def rimeiorder_view_finished(request):
-    template = "container/rmorder2.html"
     orders = RMOrder.objects.all().annotate(image_count=Count('images')).order_by('-pickup_date')
     user_permissions = get_user_permissions(request.user) 
     finished_orders = orders.exclude(
@@ -286,14 +277,13 @@ def rimeiorder_view_finished(request):
     )
     print("finished_orders, ",len(finished_orders))
 
-    return render(request, template, {
+    return render(request, constants_view.template_rmorder, {
         'rimeiorders': finished_orders,
         'user_permissions': user_permissions
         })
 
 @login_required(login_url='/login/')
 def rimeiorder_officedepot(request):
-    template = "container/rmorder2.html"
     orders = RMOrder.objects.filter(customer_name='4').annotate(image_count=Count('images')).order_by('pickup_date')
     user_permissions = get_user_permissions(request.user) 
     finished_orders = orders.filter(
@@ -302,14 +292,13 @@ def rimeiorder_officedepot(request):
     )
     print("finished_orders, ",len(finished_orders))
 
-    return render(request, template, {
+    return render(request, constants_view.template_rmorder, {
         'rimeiorders': finished_orders,
         'user_permissions': user_permissions
         })
 
 @login_required(login_url='/login/')
 def rimeiorder_cancel(request):
-    template = "container/rmorder2.html"
     orders = RMOrder.objects.filter(is_canceled=True).annotate(image_count=Count('images')).order_by('pickup_date')
     user_permissions = get_user_permissions(request.user) 
     finished_orders = orders.exclude(
@@ -318,7 +307,7 @@ def rimeiorder_cancel(request):
     )
     print("finished_orders, ",len(finished_orders))
 
-    return render(request, template, {
+    return render(request, constants_view.template_rmorder, {
         'rimeiorders': finished_orders,
         'user_permissions': user_permissions
         })
@@ -327,7 +316,7 @@ def rimeiorder_cancel(request):
 def inventory_view(request):
     inventory_items = RMProduct.objects.all()  # 获取所有库存信息
     user_permissions = get_user_permissions(request.user)
-    return render(request, "container/inventory.html", {"inventory_items": inventory_items,'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {"inventory_items": inventory_items,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def inventory_diff_view(request):
@@ -335,7 +324,7 @@ def inventory_diff_view(request):
         ~Q(quantity=F('quantity_for_neworder'))
     ).order_by('quantity_for_neworder')
     user_permissions = get_user_permissions(request.user)
-    return render(request, "container/inventory.html", {"inventory_items": inventory_items,'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {"inventory_items": inventory_items,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def permission_view(request):
@@ -351,18 +340,16 @@ def permission_view(request):
         }
         users_with_permissions.append(user_permissions)
 
-    template = "container/permission.html"
     user_permissions = get_user_permissions(request.user)
-    return render(request, template, {'users_with_permissions': users_with_permissions,'user_permissions': user_permissions})
+    return render(request, constants_view.template_permission, {'users_with_permissions': users_with_permissions,'user_permissions': user_permissions})
 
 @login_required(login_url='/login/')
 def temporary_view(request):
-    template = "container/temporary.html"
     user_permissions = get_user_permissions(request.user)
 
     years = [2025]
     months = list(range(1, 13))  # 1 到 12 月
-    return render(request, template,{'user_permissions': user_permissions,'years':years,'months':months})
+    return render(request, constants_view.template_temporary,{'user_permissions': user_permissions,'years':years,'months':months})
 
 def get_user_permissions(user):
     # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance

@@ -2,8 +2,10 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib import messages
-from ..models import Permission, UserAndPermission
 from django.http import JsonResponse
+
+from ..models import Permission, UserAndPermission
+from ..constants import constants_address,constants_view
 
 def add_user_view(request):
     if request.method == 'POST':
@@ -15,7 +17,7 @@ def add_user_view(request):
         # 检查密码是否一致
         if password != confirm_password:
             messages.error(request, "Passwords do not match.")
-            return render(request, 'container/user/add_user.html')
+            return render(request, constants_view.template_add_user)
 
         # 创建新用户
         try:
@@ -26,12 +28,12 @@ def add_user_view(request):
         except Exception as e:
             messages.error(request, f"Error creating user: {e}")
 
-    return render(request, 'container/user/add_user.html')
+    return render(request, constants_view.template_add_user)
 
 def assign_permission_view(request):
     users = User.objects.all()  # 获取所有用户
     permissions = Permission.objects.all()  # 获取所有权限
-    return render(request, 'container/user/assign_permission.html', {'users': users, 'permissions': permissions})
+    return render(request, constants_view.template_assign_permission, {'users': users, 'permissions': permissions})
 
 def update_user_permissions(request, user_id): 
     if request.method == 'POST':
@@ -50,5 +52,5 @@ def update_user_permissions(request, user_id):
     # 如果不是 POST 请求，返回权限分配页面
     users = User.objects.all()  # 获取所有用户
     permissions = Permission.objects.all()  # 获取所有权限
-    return render(request, 'container/user/assign_permission.html', {'users': users, 'permissions': permissions})
+    return render(request, constants_view.template_assign_permission, {'users': users, 'permissions': permissions})
 

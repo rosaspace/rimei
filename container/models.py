@@ -1,6 +1,6 @@
 from django.db import models
 from datetime import datetime
-from .constants import rimei_address
+from .constants import constants_address
 
 class Permission(models.Model):
     index = models.AutoField(primary_key=True)  # 自动生成的主键
@@ -205,7 +205,7 @@ class LogisticsCompany(models.Model):
 
 class Carrier(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 公司名称
-    address = models.CharField(max_length=255, default=rimei_address)
+    address = models.CharField(max_length=255, default=constants_address.rimei_address)
 
     def __str__(self):
         return self.name

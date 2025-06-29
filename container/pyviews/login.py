@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 
+from ..constants import constants_view
+
 def login_view(request):
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
@@ -15,7 +17,7 @@ def login_view(request):
             return redirect('index')  # 登录后跳转
     else:
         form = AuthenticationForm()
-    return render(request, 'container/user/login.html', {'form': form})
+    return render(request, constants_view.template_login, {'form': form})
 
 def register_view(request):
     if request.method == 'POST':
@@ -26,7 +28,7 @@ def register_view(request):
             return redirect('home')
     else:
         form = UserCreationForm()
-    return render(request, 'container/user/register.html', {'form': form})
+    return render(request, constants_view.template_register, {'form': form})
 
 @login_required
 def logout_view(request):

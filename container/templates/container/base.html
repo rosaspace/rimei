@@ -229,6 +229,20 @@
               <a class="nav-link {% if request.resolver_match.url_name == 'permission' %}active{% endif %}" href="{% url 'permission' %}">Permission</a>
             </li>
             {% endif %}
+
+            {% if 'Statistics' in user_permissions %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'inventory inventory_diff inventory_metal inventory_mcd' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Statistics
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'inventory' %}">Invoice Statistics</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_diff' %}">WeekRecord Statistics</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_metal' %}">Inbound Statistics</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_mcd' %}">Outbound Statistics</a></li>
+              </ul>
+            </li>
+            {% endif %}
       
           </ul>
           {% endif %}

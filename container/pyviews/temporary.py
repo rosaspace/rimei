@@ -16,13 +16,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
-from ..constants import UPLOAD_DIR_order,UPLOAD_DIR_container,UPLOAD_DIR_temp
-from ..constants import BOL_FOLDER,ORDER_FOLDER,ORDER_CONVERTED_FOLDER,LABEL_FOLDER,CHECKLIST_FOLDER,DO_FOLDER,INVOICE_FOUDER,CUSTOMER_INVOICE_FOLDER,ORIGINAL_DO_FOUDER
-from ..constants import Rimei_LOGO_PATH,SSA_LOGO_PATH,GF_LOGO_PATH
-from ..constants import PAGE_WIDTH,PAGE_HEIGHT,MARGIN_TOP,MARGIN_LEFT,LABEL_WIDTH,LABEL_HEIGHT,FONT_SIZE,FONT_SIZE_Lot,FONT_SIZE_Container,LINE_SPACING,DRAW_BORDERS
-from ..constants import max_line_width
-from ..email_constants import RECIPIENT_OMAR_rimei,RECIPIENT_OMAR_rosa, SIGNATURE_AVA, SIGNATURE_JING
-from ..email_constants import ORDER_EMAIL_TEMPLATES,CONTAINER_EMAIL_TEMPLATES, INVENTORY_EMAIL_TEMPLATES
+from ..constants import constants_address,constants_view
+from ..constants import email_constants
 from .pdfgenerate import print_containerid_lot
 from ..models import Container,RMProduct,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation,Carrier
 
@@ -38,7 +33,7 @@ def print_label_only(request):
         label_count = 10  # Handle invalid input gracefully
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_temp, LABEL_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_temp, constants_address.LABEL_FOLDER)
     print("pdf_path: ", pdf_path)
     
     # 检查文件是否存在
@@ -49,17 +44,17 @@ def print_label_only(request):
     c = canvas.Canvas(filename, pagesize=letter)
 
     # Set font
-    c.setFont("Helvetica-Bold", FONT_SIZE)
+    c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
     
-    y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
+    y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
     labels_on_page = 0  # Track labels per page
     first_page = True
 
     while label_count > 0:
         if not first_page:  
             c.showPage()  # Create a new page *only if necessary*
-            c.setFont("Helvetica-Bold", FONT_SIZE)  # Reset font on new page
-            y_position = PAGE_HEIGHT - MARGIN_TOP  # Reset y position
+            c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)  # Reset font on new page
+            y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
             labels_on_page = 0  # Reset row counter
 
         first_page = False 
@@ -69,27 +64,27 @@ def print_label_only(request):
                 break  # Stop when all labels are printed
     
             # Two labels per row, calculate positions
-            x_positions = [MARGIN_LEFT, MARGIN_LEFT + LABEL_WIDTH]
+            x_positions = [constants_address.MARGIN_LEFT, constants_address.MARGIN_LEFT + constants_address.LABEL_WIDTH]
 
             for x in x_positions:
                 if label_count <= 0:  
                     break  # Stop if all labels are printed
     
                 # Center text in each label
-                text_x = x + (LABEL_WIDTH / 2)
-                text_y = y_position  - (LABEL_HEIGHT / 2) - 20
+                text_x = x + (constants_address.LABEL_WIDTH / 2)
+                text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 20
                 
                 # Set font and draw text
-                c.setFont("Helvetica-Bold", FONT_SIZE)
+                c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
                 c.drawCentredString(text_x, text_y, so_num)
     
                 # Draw label borders (for testing)
-                if DRAW_BORDERS:
-                    c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
+                if constants_address.DRAW_BORDERS:
+                    c.rect(x, y_position - constants_address.LABEL_HEIGHT, constants_address.LABEL_WIDTH, constants_address.LABEL_HEIGHT)
     
                 label_count -= 1  # Reduce remaining label count
 
-            y_position -= LABEL_HEIGHT  # Move to next row
+            y_position -= constants_address.LABEL_HEIGHT  # Move to next row
             labels_on_page += 2  # Two labels per row
 
     c.save()
@@ -108,7 +103,7 @@ def print_label_containerid_lot(request):
     current_date = datetime.now().strftime('%m/%d/%Y')
 
     # PDF 路径设置
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_temp, LABEL_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_temp, constants_address.LABEL_FOLDER)
     os.makedirs(pdf_path, exist_ok=True)
     filename = os.path.join(pdf_path, f"{container_id}_lot.pdf")
 
@@ -265,45 +260,42 @@ def format_worksheet(ws):
     
 def preview_email(request):
     email_type = request.GET.get("type", "inventory")
-    template = "container/temporary.html"
     officedepot_id = request.POST.get('officedepot_number')
     print("officedepot_id: ",officedepot_id)
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    recipient = RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa
-    signature = SIGNATURE_AVA if is_rimei_user else SIGNATURE_JING
+    recipient = email_constants.RECIPIENT_OMAR_rimei if is_rimei_user else email_constants.RECIPIENT_OMAR_rosa
+    signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
 
-    template_func = INVENTORY_EMAIL_TEMPLATES.get(email_type, INVENTORY_EMAIL_TEMPLATES["default"])
-    email_data = template_func(officedepot_id, signature, is_rimei_user)
+    template_func = email_constants.INVENTORY_EMAIL_TEMPLATES.get(email_type, INVENTORY_EMAIL_TEMPLATES["default"])
+    email_data = email_constants.template_func(officedepot_id, signature, is_rimei_user)
 
-    return render(request, template, email_data)
+    return render(request, constants_view.template_temporary, email_data)
 
 def order_email(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
     email_type = request.GET.get("type", "shippeout")  # default to 'do' if not provided
-    template = "container/temporary.html"
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    signature = SIGNATURE_AVA if is_rimei_user else SIGNATURE_JING
-    recipient = RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa
+    recipient = email_constants.RECIPIENT_OMAR_rimei if is_rimei_user else email_constants.RECIPIENT_OMAR_rosa
+    signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
 
     # 获取模板（默认为 shippedout）
-    template_func = ORDER_EMAIL_TEMPLATES.get(email_type, ORDER_EMAIL_TEMPLATES["shippedout"])
-    email_data = template_func(order, signature, is_rimei_user)
+    template_func = email_constants.ORDER_EMAIL_TEMPLATES.get(email_type, ORDER_EMAIL_TEMPLATES["shippedout"])
+    email_data = email_constants.template_func(order, signature, is_rimei_user)
 
-    return render(request, template, email_data)
+    return render(request, constants_view.template_temporary, email_data)
 
 def container_email(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
     email_type = request.GET.get("type", "do")  # default to 'do' if not provided
-    template = "container/temporary.html"
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    signature = SIGNATURE_AVA if is_rimei_user else SIGNATURE_JING
-    recipient = RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa
+    recipient = email_constants.RECIPIENT_OMAR_rimei if is_rimei_user else email_constants.RECIPIENT_OMAR_rosa
+    signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
 
     # 获取模板（默认使用 default）
-    email_template_func = CONTAINER_EMAIL_TEMPLATES.get(email_type, CONTAINER_EMAIL_TEMPLATES["default"])
-    email_data = email_template_func(container, signature, is_rimei_user)
+    template_func = email_constants.CONTAINER_EMAIL_TEMPLATES.get(email_type, email_constants.CONTAINER_EMAIL_TEMPLATES["default"])
+    email_data = template_func(container, signature, is_rimei_user)
 
-    return render(request, template, email_data) 
+    return render(request, constants_view.template_temporary, email_data) 

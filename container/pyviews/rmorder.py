@@ -13,7 +13,7 @@ from datetime import datetime,date
 
 from ..models import RMOrder, RMCustomer, OrderImage, RMProduct,OrderItem, UserAndPermission
 from .pdfextract import get_product_qty_with_inventory_from_order,extract_order_info,extract_items_from_pdf,get_product_qty_with_inventory
-from ..constants import UPLOAD_DIR_order,ORDER_FOLDER
+from ..constants import constants_address,constants_view
 from .pdfgenerate import extract_text_from_pdf
 
 def add_order(request):
@@ -25,7 +25,7 @@ def add_order(request):
                 messages.error(request, f'创建订单失败：SO号 {so_num} 已存在')
 
                 customers = RMCustomer.objects.all()
-                return render(request, 'container/rmorder/add_order.html', {
+                return render(request, constants_view.template_add_order, {
                     'so_no': so_num,
                     'po_no': request.POST.get('po_num'),
                     'plts': request.POST.get('plts'),
@@ -95,7 +95,7 @@ def add_order(request):
             messages.error(request, f'创建订单失败：{str(e)}')
     # GET请求处理
     customers = RMCustomer.objects.all()
-    return render(request, 'container/rmorder/add_order.html', {'customers': customers})
+    return render(request, constants_view.template_add_order, {'customers': customers})
 
 @require_http_methods(["GET", "POST"])
 def edit_order(request, so_num):
@@ -111,7 +111,7 @@ def edit_order(request, so_num):
             total_quantity = sum(int(item.quantity) for item in orderitems_new)
             total_pallet = sum(int(item.pallet_qty) for item in orderitems_new)
             products = RMProduct.objects.all().order_by('name')
-            return render(request, 'container/rmorder/edit_order.html', {
+            return render(request, constants_view.template_edit_order, {
                 'order': order,
                 'customers': customers,
                 'order_items': orderitems_new,
@@ -127,7 +127,7 @@ def edit_order(request, so_num):
                 if new_so_num != so_num and RMOrder.objects.filter(so_num=new_so_num).exists():
                     messages.error(request, f'更新订单失败：SO号 {new_so_num} 已存在')
                     customers = RMCustomer.objects.all()
-                    return render(request, 'container/rmorder/edit_order.html', {
+                    return render(request, constants_view.template_edit_order, {
                         'order': order,
                         'customers': customers
                     })
@@ -192,7 +192,7 @@ def edit_order(request, so_num):
                 customers = RMCustomer.objects.all()
                 order_items = OrderItem.objects.filter(order=order)
                 products = RMProduct.objects.all().order_by('name')
-                return render(request, 'container/rmorder/edit_order.html', {
+                return render(request, constants_view.template_edit_order, {
                     'order': order,
                     'customers': customers,
                     'order_items': order_items,
@@ -210,13 +210,13 @@ def upload_orderpdf(request):
     if request.method == "POST" and request.FILES.get("pdf_file"):
         pdf_file = request.FILES["pdf_file"]
 
-        upload_dir = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_order)  # 确保路径在 MEDIA_ROOT 目录下
+        upload_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order)  # 确保路径在 MEDIA_ROOT 目录下
 
         # ✅ 如果目录不存在，则创建
         if not os.path.exists(upload_dir):
             os.makedirs(upload_dir)
 
-        file_path = os.path.join(UPLOAD_DIR_order, ORDER_FOLDER, pdf_file.name)
+        file_path = os.path.join(constants_address.UPLOAD_DIR_order, constants_address.ORDER_FOLDER, pdf_file.name)
 
         # 保存文件
         with default_storage.open(file_path, "wb+") as destination:
@@ -258,9 +258,9 @@ def upload_orderpdf(request):
             'order_pdfname': pdf_file.name
         }        
         
-        return render(request, 'container/rmorder/add_order.html',context)
+        return render(request, constants_view.template_add_order,context)
 
-    return render(request, 'container/rmorder.html')
+    return render(request, constants_view.template_rmorder)
 
 @require_http_methods(["POST"])
 def order_images(request, order_id):

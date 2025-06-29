@@ -20,12 +20,7 @@ from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 
 from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory,RailwayStation,Carrier,Manufacturer
-from ..constants import NEW_ADDRESS, NEW_TITLE
-from ..constants import UPLOAD_DIR_order,UPLOAD_DIR_container,UPLOAD_DIR_temp
-from ..constants import BOL_FOLDER,ORDER_FOLDER,ORDER_CONVERTED_FOLDER,LABEL_FOLDER,CHECKLIST_FOLDER,DO_FOLDER,INVOICE_FOUDER,CUSTOMER_INVOICE_FOLDER,ORIGINAL_DO_FOUDER
-from ..constants import Rimei_LOGO_PATH,SSA_LOGO_PATH,GF_LOGO_PATH
-from ..constants import PAGE_WIDTH,PAGE_HEIGHT,MARGIN_TOP,MARGIN_LEFT,LABEL_WIDTH,LABEL_HEIGHT,FONT_SIZE,FONT_SIZE_Lot,FONT_SIZE_Container,LINE_SPACING,DRAW_BORDERS
-from ..constants import rimei_address,GF_ADDRESS,SSA_ADDRESS,Only_ADDRESS,note_lines,DO_CONTACT_LINES,DO_FOOTER_LINES_TEMPLATE,DO_SIGNATURE_LINES
+from ..constants import constants_address, constants_view
 from .pdfgenerate import print_containerid_lot, print_checklist_template
 from .pdfextract import get_product_qty_with_inventory_from_container
 
@@ -38,7 +33,7 @@ def add_container_view(request):
     manufacturer = Manufacturer.objects.all()
     railstation= RailwayStation.objects.all()
     carrier = Carrier.objects.all()
-    return render(request, 'container/containerManager/add_container.html',{
+    return render(request, constants_view.template_add_container,{
         'customers': customers,
         'logistics':logistics,
         'inboundCategory':inboundCategory,
@@ -178,7 +173,7 @@ def edit_container(request, container_id):
         carrier = Carrier.objects.all()
 
         # 显示编辑页面
-        return render(request, 'container/containerManager/edit_container.html', {
+        return render(request, constants_view.template_edit_container, {
             'container': container, 
             "products": products,
             'customers': customers,
@@ -309,7 +304,7 @@ def print_container_label(request, container_num):
     label_count = 10
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, LABEL_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.LABEL_FOLDER)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -321,17 +316,17 @@ def print_container_label(request, container_num):
     c.setTitle(f"Label - {container.container_id}")
 
     # Set font
-    c.setFont("Helvetica-Bold", FONT_SIZE_Container)
+    c.setFont("Helvetica-Bold", constants_address.FONT_SIZE_Container)
     
-    y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
+    y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
     labels_on_page = 0  # Track labels per page
     first_page = True
 
     while label_count > 0:
         if not first_page:  
             c.showPage()  # Create a new page *only if necessary*
-            c.setFont("Helvetica-Bold", FONT_SIZE_Container)  # Reset font on new page
-            y_position = PAGE_HEIGHT - MARGIN_TOP  # Reset y position
+            c.setFont("Helvetica-Bold", constants_address.FONT_SIZE_Container)  # Reset font on new page
+            y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
             labels_on_page = 0  # Reset row counter
 
         first_page = False 
@@ -349,19 +344,19 @@ def print_container_label(request, container_num):
     
                 # Center text in each label
                 text_x = x + (LABEL_WIDTH / 2)
-                text_y = y_position  - (LABEL_HEIGHT / 2) - 10
+                text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 10
                 
                 # Print first line (custom text) and second line (today's date)
                 c.drawCentredString(text_x, text_y + (LINE_SPACING / 2), container_num)  # First line (higher)
                 c.drawCentredString(text_x, text_y - (LINE_SPACING / 2), today_date)  # Second line (lower)
     
                 # Draw label borders (for testing)
-                if DRAW_BORDERS:
-                    c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
+                if constants_address.DRAW_BORDERS:
+                    c.rect(x, y_position - constants_address.LABEL_HEIGHT, constants_address.LABEL_WIDTH, constants_address.LABEL_HEIGHT)
     
                 label_count -= 1  # Reduce remaining label count
 
-            y_position -= LABEL_HEIGHT  # Move to next row
+            y_position -= constants_address.LABEL_HEIGHT  # Move to next row
             labels_on_page += 2  # Two labels per row
 
     c.save()
@@ -397,7 +392,7 @@ def print_container_color_label(request, container_num):
     current_date = datetime.now().strftime('%m/%d/%Y')
 
     # PDF 路径设置
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, LABEL_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.LABEL_FOLDER)
     os.makedirs(pdf_path, exist_ok=True)
     filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
 
@@ -464,13 +459,13 @@ def print_container_detail(request, container_num):
     }    
 
     # 保存路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, CHECKLIST_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.CHECKLIST_FOLDER)
     filename = os.path.join(pdf_path, f"container.container_id.pdf")
     title = f"Container - {container.container_id}"
     contentType = container.inboundCategory.Type
     contentTitle = f"Inbound Container {contentType} Quality Checklist"
 
-    print_checklist_template(title,filename, contentTitle,container_info,can_liner_details, note_lines)
+    print_checklist_template(title,filename, contentTitle,container_info,can_liner_details, constants_address.note_lines)
 
     # 返回 PDF 响应
     with open(filename, 'rb') as pdf_file:
@@ -487,7 +482,7 @@ def print_container_delivery_order(request, container_num):
         "size_type": "40HQ",                        # 集装箱尺寸/类型
         "weight": f"{container.weight} LBS",                       # 重量
         "seal_number": "",                # 封条号
-        "commodity": "Plastic Bag",                 # 商品描述
+        "commodity": "Metal",                 # 商品描述
         "vessel": "",               # 船名
         "voyage": "",                          # 航次
         "ssl": "",                          # 船公司（Shipping Line）
@@ -504,7 +499,7 @@ def print_container_delivery_order(request, container_num):
 
 
     # PDF 路径设置
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_container, DO_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.DO_FOLDER)
     os.makedirs(pdf_path, exist_ok=True)
     filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
 
@@ -515,7 +510,7 @@ def print_container_delivery_order(request, container_num):
     logo_width, logo_height = 80, 80  
     logo_x = 0.5 * inch  # left_margin
     logo_y = height - logo_height - 40  # 顶部边距 10
-    c.drawImage(ImageReader(SSA_LOGO_PATH), logo_x, logo_y, width=logo_width, height=logo_height)
+    c.drawImage(ImageReader(constants_address.SSA_LOGO_PATH), logo_x, logo_y, width=logo_width, height=logo_height)
 
     # 样式设置
     left_margin = 0.5 * inch
@@ -538,7 +533,7 @@ def print_container_delivery_order(request, container_num):
     # US Headquarter
     y = height - 140
     draw_text(left_margin, y, "US Headquarter:", bold_font)
-    for line in Only_ADDRESS:
+    for line in constants_address.Only_ADDRESS:
         draw_text(left_margin + 120, y, line)
         y -= line_height
     y += line_height
@@ -581,7 +576,7 @@ def print_container_delivery_order(request, container_num):
     # 提示
     y -= 20
     c.setFont(regular_font, font_size_small)
-    for line in DO_CONTACT_LINES:
+    for line in constants_address.DO_CONTACT_LINES:
         c.drawString(left_margin + 120, y, line)
         y -= line_height
     y += line_height
@@ -625,14 +620,14 @@ def print_container_delivery_order(request, container_num):
     # Footer
     y -= 20
     c.setFont(regular_font, font_size_small)
-    footer_lines = [line.format(**containerInfo) for line in DO_FOOTER_LINES_TEMPLATE]
+    footer_lines = [line.format(**containerInfo) for line in constants_address.DO_FOOTER_LINES_TEMPLATE]
     for line in footer_lines:
         c.drawString(left_margin + 120, y, line)
         y -= line_height
 
     # 签名区
     y -= 60
-    for line in DO_SIGNATURE_LINES:
+    for line in constants_address.DO_SIGNATURE_LINES:
         draw_text(width / 2, y, line)
         y -= line_height
 

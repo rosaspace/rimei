@@ -19,11 +19,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 
 from ..models import RMOrder
-from ..constants import FONT_SIZE,FONT_SIZE_Lot
-from ..constants import PAGE_WIDTH,PAGE_HEIGHT,MARGIN_TOP,MARGIN_LEFT,LABEL_WIDTH,LABEL_HEIGHT
-from ..constants import SSA_LOGO_PATH, DRAW_BORDERS
-from ..constants import max_line_width
-from ..constants import SSA_ADDRESS,address_mapping,CONSIGNEE,description_mapping
+from ..constants import constants_address
 
 # PDF 解析函数
 def extract_text_from_pdf(pdf_path):
@@ -225,17 +221,17 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
         label_count = 10  # Handle invalid input gracefully
 
     # Set font
-    c.setFont("Helvetica-Bold", FONT_SIZE)
+    c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
     
-    y_position = PAGE_HEIGHT - MARGIN_TOP  # Start from the top of the page
+    y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
     labels_on_page = 0  # Track labels per page
     first_page = True
 
     while label_count > 0:
         if not first_page:  
             c.showPage()  # Create a new page *only if necessary*
-            c.setFont("Helvetica-Bold", FONT_SIZE)  # Reset font on new page
-            y_position = PAGE_HEIGHT - MARGIN_TOP  # Reset y position
+            c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)  # Reset font on new page
+            y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
             labels_on_page = 0  # Reset row counter
 
         first_page = False 
@@ -245,33 +241,33 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
                 break  # Stop when all labels are printed
     
             # Two labels per row, calculate positions
-            x_positions = [MARGIN_LEFT, MARGIN_LEFT + LABEL_WIDTH]
+            x_positions = [constants_address.MARGIN_LEFT, constants_address.MARGIN_LEFT + constants_address.LABEL_WIDTH]
 
             for x in x_positions:
                 if label_count <= 0:  
                     break  # Stop if all labels are printed
     
                 # Center text in each label
-                text_x = x + (LABEL_WIDTH / 2)
-                text_y = y_position  - (LABEL_HEIGHT / 2) - 0
+                text_x = x + (constants_address.LABEL_WIDTH / 2)
+                text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 0
                 
                 # Set font and draw text
-                c.setFont("Helvetica-Bold", FONT_SIZE)
+                c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
                 c.drawCentredString(text_x, text_y, so_num)
     
                 # Draw label borders (for testing)
-                if DRAW_BORDERS:
-                    c.rect(x, y_position - LABEL_HEIGHT, LABEL_WIDTH, LABEL_HEIGHT)
+                if constants_address.DRAW_BORDERS:
+                    c.rect(x, y_position - constants_address.LABEL_HEIGHT, constants_address.LABEL_WIDTH, constants_address.LABEL_HEIGHT)
 
                 # Add smaller text for container_id, lot_number, and current date below the label
-                c.setFont("Helvetica", FONT_SIZE_Lot)  # Smaller font size for the new text
+                c.setFont("Helvetica", constants_address.FONT_SIZE_Lot)  # Smaller font size for the new text
                 text_y_small = text_y - 30  # Position for the smaller text below the main label
                 c.drawCentredString(text_x, text_y_small, f"{container_id}    {current_date}")
                 c.drawCentredString(text_x, text_y_small - 20, f"Lot: {lot_number}")
     
                 label_count -= 1  # Reduce remaining label count
 
-            y_position -= LABEL_HEIGHT  # Move to next row
+            y_position -= constants_address.LABEL_HEIGHT  # Move to next row
             labels_on_page += 2  # Two labels per row
 
 def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate):
@@ -284,8 +280,8 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
     y_offset = 30  # ✅ 向下移动整体内容高度
 
     # ✅ Logo 和标题
-    if os.path.exists(SSA_LOGO_PATH):
-        c.drawImage(SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
+    if os.path.exists(constants_address.SSA_LOGO_PATH):
+        c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
     
     # c.setFont("Helvetica-Bold", 20)
     # c.drawString(220, y, "Packing Slip")
@@ -309,8 +305,8 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
             y -= line_height
 
     ADDRESS_MAPPING = {
-        "SHIPPER": SSA_ADDRESS,
-        "CONSIGNEE": CONSIGNEE
+        "SHIPPER": constants_address.SSA_ADDRESS,
+        "CONSIGNEE": constants_address.CONSIGNEE
     }
 
     invoice_prefix = {
@@ -339,7 +335,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
 
     # --- Bill To ---
     bill_to_type = container.customer.name
-    bill_to_address = address_mapping.get(bill_to_type, ["Unknown Address"])
+    bill_to_address = constants_address.address_mapping.get(bill_to_type, ["Unknown Address"])
     draw_address_block(c, "BILL TO:", bill_to_address, 40, height - 220 - y_offset)
 
     # --- Consignee ---
@@ -372,7 +368,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
 
     # 遍历金额项目并填入表格
     for raw_desc, units, rate, charge in amount_items:
-        mapped_desc = description_mapping.get(raw_desc, raw_desc)
+        mapped_desc = constants_address.description_mapping.get(raw_desc, raw_desc)
         row = desc_to_row.get(mapped_desc)
         if not row:
             continue
@@ -553,8 +549,8 @@ def print_checklist_template(title,filename, contentTitle, container_info,can_li
             
 
             c.setFont("Helvetica", 12)
-            for i, note in enumerate(note_lines):
-                wrapped_lines = textwrap.wrap(note, width=max_line_width)
+            for i, note in enumerate(constants_address.note_lines):
+                wrapped_lines = textwrap.wrap(note, width=constants_address.max_line_width)
                 for line in wrapped_lines:
                     c.drawString(x_label, y, line)
                     y -= 18  # 行间距适当紧凑一点
@@ -696,7 +692,7 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     # 提示信息
     y -= line_height * 2
     for note in certification_notes:
-        wrapped_lines = textwrap.wrap(note, width=max_line_width)
+        wrapped_lines = textwrap.wrap(note, width=constants_address.max_line_width)
         for line in wrapped_lines:
             draw_text(x_label, y, line)
             y -= 16
