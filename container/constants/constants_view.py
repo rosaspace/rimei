@@ -29,4 +29,8 @@ template_statement_invoice_preview = "container/invoiceManager/statement_invoice
 
 template_order_history = 'container/inventory/order_history.html'
 
-
+template_statistics_invoice = 'container/statistics/invoice_Statistics.html'
+template_statistics_weekrecord = 'container/statistics/weekrecord_Statistics.html'
+template_statistics_inbound = 'container/statistics/inbound_Statistics.html'
+template_statistics_outbound = 'container/statistics/outbound_Statistics.html'
+template_statistics_warehouse = 'container/statistics/statistics_warehouse.html'

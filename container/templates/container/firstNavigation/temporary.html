@@ -151,7 +151,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4">No inventory records found.</td>
+                    <td colspan="5">No inventory records found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -159,7 +159,8 @@
 
         <!-- 显示总数量 -->
         <div class="mt-3 text-end">
-            <strong>Total Quantity: {{ total_qty_all }}</strong>
+            <p><strong>Total Quantity: {{ total_qty_all }}</strong></p>
+            <p><strong>Total Quantity Diff: {{ total_qty_diff }}</strong></p>
         </div>
     </div>
 </div>

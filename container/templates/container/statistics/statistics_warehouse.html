@@ -1,0 +1,141 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+    <div class="row">
+    <!-- 表格区域 -->
+    <div class="col-md-6">
+      <h2>Monthly Inbound and Outbound Totals</h2>
+      <table class="table table-bordered mt-4">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Init Quantity (case)</th>
+            <th>Inbound Quantity (case)</th>
+            <th>Outbound Quantity (case)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in table_data %}
+          <tr>
+            <td>{{ item.month }}</td>
+            <td>{{ item.initItems }}</td>
+            <td>{{ item.inbound }}</td>
+            <td>{{ item.outbound }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h4>Obsolete Products (No Outbound in the Last 90 Days)</h4>
+      {% if dead_products %}
+        <table class="table table-bordered mt-3">
+          <thead>
+            <tr>
+              <th>Product Name</th>
+              <th>Inventory Quantity</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in dead_products %}
+            <tr>
+              <td>{{ item.name }}</td>
+              <td>{{ item.quantity }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p>No obsolete products</p>
+        {% endif %}
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="col-md-6">
+      <h2>Monthly Inbound and Outbound Trend Chart</h2>
+      <div style="height: 500px; max-width: 700px; margin: auto;">
+        <canvas id="warehouseChart"></canvas>
+      </div>
+      <h4>Inventory Turnover (Total Outbound / Average Inventory)</h4>
+      <p><strong>{{ inventory_turnover }}</strong></p>
+
+      <h4>Inventory Accuracy (Number of Inaccurate Products / Total Products)</h4>
+      <p><strong>{{ inventory_accuracy }} %</strong></p>
+
+      <h4>Average Inventory Level (Initial + Inbound - Outbound)</h4>
+      <p><strong>{{ avg_inventory }} cases</strong></p>
+      
+      <h4>Stockout Rate (Stockout Quantity / Total Stock)</h4>
+      <p><strong>{{ stockout_rate }} %</strong></p>
+
+      <h4>Fast-Moving Inventory Ratio (High-Frequency Outbound Products)</h4>
+      <p><strong>{{ fast_moving_ratio }} %</strong></p>
+
+      <h4>Obsolete Inventory Ratio (Dead Stock / Total Stock)</h4>
+      <p><strong>{{ obsolete_inventory_ratio }} %</strong></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ctx = document.getElementById('warehouseChart').getContext('2d');
+  const labels = {{ months|safe }};
+  const inboundData = {{ inbound_data|safe }};
+  const outboundData = {{ outbound_data|safe }};
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '入库数量',
+          data: inboundData,
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        },
+        {
+          label: '出库数量',
+          data: outboundData,
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            font: { size: 12 }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: '数量'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: '月份'
+          }
+        }
+      }
+    }
+  });
+</script>
+
+{% endblock %}

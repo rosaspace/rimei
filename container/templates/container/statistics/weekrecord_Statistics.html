@@ -1,0 +1,84 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+    <div class="row">
+        <div class="col-md-6">
+            <table class="table table-bordered mt-4">
+            <thead>
+                <tr>
+                <th>Employee</th>
+                <th>Month</th>
+                <th>Hours</th>
+                <th>Workdays</th>
+                <th>Rate (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in attendance_data %}
+                <tr {% if row.attendance_rate < 80 %}class="table-danger"{% endif %}>
+                    <td>{{ row.employee }}</td>
+                    <td>{{ row.month }}</td>
+                    <td>{{ row.total_hours }}</td>
+                    <td>{{ row.workdays }}</td>
+                    <td>{{ row.attendance_rate |floatformat:1}} %</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <!-- 图表 -->
+            <h4 class="mt-5">Monthly Work Hours Chart</h4>
+            <div class="ratio ratio-1x1 mx-auto">
+                <canvas id="hoursChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+  const ctx = document.getElementById('hoursChart').getContext('2d');
+  const labels = {{ chart_labels|safe }};
+  
+  const datasets = [
+    {% for name, data in chart_series.items %}
+    {
+      label: "{{ name }}",
+      data: {{ data|safe }},
+      fill: false,
+      borderColor: '#' + Math.floor(Math.random()*16777215).toString(16),
+      tension: 0.3
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          align: 'start'  // 👈 图例靠左对齐
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Total Hours' }
+        },
+        x: {
+          title: { display: true, text: 'Month' }
+        }
+      }
+    }
+  });
+</script>
+
+{% endblock %}

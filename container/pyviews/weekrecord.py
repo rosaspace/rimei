@@ -12,6 +12,7 @@ from django.http import HttpResponse
 
 from ..models import ClockRecord,Employee,UserAndPermission
 from ..constants import constants_address,constants_view
+from .getPermission import get_user_permissions
 
 def week_record(request):
     # 获取当前年份和周数（ISO标准）
@@ -409,12 +410,3 @@ def getWeek(last_week_start):
             'date': weekday_date
         })
     return weekdays
-
-def get_user_permissions(user):
-    # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance
-    permissions = UserAndPermission.objects.filter(username=user).values_list('permissionIndex__name', flat=True)
-    
-    # Print the length of the permissions list (or log it)
-    print("permissions: ", len(permissions))
-    
-    return permissions

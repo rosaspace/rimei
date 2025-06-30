@@ -1,0 +1,107 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+    <div class="row"> 
+        <!-- 表格区域 -->
+        <div class="col-md-6">
+            <h2>Invoice Amount List</h2>
+            <table class="table table-bordered table-striped">
+              <thead class="table-light">
+                <tr>
+                  <th>Month</th>
+                  <th>Price Diff (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in chart_data_list %}
+                <tr>
+                  <td>{{ item.month }}</td>
+                  <td>${{ item.total_diff|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <h2>Invoice Amount List</h2>
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>Delivery Date</th>
+                    <th>Pay Date</th>
+                    <th>Container</th>
+                    <th>Customers</th>
+                    <th>Price</th>
+                    <th>PriceII</th>
+                    <th>Diff</th>
+                </tr>
+                </thead>
+                <tbody id="invoiceTableBody">
+                {% for container in containers %}
+                <tr>
+                  <td>{{ container.delivery_date |date:"m/d/Y" }}</td>
+                  <td>{{ container.payment_date |date:"m/d/Y" }}</td>
+                  <td>{{ container.container_id }}</td>
+                  <td>{{ container.customer.name }}</td>
+                  <td>${{ container.price }}</td>
+                  <td>${{ container.customer_price }}</td>
+                  <td>${{ container.price_diff }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 图标 -->
+        <div class="col-md-6">
+            <h2>Invoice Amount Chart</h2>
+            <div class="ratio ratio-1x1 mx-auto">
+              <canvas id="invoiceChart"></canvas> 
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+  const labels = {{ chart_labels|safe }};
+  const data = {{ chart_data|safe }};
+
+  const ctx = document.getElementById('invoiceChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Monthly Price Difference (USD)',
+        data: data,
+        borderColor: '#007bff',
+        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {
+      padding: 0
+    },
+    plugins: {
+      legend: {
+        display: false  // 或保留 display: true 并设置 padding: 0
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Price Diff (USD)' }
+      },
+      x: {
+        title: { display: true, text: 'Month' }
+      }
+    }
+  }
+  });
+</script>
+
+
+{% endblock %}

@@ -3,7 +3,7 @@ from django.views.generic import TemplateView
 
 from . import views
 from .pyviews import container, invoice, rmorder, pdfprocess,weekrecord,payment
-from .pyviews import user, login, inventory_count,temporary
+from .pyviews import user, login, inventory_count,temporary,statistics
 
 urlpatterns = [
     # login
@@ -85,7 +85,6 @@ urlpatterns = [
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
     
-
     # Temporary
     path("import_inventory/", temporary.import_inventory, name="import_inventory"), 
     path("import_aline/", temporary.import_aline, name="import_aline"), 
@@ -114,4 +113,11 @@ urlpatterns = [
     path('add_week_records/', weekrecord.add_week_records, name='add_week_records'),
     path('edit_week_records/<int:employee_id>/', weekrecord.edit_week_records, name='edit_week_records'),
     path("export_week_records", weekrecord.export_week_records,name="export_week_records"),
+
+    # 统计表
+    path("statistics_invoice", statistics.statistics_invoice,name="statistics_invoice"),
+    path("statistics_weekreord", statistics.statistics_weekreord,name="statistics_weekreord"),
+    path("statistics_inbound", statistics.statistics_inbound,name="statistics_inbound"),
+    path("statistics_outbound", statistics.statistics_outbound,name="statistics_outbound"),
+    path("statistics_warehouse", statistics.statistics_warehouse,name="statistics_warehouse"),
 ]

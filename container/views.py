@@ -15,7 +15,8 @@ from django.utils import timezone
 from collections import defaultdict
 
 from .models import Container, RMOrder,RMCustomer,AlineOrderRecord,ContainerStatement
-from .models import UserAndPermission
+from .models import RMProduct
+from .pyviews.getPermission import get_user_permissions
 from .constants import constants_view
 
 @login_required
@@ -350,12 +351,3 @@ def temporary_view(request):
     years = [2025]
     months = list(range(1, 13))  # 1 到 12 月
     return render(request, constants_view.template_temporary,{'user_permissions': user_permissions,'years':years,'months':months})
-
-def get_user_permissions(user):
-    # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance
-    permissions = UserAndPermission.objects.filter(username=user).values_list('permissionIndex__name', flat=True)
-    
-    # Print the length of the permissions list (or log it)
-    print("permissions: ", len(permissions))
-    
-    return permissions

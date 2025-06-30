@@ -196,7 +196,6 @@ class ClockRecord(models.Model):
 
         super().save(*args, **kwargs)
 
-
 class LogisticsCompany(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 物流公司名称，唯一
 

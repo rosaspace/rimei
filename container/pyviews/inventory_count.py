@@ -13,6 +13,7 @@ from collections import defaultdict
 from django.db.models import Q
 
 from ..constants import constants_view
+from .getPermission import get_user_permissions
 
 def inventory_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
@@ -37,10 +38,10 @@ def inventory_diff_view(request):
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
 
-        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
-        if product.quantity != product.quantity_for_neworder:
-            diff_items.append(product)
+        if productTemp.quantity != productTemp.quantity_for_neworder:
+            diff_items.append(productTemp)
 
         diff_items = sorted(diff_items, key=lambda x: x.quantity_for_neworder)
 
@@ -55,9 +56,9 @@ def inventory_metal(request):
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
 
-        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
-        inventory_items_converty.append(product)
+        inventory_items_converty.append(productTemp)
         inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
     user_permissions = get_user_permissions(request.user)
@@ -71,9 +72,9 @@ def inventory_mcd(request):
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
 
-        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
-        inventory_items_converty.append(product)
+        inventory_items_converty.append(productTemp)
         inventory_items_converty = sorted(inventory_items_converty, key=lambda x: (x.type,x.name))
 
     user_permissions = get_user_permissions(request.user)
@@ -87,9 +88,9 @@ def export_stock(request):
     for product in inventory_items:
         inbound_list, outbound_list, outbound_actual_list, outbound_stock_list, inbound_actual_list = get_quality(product)
 
-        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
-        inventory_items_converty.append(product)
+        inventory_items_converty.append(productTemp)
 
     inventory_items_converty = sorted(inventory_items_converty, key=lambda x: (x.type, x.name))
     user_permissions = get_user_permissions(request.user)
@@ -110,15 +111,15 @@ def order_history(request,product_id):
     inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
 
     # 计算入库总数量
-    total_inbound_quantity = sum(item['quantity'] for item in inbound_list)
+    total_inbound_quantity = sum(item['quantity'] or 0 for item in inbound_list)
     # 计算出库总数量
-    total_outbound_quantity = sum(item['quantity'] for item in outbound_list)
+    total_outbound_quantity = sum(item['quantity'] or 0 for item in outbound_list)
     # 计算实际入库数量
-    total_inbound_actual_quantity = sum(item['quantity'] for item in inbound_actual_list)
+    total_inbound_actual_quantity = sum(item['quantity'] or 0 for item in inbound_actual_list)
     # 计算实际出库数量
-    total_outbound_actual_quantity = sum(item['quantity'] for item in outbound_actual_list)
+    total_outbound_actual_quantity = sum(item['quantity'] or 0 for item in outbound_actual_list)
     # 计算备货区数量
-    total_outbound_stock_quantity = sum(item['quantity'] for item in outbound_stock_list)
+    total_outbound_stock_quantity = sum(item['quantity'] or 0 for item in outbound_stock_list)
 
     total_surplus_quantity = total_inbound_quantity - total_outbound_quantity
     total_quality = total_inbound_actual_quantity - total_outbound_actual_quantity
@@ -147,9 +148,9 @@ def inventory_summary(request):
     for product in inventory_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
-        product = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
-        inventory_items_converty.append(product)
+        inventory_items_converty.append(productTemp)
 
         # 统计员工库存
         employee = product.blongTo.name if product.blongTo else "Unknown"
@@ -160,14 +161,17 @@ def inventory_summary(request):
                 'total_qty': 0,
                 'qty_list': [],
                 'product_set': set(),
+                'total_diff': 0,
             }
 
         employee_data[employee]['total_qty'] += qty
+        employee_data[employee]['total_diff'] += product.quantity_diff
         employee_data[employee]['qty_list'].append(qty)
         employee_data[employee]['product_set'].add(product.id)
 
     # 总数量
     total_qty_all = sum(v['total_qty'] for v in employee_data.values())
+    total_qty_diff = sum(v['total_diff'] for v in employee_data.values())
 
     # 构造 summary 列表
     summary = []
@@ -176,6 +180,7 @@ def inventory_summary(request):
         summary.append({
             "employee": employee,
             "total_qty": qty_list['total_qty'],
+            "total_diff": qty_list['total_diff'],
             'qty_expression': ' + '.join(str(q) for q in qty_list['qty_list']),
             'product_count': len(qty_list['product_set']),
             'percentage': percentage,
@@ -184,11 +189,17 @@ def inventory_summary(request):
     summary = sorted(summary, key=lambda x: x['percentage'], reverse=True)
     # 汇总总数量
     total_qty_all = sum(row['total_qty'] for row in summary)
+    total_qty_diff = sum(row['total_diff'] for row in summary)
 
     user_permissions = get_user_permissions(request.user)
     years = [2025]
     months = list(range(1, 13))  # 1 到 12 月
-    return render(request, constants_view.template_temporary, {'user_permissions': user_permissions,'years':years,'months':months,'summary':summary,'total_qty_all': total_qty_all,})
+    return render(request, constants_view.template_temporary, {
+        'user_permissions': user_permissions,
+        'years':years,'months':months,'summary':summary,
+        'total_qty_all': total_qty_all,
+        'total_qty_diff': total_qty_diff,
+    })
 
 def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list):
      
@@ -287,15 +298,6 @@ def get_quality(product):
     } for item in outbound_stock_logs]
 
     return inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list
-
-def get_user_permissions(user):
-    # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance
-    permissions = UserAndPermission.objects.filter(username=user).values_list('permissionIndex__name', flat=True)
-    
-    # Print the length of the permissions list (or log it)
-    print("permissions: ", len(permissions))
-    
-    return permissions
 
 # 排序逻辑：将'N/A'视为最小（或最大）值，按需要可修改
 def sort_by_date(entry, field_name):

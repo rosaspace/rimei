@@ -277,15 +277,6 @@ def order_images(request, order_id):
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
-def get_user_permissions(user):
-    # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance
-    permissions = UserAndPermission.objects.filter(username=user).values_list('permissionIndex__name', flat=True)
-    
-    # Print the length of the permissions list (or log it)
-    print("permissions: ", len(permissions))
-    
-    return permissions
-
 def order_is_allocated_to_stock(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
     order.is_allocated_to_stock = not order.is_allocated_to_stock

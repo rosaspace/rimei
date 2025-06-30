@@ -1,0 +1,90 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+    <div class="row"> 
+        <!-- 表格区域 -->
+        <div class="col-md-6">
+            <h2>Inbound Amount List</h2>
+            <!-- 表格 -->
+            <table class="table table-bordered mt-4">
+            <thead>
+                <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Month</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table_data %}
+                <tr>
+                <td>{{ row.product }}</td>
+                <td>{{ row.quantity }}</td>
+                <td>{{ row.month }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+
+        <!-- 图标 -->
+        <div class="col-md-6">
+            <h2>Inbound Amount Chart</h2>
+            <!-- 图表 -->
+            <div style="height: 800px; width: 100%; max-width: 900px; margin: auto;">
+            <canvas id="inboundChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+  const labels = {{ month_list|safe }};
+  const datasets = [
+    {% for item in chart_datasets %}
+    {
+      label: "{{ item.label }}",
+      data: {{ item.data|safe }},
+      borderWidth: 1,
+      fill: false,
+      tension: 0.3,
+      borderColor: '#' + Math.floor(Math.random()*16777215).toString(16)
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  new Chart(document.getElementById('inboundChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+        position: 'right',   // ✅ 图例放在右侧
+        align: 'start',      // ✅ 顶部对齐
+        labels: {
+            boxWidth: 12,      // ✅ 缩小图例颜色方块
+            font: {
+            size: 10         // ✅ 减小字体
+            }
+        }
+        }
+    },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Quantity (case)' }
+        },
+        x: {
+          title: { display: true, text: 'Month' }
+        }
+      }
+    }
+  });
+</script>
+
+{% endblock %}
