@@ -5,7 +5,7 @@
 {% block content %}
 <h2>Edit Weekly Work Records for {{ current_employee.name }}</h2>
 
-<form method="POST" action="{% url 'edit_week_records' current_employee.id %}" class="needs-validation" novalidate>
+<form method="POST" action="{% url 'edit_week_records' current_employee.id %}?year={{ selected_year }}&week={{ selected_week }}" class="needs-validation" novalidate>
     {% csrf_token %}
     <div class="row" >
         {% for day in weekdays %}

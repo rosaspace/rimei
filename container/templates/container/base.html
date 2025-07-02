@@ -158,14 +158,14 @@
       
             {% if 'Invoice' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_unpaid invoice invoice_finished' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_unpaid invoice_all invoice_pallet_labor' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Invoice
               </a>
-              <ul class="dropdown-menu">
+              <ul class="dropdown-menu">                
+                <li><a class="dropdown-item" href="{% url 'invoice_all' %}">All Invoice</a></li>
+                <li><a class="dropdown-item" href="{% url 'invoice_unpaid' %}">Unpaid Advanced</a></li>
                 <li><a class="dropdown-item" href="{% url 'invoice_statement' %}">Statement</a></li>
-                <li><a class="dropdown-item" href="{% url 'invoice_unpaid' %}">Unpaid</a></li>
-                <li><a class="dropdown-item" href="{% url 'invoice' %}">Invoice</a></li>
-                <li><a class="dropdown-item" href="{% url 'invoice_finished' %}">Finished</a></li>
+                <li><a class="dropdown-item" href="{% url 'invoice_pallet_labor' %}">Pallet Labor Fee</a></li>
               </ul>
             </li>
             {% endif %}
@@ -184,26 +184,28 @@
       
             {% if 'Container' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'container container_finished' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'container_advance77 container_customer container_mcd' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Container
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="{% url 'container' %}">Container</a></li>
-                <li><a class="dropdown-item" href="{% url 'container_finished' %}">Stocked</a></li>
+                <li><a class="dropdown-item" href="{% url 'container_advance77' %}">Container Advance77</a></li>
+                <li><a class="dropdown-item" href="{% url 'container_customer' %}">Container Omar</a></li>
+                <li><a class="dropdown-item" href="{% url 'container_mcd' %}">Container Mcdonalds</a></li>
               </ul>
             </li>
             {% endif %}
       
             {% if 'RiMeiOrder' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder rimeiorder_officedepot rimeiorder_finished metalorder' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder rimeiorder_mcdonalds rimeiorder_officedepot rimeiorder_cancel rimeiorder_metal' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Orders
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'rimeiorder' %}">Rimei Order</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_mcdonalds' %}">Mcdonalds Order</a></li>
                 <li><a class="dropdown-item" href="{% url 'rimeiorder_officedepot' %}">Office Depot</a></li>                
-                <li><a class="dropdown-item" href="{% url 'metalorder' %}">Metal Order</a></li>
-                <li><a class="dropdown-item" href="{% url 'rimeiorder_finished' %}">Finished Order</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_metal' %}">Metal Order</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_cancel' %}">Cancelled Order</a></li>
               </ul>
             </li>
             {% endif %}
@@ -230,7 +232,7 @@
       
             {% if 'Permission' in user_permissions %}
             <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.url_name == 'permission' %}active{% endif %}" href="{% url 'permission' %}">Permission</a>
+              <a class="nav-link {% if request.resolver_match.url_name == 'permission_view' %}active{% endif %}" href="{% url 'permission_view' %}">Permission</a>
             </li>
             {% endif %}
 

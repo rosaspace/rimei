@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
+from django.db.models import Q, F
 
 from datetime import datetime
 from openpyxl.styles import Alignment
@@ -19,6 +20,7 @@ from reportlab.pdfgen import canvas
 from ..constants import constants_address,constants_view
 from ..constants import email_constants
 from .pdfgenerate import print_containerid_lot
+from .getPermission import get_user_permissions
 from ..models import Container,RMProduct,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation,Carrier
 
 # Temp
@@ -33,7 +35,7 @@ def print_label_only(request):
         label_count = 10  # Handle invalid input gracefully
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, UPLOAD_DIR_temp, constants_address.LABEL_FOLDER)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_temp, constants_address.LABEL_FOLDER)
     print("pdf_path: ", pdf_path)
     
     # 检查文件是否存在
@@ -203,7 +205,7 @@ def export_pallet(request):
         gloves_out_orders = RMOrder.objects.filter(
             outbound_date__gte=start_date, 
             outbound_date__lt=end_date
-        ).exclude(customer_name="8").order_by('outbound_date')
+        ).exclude(Q(customer_name="8") | Q(customer_name="19")).order_by('outbound_date')
         print("golve out : ",len(gloves_out_orders))
 
         # 创建 "gloves out" DataFrame
@@ -244,6 +246,7 @@ def export_pallet(request):
     else:
         return HttpResponse("Invalid month or year", status=400)
     
+
 # 设置列宽和居中样式
 def format_worksheet(ws):
     alignment = Alignment(horizontal='center', vertical='center')
@@ -267,8 +270,8 @@ def preview_email(request):
     recipient = email_constants.RECIPIENT_OMAR_rimei if is_rimei_user else email_constants.RECIPIENT_OMAR_rosa
     signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
 
-    template_func = email_constants.INVENTORY_EMAIL_TEMPLATES.get(email_type, INVENTORY_EMAIL_TEMPLATES["default"])
-    email_data = email_constants.template_func(officedepot_id, signature, is_rimei_user)
+    template_func = email_constants.INVENTORY_EMAIL_TEMPLATES.get(email_type, email_constants.INVENTORY_EMAIL_TEMPLATES["default"])
+    email_data = template_func(officedepot_id, signature, is_rimei_user)
 
     return render(request, constants_view.template_temporary, email_data)
 
@@ -281,8 +284,8 @@ def order_email(request, so_num):
     signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
 
     # 获取模板（默认为 shippedout）
-    template_func = email_constants.ORDER_EMAIL_TEMPLATES.get(email_type, ORDER_EMAIL_TEMPLATES["shippedout"])
-    email_data = email_constants.template_func(order, signature, is_rimei_user)
+    template_func = email_constants.ORDER_EMAIL_TEMPLATES.get(email_type, email_constants.ORDER_EMAIL_TEMPLATES["shippedout"])
+    email_data = template_func(order, signature, is_rimei_user)
 
     return render(request, constants_view.template_temporary, email_data)
 

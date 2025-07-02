@@ -1,4 +1,5 @@
 import openpyxl
+import math
 
 from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission
 
@@ -19,16 +20,25 @@ def inventory_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
     print("----------inventory_view------------",len(inventory_items))
     inventory_items_converty = []
+    total_pallets = 0
+    total_pallets2 = 0
     for product in inventory_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        total_pallets += productTemp.totalPallet
+        total_pallets2 += product.quantity // product.Pallet
 
         inventory_items_converty.append(productTemp)
         inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
     user_permissions = get_user_permissions(request.user)
-    return render(request, constants_view.template_inventory, {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {
+        "inventory_items": inventory_items_converty,
+        'user_permissions': user_permissions,
+        'total_pallets' : total_pallets,
+        'total_pallets2' : total_pallets2
+    })
 
 def inventory_diff_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
@@ -201,6 +211,109 @@ def inventory_summary(request):
         'total_qty_diff': total_qty_diff,
     })
 
+def export_pallet_number(request):
+    # 获取请求中的月份和年份
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    inventory_items = RMProduct.objects.filter(type = "Rimei")
+
+    # 过滤出指定月份的订单
+    start_date = datetime(int(year), int(month), 1)
+    if month == '12':
+        end_date = datetime(int(year) + 1, 1, 1)  # 下一年1月1日
+    else:
+        end_date = datetime(int(year), int(month) + 1, 1)  # 下个月的1日
+
+    container_in_orders = Container.objects.filter(
+        empty_date__gte=start_date, 
+        empty_date__lt=end_date
+    ).exclude(Q(customer="3") | Q(customer="6")| Q(customer="12")).order_by('empty_date')
+    print("container in : ",len(container_in_orders))
+
+    # 查询 "gloves in" 数据
+    gloves_in_orders = Container.objects.filter(
+        empty_date__gte=start_date, 
+        empty_date__lt=end_date
+    ).exclude(Q(customer="3") | Q(customer="12")).order_by('empty_date')
+    print("golve in : ",len(gloves_in_orders))
+
+    # 创建 "gloves in" DataFrame
+    gloves_in_data = [{
+        'inbound_date': order.empty_date,
+        'container_id': order.container_id,
+        'plts': order.plts,
+        'customer': order.customer,
+        'description': order.content
+        }for order in gloves_in_orders
+    ]
+
+    # 查询 "gloves out" 数据（根据您的需求进行调整）
+    gloves_out_orders = RMOrder.objects.filter(
+        outbound_date__gte=start_date, 
+        outbound_date__lt=end_date
+    ).exclude(Q(customer_name="8") | Q(customer_name="19")).order_by('outbound_date')
+    print("golve out : ",len(gloves_out_orders))
+
+    # ✅ 计算 Container in 总数
+    total_container = len(container_in_orders)
+
+    # ✅ 计算 gloves in 总托盘数
+    total_in_plts = sum(order.plts for order in gloves_in_orders)
+
+    # ✅ 计算 gloves out 总托盘数
+    total_out_plts = sum(order.plts for order in gloves_out_orders)
+
+    # ✅ 总托盘数
+    total_plts = total_in_plts + total_out_plts
+
+    # 当月剩余托盘数
+    inventory_items_converty = []
+    total_pallets = 0
+    total_pallets2 = 0
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        total_pallets += productTemp.totalPallet
+        total_pallets2 += product.quantity // product.Pallet
+
+        inventory_items_converty.append(productTemp)
+        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
+
+    # 成本统计表格
+    cost_table = [{
+        'type': 'Monthly Container Unload Fee', 'pallets': total_container, 'unit': 450, 'value': total_container * 450
+    }, {
+        'type': 'Monthly Inbound Pallets Labor Fee', 'pallets': total_in_plts, 'unit': 4, 'value': total_in_plts * 4
+    }, {
+        'type': 'Monthly Outbound Pallets Labor Fee', 'pallets': total_out_plts, 'unit': 4, 'value': total_out_plts * 4
+    }, {
+        'type': 'Monthly Pallet Fee', 'pallets': total_plts, 'unit': 12, 'value': total_plts * 12
+    }, {
+        'type': 'Total Pallets', 'pallets': total_pallets, 'unit': 6, 'value': total_pallets * 6
+    }]
+
+    # ✅ 总价格
+    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4+total_plts * 12+total_pallets * 6
+
+
+    years = [2025]
+    months = list(range(1, 13))  # 1 到 12 月
+    user_permissions = get_user_permissions(request.user) 
+    return render(request, constants_view.template_generete_monthLabor, {
+        'gloves_in_data':gloves_in_data,
+        'user_permissions': user_permissions,
+        'years':years,'months':months,
+        'total_in_plts': total_in_plts,
+        'total_out_plts': total_out_plts,
+        'cost_table': cost_table,
+        'total_plts': total_plts,
+        'total_container': total_container,
+        'total_pallets' : total_pallets,
+        'total_price': total_price,
+        'years':year,'months':month
+    }) 
+    
 def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list):
      
       # 计算入库总数量
@@ -224,6 +337,7 @@ def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,o
     product.case = product.shownumber % product.Pallet
     product.Location = product.Location
     product.ShelfRecord = product.ShelfRecord
+    product.totalPallet = math.ceil(product.quantity / product.Pallet)
 
     return product
 
@@ -316,29 +430,41 @@ def export_inventory_to_excel(items):
     today_str = datetime.now().strftime("%Y_%m_%d")
     ws.title = f"Inventory_{today_str}"
 
+    # 按 type 分类
+    type_groups = defaultdict(list)
+    for item in items:
+        type_groups[item.type].append(item)
+
     # Define headers
     headers = ["Product", "Diff","Show Number","Each","Color", "Location", "Pallets", "Cases","ShelfRecord","Type"]
     ws.append(headers)
 
     # Write data rows
-    for item in items:
-        ws.append([
-            str(item),  # Or item.product.name if it's a ForeignKey
-            item.quantity_diff,
-            item.shownumber,
-            item.pallet,
-            item.color,
-            item.Location,
-            item.palletnumber,
-            item.case,
-            item.ShelfRecord,
-            item.type,
-        ])
+    for i, (type_name, grouped_items) in enumerate(type_groups.items()):
 
-    # Auto-fit column width
-    for col in ws.columns:
-        max_length = max(len(str(cell.value or '')) for cell in col)
-        ws.column_dimensions[get_column_letter(col[0].column)].width = max_length + 2
+        ws = wb.active if i == 0 else wb.create_sheet()
+        ws.title = str(type_name)[:31] or "Sheet"  # Excel sheet name max 31 chars
+
+        ws.append(headers)
+
+        for item in grouped_items:
+            ws.append([
+                str(item),
+                item.quantity_diff,
+                item.shownumber,
+                item.pallet,
+                item.color,
+                item.Location,
+                item.palletnumber,
+                item.case,
+                item.ShelfRecord,
+                item.type,
+            ])
+
+        # 自动列宽
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            ws.column_dimensions[get_column_letter(col[0].column)].width = max_len + 2
 
     # Save to in-memory file
     output = BytesIO()

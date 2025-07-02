@@ -179,13 +179,14 @@ def add_week_records(request):
     })
 
 def edit_week_records(request, employee_id=None):
-    today = timezone.now().date()
-    current_week_start = today - timedelta(days=today.weekday())
-    # 获取上周的周一日期
-    last_week_start = current_week_start - timedelta(days=7)
-    employee = Employee.objects.get(id=employee_id)  
-    
-    weekdays = getWeek(last_week_start)
+    employee = Employee.objects.get(id=employee_id)
+
+    year = int(request.GET.get("year"))
+    week = int(request.GET.get("week"))
+    select_week_start = date.fromisocalendar(year, week, 1)  # 周一
+    select_week_end =  date.fromisocalendar(year, week, 7)    # 周日
+    weekdays = getWeek(select_week_start)
+    print("year: ",year," week: ",week)
 
     if request.method == 'POST':
         # Handle form submission to save work records
@@ -199,14 +200,14 @@ def edit_week_records(request, employee_id=None):
 
             # Get weekday value from weekdays list
             weekday = weekdays[i]['weekday']
-            date = last_week_start + timedelta(days=i)  # Calculate the date for the current weekday    
-            print("hello: ",employee.name, weekdays[i]['name'], date)
+            dateTemp = select_week_start + timedelta(days=i)  # Calculate the date for the current weekday    
+            print("hello: ",employee.name, weekdays[i]['name'], dateTemp)
             print("hello: ",morning_in,morning_out,afternoon_in,afternoon_out,evening_in,evening_out)
             
             # Save or update work records
             ClockRecord.objects.update_or_create(
                 employee_name = employee,
-                date = date,
+                date = dateTemp,
                 defaults={
                     'weekday': weekday,
                     'morning_in': morning_in or None,
@@ -217,28 +218,13 @@ def edit_week_records(request, employee_id=None):
                     'evening_out': evening_out or None,
                 }
             )
-            # 先检查是否存在记录
-            # record, created = ClockRecord.objects.get_or_create(
-            #     employee_name=employee,
-            #     date=date,
-            # )
-            
-            # # 直接更新字段
-            # record.weekday = weekday
-            # record.morning_in = morning_in if morning_in else record.morning_in
-            # record.morning_out = morning_out if morning_out else record.morning_out
-            # record.afternoon_in = afternoon_in if afternoon_in else record.afternoon_in
-            # record.afternoon_out = afternoon_out if afternoon_out else record.afternoon_out
-            # record.evening_in = evening_in if evening_in else record.evening_in
-            # record.evening_out = evening_out if evening_out else record.evening_out
-            # record.save()
         return redirect('week_record')
 
     current_employee = None
     work_records = []
     if employee_id:
         current_employee = Employee.objects.get(id=employee_id)
-        work_records = ClockRecord.objects.filter(employee_name=current_employee, date__range=[last_week_start, last_week_start + timedelta(days=6)])
+        work_records = ClockRecord.objects.filter(employee_name=current_employee, date__range=[select_week_start, select_week_start + timedelta(days=6)])
     
     work_record_dict = {record.date: record for record in work_records}
 
@@ -246,6 +232,8 @@ def edit_week_records(request, employee_id=None):
         'weekdays': weekdays,
         'current_employee': current_employee,
         'work_records': work_record_dict,  # Pass the dictionary to the template
+        'selected_year':year,
+        'selected_week':week,
     })
 
 def export_week_records(request):

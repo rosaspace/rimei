@@ -1,0 +1,100 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+    <h2>Monthly Labor Fee</h2>
+    <div class="row">
+        <div class="col-md-6">   
+            <form method="GET" action="{% url 'export_pallet_number' %}" class="mb-3">
+                <div class="input-group">
+                    <select name="year" class="form-control" required>
+                        <option value="">Select Year</option>
+                        {% for year in years %}
+                            <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="month" class="form-control" required>
+                        <option value="">Select Month</option>
+                        {% for month in months %}
+                            <option value="{{ month }}">{{ month }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Select</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-4">
+
+        </div>
+        <div class="col-md-2">
+            <a href="{% url 'export_pallet_invoice' %}" class="btn btn-primary" id="monthlyInvoiceBtn">
+                Monthly Invoice
+            </a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">            
+            <div>
+                <h4>Container In Summary</h4>
+                <table class="table table-bordered table-striped">
+                    <thead>
+                    <tr>
+                        <th>Inbound Date</th>
+                        <th>Container ID</th>
+                        <th>PLTS</th>
+                        <th>Customer</th>
+                        <th>Description</th>
+                    </tr>
+                    </thead>
+                    <tbody id="invoiceTableBody">
+                    {% for row in gloves_in_data %}
+                    <tr>
+                        <td>{{ row.inbound_date | date:'m/d/Y' }}</td>
+                        <td>{{ row.container_id }}</td>
+                        <td>{{ row.plts }}</td>
+                        <td>{{ row.customer }}</td>
+                        <td>{{ row.description }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>            
+        </div>
+        <div class="col-md-6">
+            <div>
+                <h4>Gloves In/Out Cost Summary</h4>
+                <table class="table table-bordered">
+                <thead>
+                    <tr>
+                    <th>Type</th>
+                    <th>Pallets</th>
+                    <th>Unit</th>
+                    <th>Value ($)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in cost_table %}
+                    <tr>
+                    <td>{{ row.type }}</td>
+                    <td>{{ row.pallets }}</td>
+                    <td>$ {{ row.unit }}</td>
+                    <td>$ {{ row.value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                </table>
+            </div>
+            <div>
+                <p>Monthly Total Container Number: {{ total_container }}</p>
+                <p>Monthly Total Inbound PLTS: {{ total_in_plts }}</p>
+                <p>Monthly Total Outbound PLTS: {{ total_out_plts }}</p>
+                <p>Monthly PLTS: {{ total_plts }}</p>
+                <p>Total PLTS: {{ total_pallets }}</p>
+                <p>Total Price: ${{ total_price }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+    
+{% endblock %}

@@ -15,6 +15,7 @@ template_weekrecord = 'container/firstNavigation/weekrecord.html'
 
 template_add_container = 'container/containerManager/add_container.html'
 template_edit_container = 'container/containerManager/edit_container.html'
+template_generete_monthLabor = 'container/containerManager/generete_monthLabor.html'
 
 template_add_order = 'container/rmorder/add_order.html'
 template_edit_order = 'container/rmorder/edit_order.html'

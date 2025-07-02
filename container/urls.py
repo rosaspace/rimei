@@ -14,25 +14,28 @@ urlpatterns = [
     # main page
     path("", views.home, name="index"),
     path("index/", views.index, name="index"),    
-    path("invoice/", views.invoice_view, name="invoice"),
-    path("invoice_finished/", views.invoice_finished, name="invoice_finished"),
+    path("invoice_all/", views.invoice_view, name="invoice_all"),
     path("invoice_unpaid/", views.invoice_unpaid, name="invoice_unpaid"),
+    path("invoice_statement/", views.invoice_statement, name="invoice_statement"),
+    path("invoice_pallet_labor/", views.invoice_pallet_labor, name="invoice_pallet_labor"), 
+
     path("statement_selected_invoices/", views.statement_selected_invoices, name="statement_selected_invoices"),
     path('delete_statement/', views.delete_statement, name='delete_statement'),
-    path("paid_invoice/", views.paid_invoice, name="paid_invoice"),
-    path("paid_invoice_customer/", views.paid_invoice_customer, name="paid_invoice_customer"),
+    path("paid_invoice_advance/", views.paid_invoice_advance, name="paid_invoice_advance"),
+    path("paid_invoice_customer/", views.paid_invoice_customer, name="paid_invoice_customer"),    
     
-    path("invoice_statement/", views.invoice_statement, name="invoice_statement"),
     path("aline_payment/", views.aline_payment_view, name="aline_payment"),    
-    path("permission/", views.permission_view, name ="permission"),
+    path("permission_view/", views.permission_view, name ="permission_view"),
     path("temporary/", views.temporary_view, name="temporary"),    
 
-    path("container/", views.container_view, name="container"),    
-    path("container_finished/", views.container_view_finished, name="container_finished"),
-    path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
-    path("metalorder/", views.metalorder, name="metalorder"),
+    path("container_advance77/", views.container_advance77, name="container_advance77"), 
+    path("container_customer/", views.container_customer, name="container_customer"), 
+    path("container_mcd/", views.container_mcd, name="container_mcd"),     
     
-    path("rimeiorder_finished/", views.rimeiorder_view_finished, name="rimeiorder_finished"),
+    
+    path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
+    path("rimeiorder_metal/", views.rimeiorder_metal, name="rimeiorder_metal"),
+    path("rimeiorder_mcdonalds/", views.rimeiorder_mcdonalds, name="rimeiorder_mcdonalds"),
     path("rimeiorder_officedepot/", views.rimeiorder_officedepot, name="rimeiorder_officedepot"),
     path("rimeiorder_cancel/", views.rimeiorder_cancel, name="rimeiorder_cancel"),    
 
@@ -44,6 +47,7 @@ urlpatterns = [
     path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    
     path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),
+    path('export_pallet_number/',inventory_count.export_pallet_number,name='export_pallet_number'),
 
     # container
     path('add_container/', container.add_container, name='add_container'), 
@@ -68,6 +72,7 @@ urlpatterns = [
     path('print_original_invoice/<str:container_id>/', invoice.print_original_invoice, name='print_original_invoice'),
     path('print_converted_invoice/<str:container_id>/', invoice.print_converted_invoice, name='print_converted_invoice'),
     path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/', invoice.print_customer_invoice, name='print_customer_invoice'),
+    path("export_pallet_invoice/", invoice.export_pallet_invoice, name="export_pallet_invoice"),    
     
     # Payment
     path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
@@ -88,7 +93,7 @@ urlpatterns = [
     # Temporary
     path("import_inventory/", temporary.import_inventory, name="import_inventory"), 
     path("import_aline/", temporary.import_aline, name="import_aline"), 
-    path('export_pallet/',temporary.export_pallet,name='export_pallet'),
+    path('export_pallet/',temporary.export_pallet,name='export_pallet'),    
     path("preview_email/", temporary.preview_email,name="preview_email"), 
     path('order_email/<str:so_num>/', temporary.order_email, name='order_email'),
     path('container_email/<str:container_id>/', temporary.container_email, name='container_email'),     

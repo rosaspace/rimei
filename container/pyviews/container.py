@@ -257,7 +257,7 @@ def edit_container(request, container_id):
                     )
             
             messages.success(request, 'Container更新成功！')
-            return redirect('container_finished') 
+            return redirect('container_advance77')  
             
         except Exception as e:
             return JsonResponse({
@@ -389,7 +389,8 @@ def print_container_color_label(request, container_num):
     # 通用信息
     container_id = container.container_id
     lot_number = container.lot
-    current_date = datetime.now().strftime('%m/%d/%Y')
+    # current_date = datetime.now().strftime('%m/%d/%Y')
+    current_date = container.delivery_date
 
     # PDF 路径设置
     pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.LABEL_FOLDER)
@@ -477,12 +478,13 @@ def print_container_delivery_order(request, container_num):
     print("------------print_container_delivery_order------------")
     container = get_object_or_404(Container, container_id=container_num)
 
+    # Metal  Plastic Bag
     containerInfo = {
         "container_id": container.container_id,              # 集装箱编号
         "size_type": "40HQ",                        # 集装箱尺寸/类型
         "weight": f"{container.weight} LBS",                       # 重量
         "seal_number": "",                # 封条号
-        "commodity": "Metal",                 # 商品描述
+        "commodity": "Plastic Bag",                 # 商品描述
         "vessel": "",               # 船名
         "voyage": "",                          # 航次
         "ssl": "",                          # 船公司（Shipping Line）

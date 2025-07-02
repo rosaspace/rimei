@@ -97,8 +97,8 @@ LABEL_WIDTH = (PAGE_WIDTH - MARGIN_LEFT * 2) / 2  # Two labels per row
 LABEL_HEIGHT = (PAGE_HEIGHT - MARGIN_TOP * 2) / 5  # Five rows per page
 
 # Font size
-FONT_SIZE = 60  # Larger font size
-# FONT_SIZE = 48  # Larger font size
+# FONT_SIZE = 60  # Larger font size
+FONT_SIZE = 48  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size
 LINE_SPACING = 40

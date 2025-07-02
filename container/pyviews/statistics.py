@@ -90,7 +90,7 @@ def statistics_weekreord(request):
         .annotate(
             total_hours=Sum('total_hours'),
             days_present=Count('id')
-        ).order_by('month', 'employee_name__name')
+        ).order_by('-month', 'employee_name__name')
 
     # 构造结构化数据 [{name:..., month:..., hours:..., rate:...}]
     attendance_data = []
@@ -133,7 +133,7 @@ def statistics_inbound(request):
     grouped = container_items.annotate(month=TruncMonth('container__delivery_date')) \
         .values('product__name', 'month') \
         .annotate(total_qty=Sum('quantity')) \
-        .order_by('month')
+        .order_by('-month')
 
     # 构造结构化数据：行是产品，列是月份
     product_set = set()
@@ -193,7 +193,7 @@ def statistics_outbound(request):
     grouped = order_items.annotate(month=TruncMonth('order__outbound_date')) \
         .values('product__name', 'month') \
         .annotate(total_qty=Sum('quantity')) \
-        .order_by('month')
+        .order_by('-month')
 
     # 构造结构化数据：行是产品，列是月份
     product_set = set()

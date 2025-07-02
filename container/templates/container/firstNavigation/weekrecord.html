@@ -59,7 +59,7 @@
             <tr>
                 <td style="height: 40px;">{{ employee_record.id }}</td>
                 <td>
-                    <a href="{% url 'edit_week_records' employee_record.id %}">{{ employee_record.name }}</a>
+                    <a href="{% url 'edit_week_records' employee_record.id %}?year={{ selected_year }}&week={{ selected_week }}">{{ employee_record.name }}</a>
                 </td>
                 <td>{{ employee_record.period_start|date:"Y-m-d" }} To {{ employee_record.period_end|date:"Y-m-d" }}</td>
                 <td>{{ employee_record.total_hours }}</td>

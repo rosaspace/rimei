@@ -4,7 +4,7 @@
 <div class="container my-4">
     <h2 class="mb-4">Payment Statement - {{ current_date|date:'Ymd' }}</h2>
 
-    <form method="post" action="{% url 'paid_invoice' %}">
+    <form method="post" action="{% url 'paid_invoice_advance' %}">
         {% csrf_token %}
     
         <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">

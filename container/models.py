@@ -308,6 +308,7 @@ class ContainerItem(models.Model):
     container = models.ForeignKey(Container, on_delete=models.CASCADE)  # 关联到 RMOrder
     product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联到 RMProduct
     quantity = models.IntegerField()  # 产品数量
+    pallet = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.product.name} - {self.quantity} pcs"
