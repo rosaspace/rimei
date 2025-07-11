@@ -28,6 +28,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*','129.80.201.9']
 
+CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
+
 LOGIN_URL = '/login/'
 
 # Application definition
