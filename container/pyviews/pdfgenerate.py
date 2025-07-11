@@ -114,7 +114,7 @@ def print_weekly_pickuplist_on_one_page(start_date):
     # 仅打印周一至周五
     current_date = start_date
     printed_days = 0
-    while printed_days < 4:
+    while printed_days < 5:
         
         weekday = current_date.weekday()
         if weekday < 5:  # 周一到周五

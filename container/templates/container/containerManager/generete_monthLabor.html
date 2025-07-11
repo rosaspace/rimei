@@ -7,13 +7,13 @@
         <div class="col-md-6">   
             <form method="GET" action="{% url 'export_pallet_number' %}" class="mb-3">
                 <div class="input-group">
-                    <select name="year" class="form-control" required>
+                    <select name="year" class="form-control" id="selectYear" required>
                         <option value="">Select Year</option>
                         {% for year in years %}
                             <option value="{{ year }}">{{ year }}</option>
                         {% endfor %}
                     </select>
-                    <select name="month" class="form-control" required>
+                    <select name="month" class="form-control" id="selectMonth" required>
                         <option value="">Select Month</option>
                         {% for month in months %}
                             <option value="{{ month }}">{{ month }}</option>
@@ -27,7 +27,7 @@
 
         </div>
         <div class="col-md-2">
-            <a href="{% url 'export_pallet_invoice' %}" class="btn btn-primary" id="monthlyInvoiceBtn">
+            <a href="#" class="btn btn-primary" id="monthlyInvoiceBtn">
                 Monthly Invoice
             </a>
         </div>
@@ -96,5 +96,19 @@
     </div>
 </div>
 
+<script>
+    document.getElementById("monthlyInvoiceBtn").addEventListener("click", function (event) {
+        const year = document.getElementById("selectYear").value;
+        const month = document.getElementById("selectMonth").value;
+
+        if (!year || !month) {
+            alert("Please select both year and month.");
+            return;
+        }
+        console.log('year: ', year)
+        const url = `{% url 'export_pallet_invoice' %}?year=${year}&month=${month}`;
+        window.location.href = url;
+    });
+</script>
     
 {% endblock %}

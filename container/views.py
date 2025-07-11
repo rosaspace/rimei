@@ -52,7 +52,10 @@ def invoice_pallet_labor(request):
     months = list(range(1, 13))  # 1 到 12 月
 
     user_permissions = get_user_permissions(request.user) 
-    return render(request, constants_view.template_generete_monthLabor, {'user_permissions': user_permissions,'years':years,'months':months}) 
+    return render(request, constants_view.template_generete_monthLabor, {
+        'user_permissions': user_permissions,
+        'years':years,'months':months
+    }) 
 
 @login_required(login_url='/login/')
 def statement_selected_invoices(request):
@@ -220,14 +223,19 @@ def container_customer(request):
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
 
 def container_mcd(request):
-    containers = Container.objects.filter(Q(customer = 3) & Q(logistics = 2)).order_by('-delivery_date')
+    containers = Container.objects.filter(Q(customer = 3)).order_by('-delivery_date')
+    user_permissions = get_user_permissions(request.user) 
+    return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
+
+def container_metal(request):
+    containers = Container.objects.filter(Q(customer = 12)).order_by('-delivery_date')
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
 
 
 @login_required(login_url='/login/')
 def rimeiorder_view(request):
-    orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='10')| Q(customer_name='19')).annotate(image_count=Count('images')).order_by('-pickup_date')
+    orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('-pickup_date')
     user_permissions = get_user_permissions(request.user) 
     unfinished_orders = orders.filter(
         is_canceled=False

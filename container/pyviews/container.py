@@ -279,7 +279,7 @@ def receivedin_inventory(request, container_id):
             return JsonResponse({
                         'success': True,
                         'is_updateInventory': container.is_updateInventory,
-                        'redirect_url': '/container/'  # 这里添加你要跳转的订单列表页面的URL
+                        'redirect_url': '/container_advance77/'  # 这里添加你要跳转的订单列表页面的URL
                     })
         except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)})

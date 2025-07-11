@@ -353,6 +353,6 @@ def pickup_today(request):
 
 def pickup_week(request):
     target_date = datetime.today()
-    # target_date += timedelta(days=7)
+    target_date += timedelta(days=1)
     response = print_weekly_pickuplist_on_one_page(target_date)
     return response

@@ -386,8 +386,22 @@ def export_pallet_invoice(request):
     # 获取请求中的月份和年份
     month = request.GET.get('month')
     year = request.GET.get('year')
-    print(month,year)
+    print('month: ',month,', year: ',year)
     
+    title = 'Payment Invoice Report'
+    temp_path = invoice_template(title)
+
+    # ✅ 读取 PDF 文件并返回
+    new_filename = "invoice_month_warehouse.pdf"
+    with open(temp_path, "rb") as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="{new_filename}"'
+
+    # 删除临时文件
+    os.remove(temp_path)
+    return response
+
+def invoice_template(title):
     # ✅ 创建临时文件
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
         temp_path = temp_pdf.name
@@ -404,12 +418,11 @@ def export_pallet_invoice(request):
         fontSize=20,  # 设置大标题字体大小
         leading=24
     )
-    elements.append(Paragraph(f"Payment Invoice Report", large_title_style))
+    elements.append(Paragraph(title, large_title_style))
     elements.append(Spacer(1, 12))
 
     # 添加生成日期和月份年份信息
     elements.append(Paragraph(f"Generated Date: {datetime.now().strftime('%B %d, %Y')}", styles["Normal"]))
-    elements.append(Paragraph(f"Month: {month} / Year: {year}", styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     # 示例正文内容
@@ -418,12 +431,4 @@ def export_pallet_invoice(request):
     # 构建 PDF
     doc.build(elements)
 
-    # ✅ 读取 PDF 文件并返回
-    new_filename = "invoice_month_warehouse.pdf"
-    with open(temp_path, "rb") as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type="application/pdf")
-        response["Content-Disposition"] = f'inline; filename="{new_filename}"'
-
-    # 删除临时文件
-    os.remove(temp_path)
-    return response
+    return temp_path

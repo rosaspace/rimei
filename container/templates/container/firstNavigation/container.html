@@ -16,6 +16,7 @@
                 <th>Customer</th>
                 <th>Logistics</th>
                 <th>Carrier</th>
+                <th>Container Type</th>
                 <th>PU#</th>
                 <th>PLTS</th>
                 <th>RailwayDate</th>
@@ -35,6 +36,7 @@
                 <td>{{ container.customer.name }}</td>
                 <td>{{ container.logistics.name }}</td>
                 <td>{{ container.Carrier.name }}</td>
+                <td>{{ container.inboundCategory.Type }}</td>
                 <td>{{ container.pickup_number }}</td>
                 <td>{{ container.plts }}</td>
                 <td>{{ container.railway_date |date:"m/d/Y" }}</td>

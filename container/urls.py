@@ -31,8 +31,8 @@ urlpatterns = [
     path("container_advance77/", views.container_advance77, name="container_advance77"), 
     path("container_customer/", views.container_customer, name="container_customer"), 
     path("container_mcd/", views.container_mcd, name="container_mcd"),     
-    
-    
+    path("container_metal/", views.container_metal, name="container_metal"),
+
     path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
     path("rimeiorder_metal/", views.rimeiorder_metal, name="rimeiorder_metal"),
     path("rimeiorder_mcdonalds/", views.rimeiorder_mcdonalds, name="rimeiorder_mcdonalds"),
