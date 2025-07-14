@@ -105,9 +105,9 @@ WSGI_APPLICATION = 'rimei.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv("DB_NAME", "mydb"),
-        'USER': os.getenv("DB_USER", "myuser"),
-        'PASSWORD': os.getenv("DB_PASSWORD", "mypassword"),
+        'NAME': os.getenv("DB_NAME", "ljdb"),
+        'USER': os.getenv("DB_USER", "lj"),
+        'PASSWORD': os.getenv("DB_PASSWORD", "mengxiang0425"),
         'HOST': os.getenv("DB_HOST", "db"),
         'PORT': '5432',
     }
