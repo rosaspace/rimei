@@ -108,7 +108,7 @@ DATABASES = {
         'NAME': os.getenv("DB_NAME", "ljdb"),
         'USER': os.getenv("DB_USER", "lj"),
         'PASSWORD': os.getenv("DB_PASSWORD", "mengxiang0425"),
-        'HOST': os.getenv("DB_HOST", "db"),
+        'HOST': '172.17.0.1',
         'PORT': '5432',
     }
 }
