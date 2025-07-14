@@ -128,7 +128,7 @@ def print_weekly_pickuplist_on_one_page(start_date):
 
             pickup_orders = RMOrder.objects.filter(
                 pickup_date=current_date.date()
-            ).exclude(Q(customer_name="4") | Q(is_canceled=True))
+            ).exclude(Q(customer_name="4") | Q(customer_name="19") | Q(is_canceled=True))
 
             if pickup_orders.exists():
                 pickup_list = [f"{o.so_num} / {o.plts} plts / {o.customer_name}" for o in pickup_orders]

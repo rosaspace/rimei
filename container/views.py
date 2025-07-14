@@ -217,7 +217,7 @@ def container_advance77(request):
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
 
-def container_customer(request):
+def container_omar(request):
     containers = Container.objects.filter(Q(logistics = 2)).exclude(Q(customer = 3)).order_by('-delivery_date')
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})

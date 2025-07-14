@@ -29,7 +29,7 @@ urlpatterns = [
     path("temporary/", views.temporary_view, name="temporary"),    
 
     path("container_advance77/", views.container_advance77, name="container_advance77"), 
-    path("container_customer/", views.container_customer, name="container_customer"), 
+    path("container_omar/", views.container_omar, name="container_omar"), 
     path("container_mcd/", views.container_mcd, name="container_mcd"),     
     path("container_metal/", views.container_metal, name="container_metal"),
 

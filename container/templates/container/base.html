@@ -184,12 +184,12 @@
       
             {% if 'Container' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'container_advance77 container_customer container_mcd container_metal' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'container_advance77 container_omar container_mcd container_metal' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Container
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'container_advance77' %}">Container Advance77</a></li>
-                <li><a class="dropdown-item" href="{% url 'container_customer' %}">Container Omar</a></li>
+                <li><a class="dropdown-item" href="{% url 'container_omar' %}">Container Omar</a></li>
                 <li><a class="dropdown-item" href="{% url 'container_mcd' %}">Container Mcdonalds</a></li>
                 <li><a class="dropdown-item" href="{% url 'container_metal' %}">Container Metal</a></li>
               </ul>

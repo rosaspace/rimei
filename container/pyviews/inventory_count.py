@@ -436,7 +436,7 @@ def export_inventory_to_excel(items):
         type_groups[item.type].append(item)
 
     # Define headers
-    headers = ["Product", "Diff","Show Number","Each","Color", "Location", "Pallets", "Cases","ShelfRecord","Type"]
+    headers = ["Product", "Diff","Show Number","Each","Color", "Location", "Pallets", "Cases","ShelfRecord"]
     ws.append(headers)
 
     # Write data rows
@@ -458,7 +458,6 @@ def export_inventory_to_excel(items):
                 item.palletnumber,
                 item.case,
                 item.ShelfRecord,
-                item.type,
             ])
 
         # 自动列宽

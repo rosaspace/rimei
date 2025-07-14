@@ -25,7 +25,7 @@
         </div>
     </div>
     <button type="submit" class="btn btn-primary">Assign Permissions</button>
-    <a href="{% url 'permission' %}" class="btn btn-secondary ms-2">Back</a>
+    <a href="{% url 'permission_view' %}" class="btn btn-secondary ms-2">Back</a>
 </form>
 
 <h3>Current Permissions</h3>
@@ -57,7 +57,7 @@
 
     // 处理成功响应后重定向
     function redirectToPermissions() {
-        window.location.href = "{% url 'permission' %}";
+        window.location.href = "{% url 'permission_view' %}";
     }
 </script>
 

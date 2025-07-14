@@ -47,7 +47,7 @@ def update_user_permissions(request, user_id):
             UserAndPermission.objects.create(username=user, permissionIndex=permission)
         
         messages.success(request, f"Permissions updated for user '{user.username}' successfully!")
-        return redirect('permission')  # 重定向到权限分配页面
+        return redirect('permission_view')  # 重定向到权限分配页面
 
     # 如果不是 POST 请求，返回权限分配页面
     users = User.objects.all()  # 获取所有用户
