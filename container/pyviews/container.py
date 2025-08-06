@@ -461,6 +461,8 @@ def print_container_detail(request, container_num):
 
     # 保存路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.CHECKLIST_FOLDER)
+    os.makedirs(pdf_path, exist_ok=True)  # 如果目录不存在，则创建
+
     filename = os.path.join(pdf_path, f"container.container_id.pdf")
     title = f"Container - {container.container_id}"
     contentType = container.inboundCategory.Type

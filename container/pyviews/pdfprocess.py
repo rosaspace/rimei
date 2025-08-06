@@ -52,9 +52,12 @@ def print_converted_order(request, so_num):
     if not os.path.exists(pdf_path):
         return HttpResponse("PDF文件未找到", status=404)
     
-    new_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.ORDER_CONVERTED_FOLDER, order.order_pdfname)
-    base_name, ext = os.path.splitext(new_path)
-    updated_pdf = f"{base_name}_updated.pdf"
+    converted_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.ORDER_CONVERTED_FOLDER)
+    os.makedirs(converted_dir, exist_ok=True)  # 确保目录存在
+
+    base_name, ext = os.path.splitext(order.order_pdfname)
+    updated_pdf_name = f"{base_name}_updated.pdf"
+    updated_pdf_path = os.path.join(converted_dir, updated_pdf_name)
     doc = fitz.open(pdf_path)
 
     for page in doc:
@@ -83,12 +86,12 @@ def print_converted_order(request, so_num):
 
         page.insert_text((packing_slip_x, packing_slip_y), constants_address.NEW_TITLE, fontsize=18, color=(0, 0, 0), fontfile="helvB")
 
-    doc.save(updated_pdf)
+    doc.save(updated_pdf_path)
     doc.close()
     
-    with open(updated_pdf, 'rb') as pdf_file:
+    with open(updated_pdf_path, 'rb') as pdf_file:
             response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="{os.path.basename(updated_pdf)}"'
+            response['Content-Disposition'] = f'inline; filename="{updated_pdf_name}"'
             return response
 
 def print_order_label(request, so_num):
@@ -98,13 +101,10 @@ def print_order_label(request, so_num):
     original_label_count = label_count  # 用于总数显示
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.LABEL_FOLDER)
+    label_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.LABEL_FOLDER)
+    os.makedirs(label_dir, exist_ok=True)  # 如果目录不存在，则创建
     
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-
-    filename = os.path.join(pdf_path, f"{so_num}.pdf")  # Save inside "label" folder
+    filename = os.path.join(label_dir, f"{so_num}.pdf")  # Save inside "label" folder
     c = canvas.Canvas(filename, pagesize=letter)
 
     # Set font
@@ -164,7 +164,7 @@ def print_order_label(request, so_num):
     
     with open(filename, 'rb') as pdf_file:
         response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        response['Content-Disposition'] = f'inline; filename="{so_num}.pdf"'
         return response
 
 def print_order_bol(request, so_num):
@@ -199,7 +199,6 @@ def print_order_bol(request, so_num):
         "Total Pallets": str(total_plts),
     }
 
-    # 注意事项
     # 添加附加说明
     certification_notes = [
         "NOTE: Liability Limitation for loss or damage in this shipment may be applicable. See 49 U.S.C. - 14706(c)(1)(A) and (B).",
@@ -210,6 +209,8 @@ def print_order_bol(request, so_num):
 
     # 保存路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.BOL_FOLDER)
+    os.makedirs(pdf_path, exist_ok=True)  # 如果目录不存在，则创建
+
     filename = os.path.join(pdf_path, f"{container_info['SO Number']}.pdf")
     title = f"Order - {container_info['SO Number']}"
     contentTitle =  f"Bill Of Lading - {order.so_num}"

@@ -32,7 +32,11 @@ def print_original_do(request, container_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.ORIGINAL_DO_FOUDER, container.container_pdfname)
+    do_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.ORIGINAL_DO_FOUDER)
+    os.makedirs(do_path , exist_ok=True)  # 如果目录不存在，则创建
+
+    # 构建完整 PDF 文件路径
+    pdf_path = os.path.join(do_path, container.container_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -70,7 +74,11 @@ def print_converted_invoice(request, container_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.ORDER_CONVERTED_FOLDER, container.customer_invoice_pdfname)
+    invoice_dir  = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.ORDER_CONVERTED_FOLDER)
+    os.makedirs(invoice_dir , exist_ok=True)  # 如果目录不存在，则创建
+
+    # 构建完整 PDF 文件路径
+    pdf_path = os.path.join(invoice_dir, container.customer_invoice_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
