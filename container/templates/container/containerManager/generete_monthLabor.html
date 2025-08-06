@@ -5,18 +5,22 @@
     <h2>Monthly Labor Fee</h2>
     <div class="row">
         <div class="col-md-6">   
-            <form method="GET" action="{% url 'export_pallet_number' %}" class="mb-3">
+            <form method="GET" action="{% url 'show_pallet_number' %}" class="mb-3">
                 <div class="input-group">
                     <select name="year" class="form-control" id="selectYear" required>
                         <option value="">Select Year</option>
                         {% for year in years %}
-                            <option value="{{ year }}">{{ year }}</option>
+                            <option value="{{ year }}" {% if year|stringformat:"s" == selectYear %}selected{% endif %}>
+                                {{ year }}
+                            </option>
                         {% endfor %}
                     </select>
                     <select name="month" class="form-control" id="selectMonth" required>
                         <option value="">Select Month</option>
                         {% for month in months %}
-                            <option value="{{ month }}">{{ month }}</option>
+                            <option value="{{ month }}" {% if month|stringformat:"s" == selectMonth %}selected{% endif %}>
+                                {{ month }}
+                            </option>
                         {% endfor %}
                     </select>
                     <button type="submit" class="btn btn-primary">Select</button>

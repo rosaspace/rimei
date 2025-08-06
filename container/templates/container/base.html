@@ -158,12 +158,13 @@
       
             {% if 'Invoice' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_unpaid invoice_all invoice_pallet_labor' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_unpaid_customer invoice_unpaid invoice_all invoice_pallet_labor' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Invoice
               </a>
               <ul class="dropdown-menu">                
                 <li><a class="dropdown-item" href="{% url 'invoice_all' %}">All Invoice</a></li>
-                <li><a class="dropdown-item" href="{% url 'invoice_unpaid' %}">Unpaid Advanced</a></li>
+                <li><a class="dropdown-item" href="{% url 'invoice_unpaid_customer' %}">Unpaid Customer</a></li>
+                <li><a class="dropdown-item" href="{% url 'invoice_unpaid' %}">Unpaid Advance77</a></li>
                 <li><a class="dropdown-item" href="{% url 'invoice_statement' %}">Statement</a></li>
                 <li><a class="dropdown-item" href="{% url 'invoice_pallet_labor' %}">Pallet Labor Fee</a></li>
               </ul>
@@ -274,7 +275,7 @@
                     ordering: false,
                     info: true,
                     searching: true,
-                    pageLength: 30
+                    pageLength: 36
                 });
             }
         });

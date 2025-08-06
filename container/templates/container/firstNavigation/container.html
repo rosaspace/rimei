@@ -14,7 +14,7 @@
                 <th>ID</th>
                 <th>Container#</th>
                 <th>Customer</th>
-                <th>Logistics</th>
+                <!-- <th>Logistics</th> -->
                 <th>Carrier</th>
                 <th>Container Type</th>
                 <th>PU#</th>
@@ -34,7 +34,7 @@
                     <a href="{% url 'edit_container' container.container_id %}">{{ container.container_id }}</a>
                 </td>
                 <td>{{ container.customer.name }}</td>
-                <td>{{ container.logistics.name }}</td>
+                <!-- <td>{{ container.logistics.name }}</td> -->
                 <td>{{ container.Carrier.name }}</td>
                 <td>{{ container.inboundCategory.Type }}</td>
                 <td>{{ container.pickup_number }}</td>

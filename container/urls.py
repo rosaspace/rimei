@@ -14,7 +14,8 @@ urlpatterns = [
     # main page
     path("", views.home, name="index"),
     path("index/", views.index, name="index"),    
-    path("invoice_all/", views.invoice_view, name="invoice_all"),
+    path("invoice_all/", views.invoice_view, name="invoice_all"),    
+    path("invoice_unpaid_customer/", views.invoice_unpaid_customer, name="invoice_unpaid_customer"),
     path("invoice_unpaid/", views.invoice_unpaid, name="invoice_unpaid"),
     path("invoice_statement/", views.invoice_statement, name="invoice_statement"),
     path("invoice_pallet_labor/", views.invoice_pallet_labor, name="invoice_pallet_labor"), 
@@ -47,7 +48,7 @@ urlpatterns = [
     path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    
     path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),
-    path('export_pallet_number/',inventory_count.export_pallet_number,name='export_pallet_number'),
+    path('show_pallet_number/',inventory_count.show_pallet_number,name='show_pallet_number'),
 
     # container
     path('add_container/', container.add_container, name='add_container'), 
@@ -68,10 +69,11 @@ urlpatterns = [
     path("edit_customer_invoice_file/<str:container_id>/", invoice.edit_customer_invoice_file, name="edit_customer_invoice_file"),
     path("edit_customer_invoice/<str:container_id>/", invoice.edit_customer_invoice, name="edit_customer_invoice"),
     path("print_statement_invoice_pdf/", invoice.print_statement_invoice_pdf, name="print_statement_invoice_pdf"),
+    path("print_statement_customer_invoice_pdf/", invoice.print_statement_customer_invoice_pdf, name="print_statement_customer_invoice_pdf"),
     path('print_original_do/<str:container_id>/', invoice.print_original_do, name='print_original_do'),
     path('print_original_invoice/<str:container_id>/', invoice.print_original_invoice, name='print_original_invoice'),
     path('print_converted_invoice/<str:container_id>/', invoice.print_converted_invoice, name='print_converted_invoice'),
-    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/', invoice.print_customer_invoice, name='print_customer_invoice'),
+    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/', invoice.print_customer_invoice, name='print_customer_invoice'),
     path("export_pallet_invoice/", invoice.export_pallet_invoice, name="export_pallet_invoice"),    
     
     # Payment

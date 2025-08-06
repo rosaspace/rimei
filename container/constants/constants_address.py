@@ -15,6 +15,12 @@ Only_ADDRESS = [
     "Lemont, IL 60439"
 ]
 
+RM_ADDRESS = [
+    "RIMEI INTERNATION INC",
+    "1285 101st Street",
+    "Lemont, IL 60439"
+]
+
 GF_ADDRESS = [
     "Golden Feather Supplies LLC",
     "1285 101st St",
@@ -48,11 +54,29 @@ address_mapping = {
     ]
 }
 
+labor_left_text = """
+Rimei International Inc<br/>
+1285 101st Street, <br/>
+Lemont, IL 60439"""
+
+labor_right_text = """
+Citi Bank<br/>
+Routing# 271070801<br/>
+Account# 801776329<br/>
+Account Name: Rimei International Inc"""
+
+# Invoice
+Chassis_rate = 40
+EmptyContainerRelocate_rate = 150
+ClassisSplit_rate = 70 
+Pre_pull_rate = 150
+Yard_storage_rate = 45
+
 # 描述映射：原始 → 表格描述
 description_mapping = {
     "INTERM1": "Drayage (FSC all included)",
     "Chassis use": "Chassis",
-    "Chassis split": "Chassis split",
+    "Chassis split": "Chassis split", 
     "Storage": "Yard storage",
     "Prepull": "Pre-pull",
     "Rail storage + fee": "Rail storage",
@@ -98,11 +122,14 @@ LABEL_HEIGHT = (PAGE_HEIGHT - MARGIN_TOP * 2) / 5  # Five rows per page
 
 # Font size
 FONT_SIZE = 60  # Larger font size
-# FONT_SIZE = 42  # Larger font size
+# FONT_SIZE = 46  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size
 LINE_SPACING = 40
 DRAW_BORDERS = False  # Set to True to draw borders, False to hide the
+
+font_Helvetica = "Helvetica"
+font_Helvetica_Bold = "Helvetica-Bold"
 
 # 一行的文字长度
 max_line_width = 96  # 根据页面宽度大致估算字符数

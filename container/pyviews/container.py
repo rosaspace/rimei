@@ -451,7 +451,7 @@ def print_container_detail(request, container_num):
         "Container Number": container.container_id,
         "Carrier": container.Carrier.name,
         "LOT#": container.lot,
-        "Date": datetime.now().strftime("%m/%d/%Y"),
+        "Date": container.delivery_date.strftime("%m/%d/%Y"),
         "Product Validity": "",
         "Name": "OMAR",
         "Commodity": container.inboundCategory.Name,
@@ -480,6 +480,7 @@ def print_container_delivery_order(request, container_num):
     print("------------print_container_delivery_order------------")
     container = get_object_or_404(Container, container_id=container_num)
 
+    # COLD ROLLING MILLS UN-COILER
     # Metal  Plastic Bag
     containerInfo = {
         "container_id": container.container_id,              # 集装箱编号

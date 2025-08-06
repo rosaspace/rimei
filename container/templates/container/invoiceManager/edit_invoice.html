@@ -19,6 +19,10 @@
                     <input type="checkbox" class="form-check-input" id="is_relocate" name="is_relocate">
                     <label class="form-check-label" for="is_relocate">Empty Container Relocate</label>
                 </div>
+                <div class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="is_chassis_split" name="is_chassis_split">
+                    <label class="form-check-label" for="is_chassis_split ">Chassis split</label>
+                </div>
                 <button class="btn btn-primary" id="printCustomerInvoice">Customer Invoice</button>
             </div>
         </div>
@@ -270,8 +274,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('printCustomerInvoice').addEventListener('click', function() {
         // const containerID = /* 获取 containerID 的方式，比如从某个隐藏字段或变量 */;
         const isRelocateChecked = document.getElementById('is_relocate').checked;
+        const is_chassis_split = document.getElementById('is_chassis_split').checked;
         const isEmptyContainerRelocate = isRelocateChecked ? '1' : '0';
-        window.open(`/print_customer_invoice/${containerID}/${isEmptyContainerRelocate}/`, '_blank');
+        const isClassisSplit = is_chassis_split ? '1' : '0';
+        window.open(`/print_customer_invoice/${containerID}/${isEmptyContainerRelocate}/${isClassisSplit}`, '_blank');
     });
 });
 </script>

@@ -37,6 +37,15 @@ def invoice_view(request):
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
 
+def invoice_unpaid_customer(request):
+    containers = Container.objects.filter(
+        Q(ispay=False, customer_ispay=False) 
+    ).exclude(
+        logistics=2
+    ).order_by('-due_date')
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
+
 @login_required(login_url='/login/')
 def invoice_unpaid(request):
     containers = Container.objects.filter(
@@ -55,7 +64,7 @@ def invoice_pallet_labor(request):
     return render(request, constants_view.template_generete_monthLabor, {
         'user_permissions': user_permissions,
         'years':years,'months':months
-    }) 
+    })  
 
 @login_required(login_url='/login/')
 def statement_selected_invoices(request):

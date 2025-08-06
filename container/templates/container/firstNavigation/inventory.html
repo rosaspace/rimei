@@ -18,7 +18,7 @@
                 <th>Location</th>
                 <th>ShelfRecord</th>
                 <th>BelongTo</th>
-                <th>Type</th>
+                <!-- <th>Type</th> -->
                 <th>History</th>
             </tr>
         </thead>
@@ -39,7 +39,7 @@
                 <td>{{ item.Location }}</td>
                 <td>{{ item.ShelfRecord }}</td>
                 <td>{{ item.blongTo.name|default:"-" }}</td>
-                <td>{{ item.type }}</td>
+                <!-- <td>{{ item.type }}</td> -->
                 <td style="height: 23px;">
                     <a href="{% url 'order_history' item.id %}" class="text-primary text-decoration-underline">
                         View

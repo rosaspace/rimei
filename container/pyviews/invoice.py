@@ -2,14 +2,17 @@ from django.shortcuts import render, redirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.conf import settings
+from django.db.models import Q
 
-from reportlab.platypus  import SimpleDocTemplate
+from reportlab.platypus  import SimpleDocTemplate, Image
 from reportlab.platypus import Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 
 import os
 import re
@@ -19,10 +22,11 @@ import fitz  # PyMuPDF 解析 PDF
 from datetime import datetime
 from decimal import Decimal
 
-from ..models import Container
+from ..models import Container,RMProduct
 from .pdfextract import extract_invoice_data, extract_customer_invoice_data
 from ..constants import constants_address, constants_view
 from .pdfgenerate import extract_text_from_pdf, converter_customer_invoice
+from .inventory_count import get_month_pallet_number, get_quality, get_product_qty
 
 # Invoice
 def print_original_do(request, container_id):
@@ -90,9 +94,10 @@ def print_converted_invoice(request, container_id):
         response['Content-Disposition'] = f'inline; filename="{container.customer_invoice_pdfname}"'
         return response
 
-def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0):
+def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, isClassisSplit = 0):
     print("----------print_customer_invoice----------")
     print("isEmptyContainerRelocate: ", isEmptyContainerRelocate)
+    print("isClassisSplit: ", isClassisSplit)
     container = get_object_or_404(Container, container_id=container_id)
 
     if not container.invoice_pdfname:
@@ -178,7 +183,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0):
     new_filename = f"{container.container_id}.pdf"
     output_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.CUSTOMER_INVOICE_FOLDER)
     output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
-    converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate)
+    converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit)
     
     # 打开并读取PDF文件
     with open(output_file_path , 'rb') as pdf:
@@ -216,7 +221,7 @@ def print_statement_invoice_pdf(request):
         fontSize=20,  # 设置大标题字体大小
         leading=24
     )
-    elements.append(Paragraph(f"Payment Statement - {datetime.now().strftime('%m/%d/%Y')}", large_title_style))
+    elements.append(Paragraph(f"Advance77 Payment Statement - {datetime.now().strftime('%m/%d/%Y')}", large_title_style))
     elements.append(Spacer(1, 12))
 
     # 表格数据
@@ -232,6 +237,84 @@ def print_statement_invoice_pdf(request):
             f"${c.price or 0:.2f}",
             c.invoice_date.strftime("%m/%d/%Y") if c.invoice_date else "",
             c.due_date.strftime("%m/%d/%Y") if c.due_date else "",
+            # c.payment_date.strftime("%m/%d/%Y") if c.payment_date else "",
+        ])
+    # 合计行
+    data.append(["", "Total", "", "", f"${total_price:.2f}", "", ""])
+
+    table = Table(data, colWidths=[50, 100, 90, 70, 60, 70, 70, 70])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 12),  # ✅ 设置字体大小为12
+        ("LEADING", (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),              # 增加下边距
+        ("TOPPADDING", (0, 0), (-1, -1), 6),                 # 增加上边距
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+
+    # ✅ 读取 PDF 文件并返回
+    new_filename = "invoice_statement.pdf"
+    with open(temp_path, "rb") as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="{new_filename}"'
+
+    # 删除临时文件
+    os.remove(temp_path)
+    return response
+
+def print_statement_customer_invoice_pdf(request):
+    if request.method == "POST":
+        selected_ids = request.POST.getlist("selected_ids")
+    elif request.method == "GET":
+        selected_ids = request.GET.getlist("selected_ids")
+    else:
+        return redirect("invoice_unpaid") 
+
+    if not selected_ids:
+        return HttpResponse("No container IDs provided.", status=400)
+    
+    containers = Container.objects.filter(container_id__in=selected_ids)
+    total_price = sum([c.customer_price or 0 for c in containers])
+
+    # ✅ 创建临时文件
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+        temp_path = temp_pdf.name
+
+    # ✅ 使用 ReportLab 写入该 PDF 文件
+    doc = SimpleDocTemplate(temp_path, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # 标题
+    large_title_style = ParagraphStyle(
+        name="LargeTitle",
+        parent=styles["Title"],
+        fontSize=20,  # 设置大标题字体大小
+        leading=24
+    )
+    elements.append(Paragraph(f"Customer Payment Statement - {datetime.now().strftime('%m/%d/%Y')}", large_title_style))
+    elements.append(Spacer(1, 12))
+
+    # 表格数据
+    index = 0
+    data = [["ID", "Container#", "Customer", "Invoice#", "Price", "Invoice Date", "Due Date"]]
+    for c in containers:
+        index += 1
+        data.append([
+            index,
+            c.container_id,
+            c.customer.name,
+            c.customer_invoiceId,
+            f"${c.customer_price or 0:.2f}",
+            c.customer_invoice_date.strftime("%m/%d/%Y") if c.customer_invoice_date else "",
+            c.customer_due_date.strftime("%m/%d/%Y") if c.customer_due_date else "",
             # c.payment_date.strftime("%m/%d/%Y") if c.payment_date else "",
         ])
     # 合计行
@@ -392,12 +475,33 @@ def edit_customer_invoice(request, container_id):
 
 def export_pallet_invoice(request):
     # 获取请求中的月份和年份
-    month = request.GET.get('month')
-    year = request.GET.get('year')
-    print('month: ',month,', year: ',year)
+    select_month = request.GET.get('month')
+    select_year = request.GET.get('year')
+
+    # 当月剩余托盘数
+    inventory_items = RMProduct.objects.filter(type = "Rimei")
+    total_pallets = 0
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        total_pallets += productTemp.totalPallet
+
+    # ✅ 出入库托盘数
+    total_container,total_in_plts,total_out_plts,total_plts,gloves_in_data,container_in_orders = get_month_pallet_number(select_month, select_year)
+
+    # ✅ 总价格
+    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4+total_plts * 12+total_pallets * 6
+
+    # ✅ 拼接 container 名字（每行 3~4 个）
+    container_list = list(container_in_orders.values_list('container_id', flat=True))
+    wrapped_container = ""
+    for i in range(0, len(container_list), 3):  # 每行3个
+        wrapped_container += "  ".join(container_list[i:i+3]) + "\n"
+    print(wrapped_container)
     
     title = 'Payment Invoice Report'
-    temp_path = invoice_template(title)
+    temp_path = invoice_template(title,wrapped_container,total_container, total_in_plts,total_out_plts,total_plts,total_pallets,total_price)
 
     # ✅ 读取 PDF 文件并返回
     new_filename = "invoice_month_warehouse.pdf"
@@ -409,34 +513,183 @@ def export_pallet_invoice(request):
     os.remove(temp_path)
     return response
 
-def invoice_template(title):
+def invoice_template(title,wrapped_container, total_container, total_in_plts,total_out_plts,total_plts,total_pallets,total_price):
     # ✅ 创建临时文件
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
         temp_path = temp_pdf.name
 
     # ✅ 使用 ReportLab 写入该 PDF 文件
-    doc = SimpleDocTemplate(temp_path, pagesize=A4)
+    doc = SimpleDocTemplate(temp_path, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=60, bottomMargin=30)
     elements = []
     styles = getSampleStyleSheet()
 
-    # 标题
-    large_title_style = ParagraphStyle(
-        name="LargeTitle",
-        parent=styles["Title"],
-        fontSize=20,  # 设置大标题字体大小
-        leading=24
+    # 样式
+    normal = ParagraphStyle(name='Normal', fontSize=10, leading=12)
+    bold = ParagraphStyle(name='Bold', parent=normal, fontName='Helvetica-Bold')
+    invoice_title_style = ParagraphStyle(
+        name="InvoiceTitle",
+        fontSize=20,
+        leading=24,
+        alignment=TA_RIGHT,
+        textColor=colors.black,
+        spaceAfter=6,
+        fontName='Helvetica-Bold',
     )
-    elements.append(Paragraph(title, large_title_style))
+    invoice_cell_style = ParagraphStyle(
+        name="InvoiceCell",
+        fontSize=10,
+        leading=12,
+        alignment=TA_RIGHT,
+    )
+
+    # ✅ Logo 和标题
+    logo = Image(constants_address.Rimei_LOGO_PATH, width=2 * inch, height=0.7 * inch)
+    rm_address_str = "<br/>".join(constants_address.RM_ADDRESS)
+    company_info = Paragraph(rm_address_str, normal)
+
+    # ✅ 用 Table 将 logo 和公司地址垂直排列在一列，左对齐
+    left_column = Table(
+        [[logo], [company_info]],
+        colWidths=[3.2 * inch],  # 可微调宽度
+        hAlign='LEFT'
+    )
+    left_column.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+
+    # 发票信息
+    today_str = datetime.today().strftime("%m%d%Y")
+    today_display = datetime.today().strftime("%-m/%-d/%Y")
+    invoice_title = Paragraph("INVOICE", invoice_title_style)
+    invoice_spacer = Spacer(1, 10)  # 加一个高度为6的空行
+    invoice_data = [
+        [Paragraph("<b>Invoice#</b>", invoice_cell_style), Paragraph(f"RM{today_str}", invoice_cell_style)],
+        [Paragraph("<b>Date</b>", invoice_cell_style), Paragraph(today_display, invoice_cell_style)],
+    ]
+    invoice_table = Table(invoice_data, colWidths=[60, 100], hAlign='RIGHT')
+    invoice_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+
+    # ✅ 将标题和表格垂直堆叠
+    right_column = Table([[invoice_title], [invoice_spacer], [invoice_table]], hAlign='RIGHT')
+    right_column.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+
+    # ✅ 主布局：左右两列
+    header_table = Table(
+        [[left_column, right_column]],
+        colWidths=[4.0 * inch, 3.2 * inch]
+    )
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    elements.append(header_table)
+    elements.append(Spacer(1, 20))
+
+    #region Bill To
+    # 收款人地址, Bill To
+    elements.extend(add_section_header("Bill to:", bold, 40))
+    elements.append(Paragraph(
+        'Omar supplies Inc.<br/>400 E. Randolph St.<br/>Suite 705<br/>Chicago IL 60601<br/>United States',
+        normal
+    ))
+    elements.append(Spacer(1, 12))
+    #endregion
+
+    #region 表格
+    # 项目表格
+    data = [
+        ["Item", "Description", "Qty", "Unit Price", "Total Price"],
+        ["Container Unload Fee", wrapped_container.strip(), total_container, "$450.00", f'${total_container * 450}'],
+        ["Pallet Fee", "", total_plts, "$12.00", f'${total_plts * 12}'],
+        ["Pallet Storage Per Month", "", total_pallets, "$6.00", f'${total_pallets * 6}'],
+        ["Pallet Inbound Labor Fee", "", total_in_plts, "$4.00", f'${total_in_plts * 4}'],
+        ["Pallet Outbound Labor Fee", "", total_out_plts, "$4.00", f'${total_out_plts * 4}'],
+        ["Omar Labor cost", "", "0", "$0.25", "$0.00"]
+    ]
+    table = Table(data, colWidths=[130, 230, 40, 50, 55])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#d3d3d3")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+    ]))
+    elements.append(table)
     elements.append(Spacer(1, 12))
 
-    # 添加生成日期和月份年份信息
-    elements.append(Paragraph(f"Generated Date: {datetime.now().strftime('%B %d, %Y')}", styles["Normal"]))
-    elements.append(Spacer(1, 12))
+    # 右对齐的 TOTAL 小计行
+    right_align_style = ParagraphStyle(
+        name='RightAlign',
+        fontSize=14,
+        textColor=colors.black,
+        alignment=TA_RIGHT
+    )
 
-    # 示例正文内容
-    elements.append(Paragraph("This is a sample pallet invoice PDF file generated by the system.", styles["Normal"]))
+    # 添加右对齐的 TOTAL 段落
+    elements.append(Paragraph(f'<b>TOTAL: ${total_price}</b>', right_align_style))
+    elements.append(Spacer(1, 20))
+    #endregion
+
+    #region 汇款信息
+    # 汇款信息标题部分，左右对齐
+    left_title = add_section_header("Please remit all payments to:", bold, 160)[0]
+    right_title = add_section_header("Bank information for payment:", bold, 160)[0]
+
+    left_para = Paragraph(constants_address.labor_left_text, normal)
+    right_para = Paragraph(constants_address.labor_right_text, normal)
+
+    # 拼接标题 + 正文的表格（两行两列）
+    info_table = Table(
+        [
+            [left_title, right_title],
+            [left_para, right_para],
+        ],
+        colWidths=[4.0 * inch, 4.0 * inch],
+        hAlign='LEFT',
+    )
+
+    info_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+
+    elements.append(info_table)
+    #endregion
 
     # 构建 PDF
     doc.build(elements)
 
     return temp_path
+
+def add_section_header(title, style, width):
+    """使用表格边框生成段落标题和下划线，左侧对齐。"""
+    table = Table(
+        [[Paragraph(f'<b>{title}</b>', style)]],  # 只有一行一列
+        colWidths=[width],
+        hAlign='LEFT'
+    )
+    table.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (0, 0), 1, colors.black),  # 在第一行下方画一条线
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    return [table, Spacer(1, 6)]

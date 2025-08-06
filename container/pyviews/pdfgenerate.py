@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 
 from ..models import RMOrder
 from ..constants import constants_address
+from ..constants.constants_address import font_Helvetica, font_Helvetica_Bold
 
 # PDF 解析函数
 def extract_text_from_pdf(pdf_path):
@@ -62,13 +63,13 @@ def print_pickuplist(target_date):
     y = height - 2 * inch
 
     # 日期行样式
-    c.setFont("Helvetica-Bold", 48)
+    c.setFont(font_Helvetica_Bold, 48)
     # 日期文字
     date_text = f"{weekday_str}   {date_str}"
     c.drawString(left_margin, y, date_text)
 
     # 计算文字宽度以便画下划线
-    text_width = c.stringWidth(date_text, "Helvetica-Bold", 48)
+    text_width = c.stringWidth(date_text, font_Helvetica_Bold, 48)
     underline_y = y - 5  # 稍微低一点以贴近文字底部
 
     # 画下划线
@@ -100,12 +101,12 @@ def print_weekly_pickuplist_on_one_page(start_date):
     # 配置
     left_margin = 1 * inch
     top_margin = height - 1 * inch
-    line_height = 26
+    line_height = 24
     title_font_size = 24
     item_font_size = 16
 
     # 标题
-    c.setFont("Helvetica-Bold", title_font_size + 10)
+    c.setFont(font_Helvetica_Bold, title_font_size + 10)
     c.drawCentredString(width / 2, height - 1 * inch, "WEEKDAY PICKUP LIST")
 
     # 当前绘制位置
@@ -122,7 +123,7 @@ def print_weekly_pickuplist_on_one_page(start_date):
             date_str = current_date.strftime('%m/%d')
             header_text = f"{weekday_str} {date_str}"
 
-            c.setFont("Helvetica-Bold", title_font_size)
+            c.setFont(font_Helvetica_Bold, title_font_size)
             c.drawString(left_margin, y, header_text)
             y -= line_height
 
@@ -182,11 +183,11 @@ def print_weekly_pickuplist(start_date):
         y = height - 2 * inch
 
         # 日期标题
-        c.setFont("Helvetica-Bold", 48)
+        c.setFont(font_Helvetica_Bold, 48)
         date_text = f"{weekday_str}   {date_str}"
         c.drawString(left_margin, y, date_text)
 
-        text_width = c.stringWidth(date_text, "Helvetica-Bold", 48)
+        text_width = c.stringWidth(date_text, font_Helvetica_Bold, 48)
         underline_y = y - 5
         c.setLineWidth(3)
         c.line(left_margin, underline_y, left_margin + text_width, underline_y)
@@ -202,7 +203,7 @@ def print_weekly_pickuplist(start_date):
             if y < 1.5 * inch:  # 页面到底了，加新页
                 c.showPage()
                 y = height - 2 * inch
-                c.setFont("Helvetica-Bold", 48)
+                c.setFont(font_Helvetica_Bold, 48)
                 c.drawString(left_margin, y, f"{weekday_str}   {date_str}")
                 y -= 110  # 留出 Pickup 标签空间
                 c.setFont("Helvetica", 30)
@@ -221,7 +222,7 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
         label_count = 10  # Handle invalid input gracefully
 
     # Set font
-    c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
+    c.setFont(font_Helvetica_Bold, constants_address.FONT_SIZE)
     
     y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
     labels_on_page = 0  # Track labels per page
@@ -230,7 +231,7 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
     while label_count > 0:
         if not first_page:  
             c.showPage()  # Create a new page *only if necessary*
-            c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)  # Reset font on new page
+            c.setFont(font_Helvetica_Bold, constants_address.FONT_SIZE)  # Reset font on new page
             y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
             labels_on_page = 0  # Reset row counter
 
@@ -252,7 +253,7 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
                 text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 0
                 
                 # Set font and draw text
-                c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
+                c.setFont(font_Helvetica_Bold, constants_address.FONT_SIZE)
                 c.drawCentredString(text_x, text_y, so_num)
     
                 # Draw label borders (for testing)
@@ -270,7 +271,7 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
             y_position -= constants_address.LABEL_HEIGHT  # Move to next row
             labels_on_page += 2  # Two labels per row
 
-def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate):
+def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit):
     # 构建新的PDF文件（使用 reportlab）
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -283,14 +284,9 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
     if os.path.exists(constants_address.SSA_LOGO_PATH):
         c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
     
-    # c.setFont("Helvetica-Bold", 20)
-    # c.drawString(220, y, "Packing Slip")
-    # y -= 80
-    # c.setFont("Helvetica", 12)
-
     # === Helper function to draw section headers ===
     def draw_section_header(title, x, y):
-        c.setFont("Helvetica-Bold", 11)
+        c.setFont(font_Helvetica_Bold, 11)
         c.drawString(x, y, title)
         c.setLineWidth(0.5)
         c.line(x, y - 2, x + 150, y - 2)
@@ -388,7 +384,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
         elif mapped_desc == "Chassis":
             orig_units = float(units or 0)
             new_units = orig_units if orig_units > 2 else 2
-            new_rate = 40
+            new_rate = constants_address.Chassis_rate
             charge = new_units * new_rate
             display_units = f"{new_units:.1f}"
             display_rate = f"${new_rate:,.2f}"
@@ -397,7 +393,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
         elif mapped_desc == "Chassis split":
             orig_units = float(units or 0)
             new_units = orig_units if orig_units > 2 else 2
-            new_rate = 70
+            new_rate = constants_address.ClassisSplit_rate
             charge = new_units * new_rate
             display_units = f"{new_units:.1f}"
             display_rate = f"${new_rate:,.2f}"
@@ -405,14 +401,14 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
 
         elif mapped_desc == "Pre-pull":
             orig_units = float(units or 0)
-            new_rate = 150
+            new_rate = constants_address.Pre_pull_rate
             charge = orig_units * new_rate
             display_rate = f"${new_rate:,.2f}"
             display_charge = f"${charge:,.2f}"
 
         elif mapped_desc == "Yard storage":
             orig_units = float(units or 0)
-            new_rate = 45
+            new_rate = constants_address.Yard_storage_rate
             charge = orig_units * new_rate
             display_rate = f"${new_rate:,.2f}"
             display_charge = f"${charge:,.2f}"
@@ -431,8 +427,21 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
         relocate_row = desc_to_row.get("Empty container relocate/SOC")
         if relocate_row:
             relocate_units = "1.0"
-            relocate_rate = 150
+            relocate_rate = constants_address.EmptyContainerRelocate_rate
             relocate_charge = relocate_rate
+            relocate_row[1] = relocate_units
+            relocate_row[2] = f"${relocate_rate:,.2f}"
+            relocate_row[3] = f"${relocate_charge:,.2f}"
+            total += Decimal(str(relocate_charge))
+
+    print("isClassisSplit: ", isClassisSplit)
+    if isClassisSplit == "1":
+        # 找到对应行
+        relocate_row = desc_to_row.get("Chassis split")
+        if relocate_row:
+            relocate_units = 2
+            relocate_rate = constants_address.ClassisSplit_rate
+            relocate_charge = relocate_units * relocate_rate
             relocate_row[1] = relocate_units
             relocate_row[2] = f"${relocate_rate:,.2f}"
             relocate_row[3] = f"${relocate_charge:,.2f}"
@@ -480,7 +489,7 @@ def print_checklist_template(title,filename, contentTitle, container_info,can_li
     width, height = letter
 
     # 设置标题居中
-    c.setFont("Helvetica-Bold", 16)
+    c.setFont(font_Helvetica_Bold, 16)
     title = contentTitle
     c.drawCentredString(width / 2, height - 40, title)
 
@@ -518,7 +527,7 @@ def print_checklist_template(title,filename, contentTitle, container_info,can_li
 
         if key == "Total Pallets":
             # 插入子表头
-            c.setFont("Helvetica-Bold", 11)
+            c.setFont(font_Helvetica_Bold, 11)
             c.drawString(x_sub_table + 0, y, "Size")
             c.drawString(x_sub_table + 100, y, "Name")
             c.drawString(x_sub_table + 220, y, "CTNS")
@@ -603,7 +612,7 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     width, height = letter
 
     # 设置标题居中
-    c.setFont("Helvetica-Bold", 16)
+    c.setFont(font_Helvetica_Bold, 16)
     title = contentTitle
     c.drawCentredString(width / 2, height - 80, title)
 
@@ -618,7 +627,7 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     c.setFont("Helvetica", 12)
 
     regular_font = "Helvetica"
-    bold_font = "Helvetica-Bold"
+    bold_font = font_Helvetica_Bold
     font_size = 10
     left_margin = 0.8 * inch
     line_height = 18
