@@ -27,17 +27,31 @@
                 </div>
             </form>
         </div>
-        <div class="col-md-4">
-
-        </div>
-        <div class="col-md-2">
-            <a href="#" class="btn btn-primary" id="monthlyInvoiceBtn">
-                Monthly Invoice
-            </a>
+        <div class="col-md-6">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="inbound_number" class="form-label">Inbound Number</label>
+                    <input type="text" class="form-control" id="inbound_number" name="inbound_number" value="{{ total_in_plts }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="outbound_number" class="form-label">Outbound Number</label>
+                    <input type="text" class="form-control" id="outbound_number" name="outbound_number" value="{{ total_out_plts }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="pallet_storage_number" class="form-label">Pallet Storage</label>
+                    <input type="text" class="form-control" id="pallet_storage_number" name="pallet_storage_number" value="{{ total_pallets }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="monthlyInvoiceBtn" class="form-label">Generate Invoice</label>
+                    <a href="#" class="btn btn-primary" id="monthlyInvoiceBtn">
+                        Monthly Invoice
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
     <div class="row">
-        <div class="col-md-6">            
+        <div class="col-md-6">
             <div>
                 <h4>Container In Summary</h4>
                 <table class="table table-bordered table-striped">
@@ -89,11 +103,11 @@
                 </table>
             </div>
             <div>
-                <p>Monthly Total Container Number: {{ total_container }}</p>
-                <p>Monthly Total Inbound PLTS: {{ total_in_plts }}</p>
-                <p>Monthly Total Outbound PLTS: {{ total_out_plts }}</p>
-                <p>Monthly PLTS: {{ total_plts }}</p>
-                <p>Total PLTS: {{ total_pallets }}</p>
+                <p>Monthly Container Number: {{ total_container }}</p>
+                <p>Pallet Inbound Labor Fee: {{ total_in_plts }}</p>
+                <p>Pallet Outbound Labor Fee: {{ total_out_plts }}</p>
+                <p>Pallet Fee: {{ total_plts }}</p>
+                <p>Pallet Storage Per Month: {{ total_pallets }}</p>
                 <p>Total Price: ${{ total_price }}</p>
             </div>
         </div>
@@ -104,13 +118,17 @@
     document.getElementById("monthlyInvoiceBtn").addEventListener("click", function (event) {
         const year = document.getElementById("selectYear").value;
         const month = document.getElementById("selectMonth").value;
+        const inboundNumber = document.getElementById("inbound_number").value;
+        const outboundNumber = document.getElementById("outbound_number").value;
+        const palletstoragenumber = document.getElementById("pallet_storage_number").value;
+         console.log("Inbound:", inboundNumber);
 
         if (!year || !month) {
             alert("Please select both year and month.");
             return;
         }
         console.log('year: ', year)
-        const url = `{% url 'export_pallet_invoice' %}?year=${year}&month=${month}`;
+        const url = `{% url 'export_pallet_invoice' %}?year=${year}&month=${month}&inboundNumber=${inboundNumber}&outboundNumber=${outboundNumber}&palletstoragenumber=${palletstoragenumber}`;
         window.location.href = url;
     });
 </script>

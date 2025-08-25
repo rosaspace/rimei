@@ -6,20 +6,20 @@
         <thead>
             <tr>
                 <th>Product Name</th>
-                <th>Quantity</th>
-                <th>ForNewOrder</th>
-                <th>InPreparation</th>
+                <th>QTY</th>
+                <th>Order</th>
+                <th>InPrep</th>
                 <th>Diff</th>                
                 <th>Each</th>
                 <th>Color</th>
-                <th>Show</th>
+                <th>ShowQTY</th>
+                <th>Avail.Qty</th>
                 <th>Pallet</th>
                 <th>Case</th>
-                <th>Location</th>
-                <th>ShelfRecord</th>
-                <th>BelongTo</th>
+                <th>Loca</th>
+                <th>Shelf</th>
                 <!-- <th>Type</th> -->
-                <th>History</th>
+                <th>His</th>
             </tr>
         </thead>
         <tbody>
@@ -34,11 +34,11 @@
                 <td>{{ item.pallet }}</td>
                 <td>{{ item.color }}</td>
                 <td>{{ item.shownumber }}</td> 
+                <td>{{ item.availableQTY }}</td> 
                 <td>{{ item.palletnumber }}</td>
                 <td>{{ item.case }}</td>
                 <td>{{ item.Location }}</td>
                 <td>{{ item.ShelfRecord }}</td>
-                <td>{{ item.blongTo.name|default:"-" }}</td>
                 <!-- <td>{{ item.type }}</td> -->
                 <td style="height: 23px;">
                     <a href="{% url 'order_history' item.id %}" class="text-primary text-decoration-underline">

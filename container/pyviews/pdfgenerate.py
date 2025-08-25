@@ -18,7 +18,7 @@ from reportlab.lib import colors
 from decimal import Decimal
 from datetime import datetime, timedelta
 
-from ..models import RMOrder
+from ..models import RMOrder, Container
 from ..constants import constants_address
 from ..constants.constants_address import font_Helvetica, font_Helvetica_Bold
 
@@ -44,8 +44,13 @@ def print_pickuplist(target_date):
     date_str = target_date.strftime('%m/%d')
 
     # 查询 RMOrder 表中的 Pickup No.
-    pickup_orders = RMOrder.objects.filter(pickup_date=target_date.date()).exclude(Q(customer_name="4") | Q(is_canceled=True))
-    pickup_numbers = [str(order.so_num) for order in pickup_orders]
+    pickup_orders = RMOrder.objects.filter(
+        pickup_date=target_date.date()
+    ).exclude(Q(customer_name="4") | Q(customer_name="19")| Q(is_canceled=True))
+    pickup_numbers = [f"{o.so_num} / {o.plts} plts / {o.customer_name}" for o in pickup_orders]
+
+    delivery_container = Container.objects.filter(delivery_date=target_date.date())
+    delivery_numbers = [f"{o.container_id} / {o.plts} plts" for o in delivery_container]
 
     # 如果没有数据，显示占位
     if not pickup_numbers:
@@ -83,8 +88,22 @@ def print_pickuplist(target_date):
 
     # Pickup 编号列表
     y -= 50
-    c.setFont("Helvetica", 30)
+    c.setFont("Helvetica", 24)
     for num in pickup_numbers:
+        c.drawString(left_margin, y, num)
+        y -= 50
+
+    # Delivery 标签
+    if not delivery_numbers:
+        delivery_numbers = ["N/A"]
+    y -= 30
+    c.setFont("Helvetica", 30)
+    c.drawString(left_margin, y, "Delivery:")
+
+    # Delivery 编号列表
+    y -= 50
+    c.setFont("Helvetica", 24)
+    for num in delivery_numbers:
         c.drawString(left_margin, y, num)
         y -= 50
 

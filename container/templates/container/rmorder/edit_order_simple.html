@@ -1,0 +1,131 @@
+{% extends 'container/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h4 class="mb-2">Print Order</h4>
+    <div class="row" >
+        <div class="d-flex flex-wrap align-items-start">
+            <div class="me-2">
+                <button class="btn btn-primary" id="printConvertedOrder">Converted Order</button>
+            </div>
+            <div class="me-2">
+                <button class="btn btn-primary" id="printBOL">BOL</button>
+            </div>
+            <div class="me-2">
+                <button class="btn btn-primary" id="printMcdOrder">Mcd Order</button>
+            </div>
+            <div class="ms-auto">
+                <a href="{% url 'simplified_view' %}" class="btn btn-secondary">Back</a>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-3 border-2 opacity-100">
+
+    <form id="edit-order-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_order' order.so_num %}" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row mb-2" >
+            <div class="col-md-3">
+                <label class="form-label">SO Number</label>
+                <p class="form-control-plaintext">{{ order.so_num|default:'' }}</p>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Customer</label>
+                <p class="form-control-plaintext">{{ order.customer_name.name|default:'' }}</p>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label">PO Number</label>
+                <p class="form-control-plaintext">{{ order.po_num|default:'' }}</p>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Pallets</label>
+                <p class="form-control-plaintext">{{ order.plts|default:'' }}</p>
+            </div>
+        </div>        
+
+        <div class="row mb-2" >
+            <div class="col-md-6">
+                <!-- <label class="form-label">Bill To:</label> -->
+                <p class="form-control-plaintext mb-0" style="white-space: pre-line;">
+                    {{ order.bill_to|default:'' }}
+                </p>
+            </div>
+            
+            <div class="col-md-6">
+                <!-- <label class="form-label">Ship To:</label> -->
+                <p class="form-control-plaintext mb-0" style="white-space: pre-line;">
+                    {{ order.ship_to|default:'' }}
+                </p>
+            </div>
+        </div>
+
+        <!-- <hr class="my-1 border-1 opacity-100"> -->
+
+        <!-- 订单项目表格 -->
+        <div class="row mb-2" >
+            <div class="col-12">                
+                <table class="table table-bordered mb-0" id="orderTable" >
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Quantity</th>
+                            <th>Pallet</th>
+                            <th>Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order_items %}
+                        <tr {% if item.quantity > item.inventory_qty %}class="table-danger"{% endif %}>
+                            <td class="align-middle">
+                                {{ item.product.name }}
+                            </td>
+                            <td class="align-middle">
+                                {{ item.quantity }}
+                            </td>
+                            <td class="align-middle">
+                                <span>{{ item.pallet_qty }}</span>
+                            </td>
+                            <td class="align-middle">
+                                <span>{{ item.case_qty }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div>
+                    <p class="mb-0">Total Weight: <strong>{{ total_weight|floatformat:0 }}</strong> LBS</p>
+                    <p class="mb-0">Total Quantity: <strong>{{ total_quantity }}</strong> cases</p>
+                    <p class="mb-0">Total Pallet: <strong>{{ total_pallet }}</strong> plts</p>
+                </div>
+            </div>
+        </div>      
+    </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const soNum = '{{ order.so_num }}';
+    
+    // 打印转换后的订单
+    document.getElementById('printConvertedOrder').addEventListener('click', function() {
+        window.open(`/print_converted_order/${soNum}/`, '_blank');
+    });
+
+    // 打印BOL
+    document.getElementById('printBOL').addEventListener('click', function() {
+        window.open(`/print_order_bol/${soNum}/`, '_blank');
+    });
+
+    // 打印Mcd订单
+    document.getElementById('printMcdOrder').addEventListener('click', function() {
+        window.open(`/print_order_mcd/${soNum}/`, '_blank');
+    });
+});
+</script>
+{% endblock %}

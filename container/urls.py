@@ -10,6 +10,8 @@ urlpatterns = [
     path('login/', login.login_view, name='login'),
     path('register/', login.register_view, name='register'),
     path("logout", login.logout_view, name="logout"),
+    path("simplified_view/", views.simplified_view, name="simplified_view"),
+    path("edit_order_simple/<str:so_num>/", rmorder.edit_order_simple, name="edit_order_simple"),     
 
     # main page
     path("", views.home, name="index"),

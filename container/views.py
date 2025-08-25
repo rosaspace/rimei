@@ -28,6 +28,20 @@ def index(request):
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_base,{'user_permissions': user_permissions})
 
+@login_required
+def simplified_view(request):
+    orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('pickup_date')
+    unfinished_orders = orders.filter(
+        Q(is_canceled=False) &
+        Q(is_updateInventory=False)
+    )
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_simplified_order,{
+        'rimeiorders': unfinished_orders,
+        'user_permissions': user_permissions
+        })
+
 @login_required(login_url='/login/')
 def invoice_view(request):
     containers = Container.objects.all().exclude(

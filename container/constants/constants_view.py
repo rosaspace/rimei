@@ -19,6 +19,8 @@ template_generete_monthLabor = 'container/containerManager/generete_monthLabor.h
 
 template_add_order = 'container/rmorder/add_order.html'
 template_edit_order = 'container/rmorder/edit_order.html'
+template_edit_simple_order = 'container/rmorder/edit_order_simple.html'
+template_simplified_order = 'container/rmorder/simplified_order.html'
 
 template_add_record = 'container/weekrecord/add_record.html'
 template_edit_record = 'container/weekrecord/edit_record.html'

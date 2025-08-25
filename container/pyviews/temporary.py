@@ -260,7 +260,7 @@ def format_worksheet(ws):
         adjusted_width = max(max_length + 2, 12)  # 设置最小宽度为12
         ws.column_dimensions[column_letter].width = adjusted_width
 
-    
+# 邮件  
 def preview_email(request):
     email_type = request.GET.get("type", "inventory")
     officedepot_id = request.POST.get('officedepot_number')

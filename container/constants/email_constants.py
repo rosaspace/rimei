@@ -1,8 +1,9 @@
 
 from django.utils import timezone
+from datetime import datetime, date, time
 
 # 日期
-CURRENT_DATE = timezone.now().strftime("%m/%d/%Y")
+CURRENT_DATE = datetime.now().strftime("%m/%d/%Y")
 
 # 收件人
 SIGNATURE_AVA = "Ava"

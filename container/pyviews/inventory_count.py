@@ -218,18 +218,19 @@ def show_pallet_number(request):
 
     # 当月剩余托盘数
     inventory_items = RMProduct.objects.filter(type = "Rimei")
-    total_pallets = 0
+    total_storage_pallets = 0
     for product in inventory_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
-        total_pallets += productTemp.totalPallet
+        total_storage_pallets += productTemp.totalPallet
 
     # ✅ 出入库托盘数
-    total_container,total_in_plts,total_out_plts,total_plts,gloves_in_data,container_in_orders = get_month_pallet_number(select_month, select_year)
+    total_container,total_in_plts,total_out_plts, gloves_in_data,container_in_orders = get_month_pallet_number(select_month, select_year)
+    total_plts = total_in_plts + total_out_plts
 
     # ✅ 总价格
-    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4+total_plts * 12+total_pallets * 6
+    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4+total_plts * 12+total_storage_pallets * 6
 
     # 成本统计表格
     cost_table = [{
@@ -237,7 +238,7 @@ def show_pallet_number(request):
     }, {
         'type': 'Pallet Fee', 'pallets': total_plts, 'unit': 12, 'value': total_plts * 12
     }, {
-        'type': 'Pallet Storage Per Month', 'pallets': total_pallets, 'unit': 6, 'value': total_pallets * 6
+        'type': 'Pallet Storage Per Month', 'pallets': total_storage_pallets, 'unit': 6, 'value': total_storage_pallets * 6
     }, {
         'type': 'Pallet Inbound Labor Fee', 'pallets': total_in_plts, 'unit': 4, 'value': total_in_plts * 4
     }, {
@@ -256,7 +257,7 @@ def show_pallet_number(request):
         'cost_table': cost_table,
         'total_plts': total_plts,
         'total_container': total_container,
-        'total_pallets' : total_pallets,
+        'total_pallets' : total_storage_pallets,
         'total_price': total_price,
         'years':years,'months':months,
         'selectYear':select_year,'selectMonth':select_month,
@@ -309,10 +310,7 @@ def get_month_pallet_number(select_month, select_year):
     # ✅ 计算 gloves out 总托盘数
     total_out_plts = sum(order.plts for order in gloves_out_orders)
 
-    # ✅ 总托盘数
-    total_plts = total_in_plts + total_out_plts
-
-    return total_container,total_in_plts,total_out_plts,total_plts,gloves_in_data,container_in_orders
+    return total_container,total_in_plts,total_out_plts, gloves_in_data, container_in_orders
     
 def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list):
      
@@ -331,6 +329,7 @@ def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,o
     product.quantity = total_inbound_actual_quantity - total_outbound_actual_quantity
     product.quantity_to_stock = product.quantity - total_outbound_stock_quantity
     product.shownumber  = product.quantity_to_stock + product.quantity_diff
+    product.availableQTY = product.quantity_for_neworder + product.quantity_diff
     product.pallet = product.Pallet
     product.color = product.Color
     product.palletnumber = product.shownumber//product.Pallet
@@ -444,7 +443,7 @@ def export_inventory_to_excel(items):
         type_groups[item.type].append(item)
 
     # Define headers
-    headers = ["Product", "QTY", "QTY removing order", "Diff","Show Number","Available QTY", "Each","Color", "Location", "Pallets", "Cases","ShelfRecord"]
+    headers = ["Product", "QTY", "QTY removing order", "Diff","Show QTY","Available QTY", "Each","Color", "Location", "Pallets", "Cases","ShelfRecord"]
     ws.append(headers)
 
     # Write data rows
@@ -462,7 +461,7 @@ def export_inventory_to_excel(items):
                 item.quantity_for_neworder,
                 item.quantity_diff,
                 item.shownumber,
-                item.quantity_for_neworder + item.quantity_diff,
+                item.availableQTY,
                 item.pallet,
                 item.color,
                 item.Location,

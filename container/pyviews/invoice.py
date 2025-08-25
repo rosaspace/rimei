@@ -477,21 +477,41 @@ def export_pallet_invoice(request):
     # 获取请求中的月份和年份
     select_month = request.GET.get('month')
     select_year = request.GET.get('year')
+    inboundNumber_str = request.GET.get('inboundNumber')
+    outboundNumber_str = request.GET.get('outboundNumber')
+    palletstoragenumber_str = request.GET.get('palletstoragenumber')
+
+    try:
+        inboundNumber = int(inboundNumber_str)
+        outboundNumber = int(outboundNumber_str)
+        palletstoragenumber = int(palletstoragenumber_str)
+    except (TypeError, ValueError):
+        inboundNumber = 0  # 或根据你的需求设为其他默认值
+        outboundNumber = 0
+        palletstoragenumber = 0
 
     # 当月剩余托盘数
     inventory_items = RMProduct.objects.filter(type = "Rimei")
-    total_pallets = 0
+    total_storage_pallets = 0
     for product in inventory_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
-        total_pallets += productTemp.totalPallet
+        total_storage_pallets += productTemp.totalPallet
 
     # ✅ 出入库托盘数
-    total_container,total_in_plts,total_out_plts,total_plts,gloves_in_data,container_in_orders = get_month_pallet_number(select_month, select_year)
+    total_container,total_in_plts,total_out_plts, gloves_in_data,container_in_orders = get_month_pallet_number(select_month, select_year)
+
+    if inboundNumber > total_in_plts :
+        total_in_plts = inboundNumber
+    if outboundNumber > total_out_plts :
+        total_out_plts = outboundNumber
+    if palletstoragenumber > total_storage_pallets :
+        total_storage_pallets = palletstoragenumber
+    total_plts = total_in_plts + total_out_plts
 
     # ✅ 总价格
-    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4+total_plts * 12+total_pallets * 6
+    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4 + total_plts * 12 + total_storage_pallets * 6
 
     # ✅ 拼接 container 名字（每行 3~4 个）
     container_list = list(container_in_orders.values_list('container_id', flat=True))
@@ -501,7 +521,7 @@ def export_pallet_invoice(request):
     print(wrapped_container)
     
     title = 'Payment Invoice Report'
-    temp_path = invoice_template(title,wrapped_container,total_container, total_in_plts,total_out_plts,total_plts,total_pallets,total_price)
+    temp_path = invoice_template(title,wrapped_container,total_container, total_in_plts, total_out_plts, total_plts, total_storage_pallets, total_price)
 
     # ✅ 读取 PDF 文件并返回
     new_filename = "invoice_month_warehouse.pdf"
@@ -613,11 +633,11 @@ def invoice_template(title,wrapped_container, total_container, total_in_plts,tot
     # 项目表格
     data = [
         ["Item", "Description", "Qty", "Unit Price", "Total Price"],
-        ["Container Unload Fee", wrapped_container.strip(), total_container, "$450.00", f'${total_container * 450}'],
-        ["Pallet Fee", "", total_plts, "$12.00", f'${total_plts * 12}'],
-        ["Pallet Storage Per Month", "", total_pallets, "$6.00", f'${total_pallets * 6}'],
-        ["Pallet Inbound Labor Fee", "", total_in_plts, "$4.00", f'${total_in_plts * 4}'],
-        ["Pallet Outbound Labor Fee", "", total_out_plts, "$4.00", f'${total_out_plts * 4}'],
+        ["Container Unload Fee", wrapped_container.strip(), total_container, "$450.00", f'${total_container * 450:.2f}'],
+        ["Pallet Fee", "", total_plts, "$12.00", f'${total_plts * 12:.2f}'],
+        ["Pallet Storage Per Month", "", total_pallets, "$6.00", f'${total_pallets * 6:.2f}'],
+        ["Pallet Inbound Labor Fee", "", total_in_plts, "$4.00", f'${total_in_plts * 4:.2f}'],
+        ["Pallet Outbound Labor Fee", "", total_out_plts, "$4.00", f'${total_out_plts * 4:.2f}'],
         ["Omar Labor cost", "", "0", "$0.25", "$0.00"]
     ]
     table = Table(data, colWidths=[130, 230, 40, 50, 55])
@@ -640,7 +660,7 @@ def invoice_template(title,wrapped_container, total_container, total_in_plts,tot
     )
 
     # 添加右对齐的 TOTAL 段落
-    elements.append(Paragraph(f'<b>TOTAL: ${total_price}</b>', right_align_style))
+    elements.append(Paragraph(f'<b>TOTAL: ${total_price:.2f}</b>', right_align_style))
     elements.append(Spacer(1, 20))
     #endregion
 

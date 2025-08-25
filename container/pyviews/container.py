@@ -451,13 +451,13 @@ def print_container_detail(request, container_num):
         "Container Number": container.container_id,
         "Carrier": container.Carrier.name,
         "LOT#": container.lot,
-        "Date": container.delivery_date.strftime("%m/%d/%Y"),
+        "Date": container.delivery_date.strftime("%m/%d/%Y") if container.delivery_date else "",
         "Product Validity": "",
         "Name": "OMAR",
         "Commodity": container.inboundCategory.Name,
         # "Can liner Size": '',
         "Total Pallets": str(total_plts),
-    }    
+    }
 
     # 保存路径
     pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.CHECKLIST_FOLDER)

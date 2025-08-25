@@ -283,3 +283,30 @@ def order_is_allocated_to_stock(request, so_num):
     order.save()
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     return redirect(next_url)
+
+def edit_order_simple(request, so_num):
+    print("--------edit_order------",so_num)
+    try:
+        if request.method == "GET":
+            order = RMOrder.objects.get(so_num=so_num)
+            customers = RMCustomer.objects.all()
+            order_items = OrderItem.objects.filter(order=order)
+            orderitems_new = get_product_qty_with_inventory_from_order(order_items)
+            # ✅ 计算总重量（假设每项是字典，键名为 'weight'）
+            total_weight = sum(float(item.weight) for item in orderitems_new if item.weight)
+            total_quantity = sum(int(item.quantity) for item in orderitems_new)
+            total_pallet = sum(int(item.pallet_qty) for item in orderitems_new)
+            products = RMProduct.objects.all().order_by('name')
+            return render(request, constants_view.template_edit_simple_order, {
+                'order': order,
+                'customers': customers,
+                'order_items': orderitems_new,
+                'products': products,  # 加上这行
+                'total_weight': total_weight,  # ✅ 加入模板变量
+                'total_quantity': total_quantity,  # ✅ 加入模板变量
+                'total_pallet':total_pallet,
+            })
+        
+    except RMOrder.DoesNotExist:
+        messages.error(request, '订单不存在')
+        return redirect('rimeiorder')
