@@ -10,7 +10,7 @@ from django.template.loader import get_template
 from django.http import HttpResponse
 
 from weasyprint import HTML
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from django.utils import timezone
 from collections import defaultdict
 
@@ -36,10 +36,28 @@ def simplified_view(request):
         Q(is_updateInventory=False)
     )
 
+    today = date.today()
+    # 计算本周的周一和周日
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+    # 下周的时间范围
+    next_start_of_week = start_of_week + timedelta(days=7)
+    next_end_of_week = next_start_of_week + timedelta(days=6)
+    # 下下周
+    next2_start_of_week = start_of_week + timedelta(days=14)
+    next2_end_of_week = next2_start_of_week + timedelta(days=6)
+
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_simplified_order,{
         'rimeiorders': unfinished_orders,
-        'user_permissions': user_permissions
+        'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        "next_start_of_week": next_start_of_week,
+        "next_end_of_week": next_end_of_week,
+        "next2_start_of_week":next2_start_of_week,
+        "next2_end_of_week":next2_end_of_week
         })
 
 @login_required(login_url='/login/')
@@ -265,9 +283,27 @@ def rimeiorder_view(request):
     )
     print("unfinished_orders, ",len(unfinished_orders))
 
+    today = date.today()
+    # 计算本周的周一和周日
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+    # 下周的时间范围
+    next_start_of_week = start_of_week + timedelta(days=7)
+    next_end_of_week = next_start_of_week + timedelta(days=6)
+    # 下下周
+    next2_start_of_week = start_of_week + timedelta(days=14)
+    next2_end_of_week = next2_start_of_week + timedelta(days=6)
+
     return render(request, constants_view.template_rmorder, {
         'rimeiorders': unfinished_orders,
-        'user_permissions': user_permissions
+        'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        "next_start_of_week": next_start_of_week,
+        "next_end_of_week": next_end_of_week,
+        "next2_start_of_week":next2_start_of_week,
+        "next2_end_of_week":next2_end_of_week
         })
 
 @login_required(login_url='/login/')

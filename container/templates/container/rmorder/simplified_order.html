@@ -34,7 +34,15 @@
         </thead>
         <tbody>
             {% for order in rimeiorders %}
-            <tr>
+            <tr {% if order.pickup_date and order.pickup_date < today %}
+      class="table-secondary"
+    {% elif order.pickup_date and order.pickup_date >= start_of_week and order.pickup_date <= end_of_week %}
+      class="table-warning"
+    {% elif order.pickup_date and order.pickup_date >= next_start_of_week and order.pickup_date <= next_end_of_week %}
+      class="table-primary"
+    {% elif order.pickup_date and order.pickup_date >= next2_start_of_week and order.pickup_date <= next2_end_of_week %}
+      class="table-warning"
+    {% endif %}>
                 <td>{{ order.id }}</td>
                 <td>
                     <a href="{% url 'edit_order_simple' order.so_num %}">{{ order.so_num }}</a>
