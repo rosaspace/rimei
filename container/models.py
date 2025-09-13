@@ -204,6 +204,7 @@ class LogisticsCompany(models.Model):
 
 class Carrier(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 公司名称
+    shortname = models.CharField(max_length=255, default='')  # 公司名称
     address = models.CharField(max_length=255, default=constants_address.rimei_address)
 
     def __str__(self):
@@ -349,3 +350,49 @@ class ContainerStatement(models.Model):
 
     def __str__(self):
         return f"{self.statement_number} - {self.container_id_str}"
+
+class InvoicePaidCustomer(models.Model):
+    name = models.CharField(max_length=255, default='')
+
+    def __str__(self):
+        return f"{self.name}"
+
+class InvoiceVendor(models.Model):
+    name = models.CharField(max_length=255, default='')
+
+    def __str__(self):
+        return f"{self.name}"
+
+class InvoicePurposeFor(models.Model):
+    name = models.CharField(max_length=255, default='')
+
+    def __str__(self):
+        return f"{self.name}"
+
+class InvoiceARRecord(models.Model):
+    customer = models.ForeignKey(InvoicePaidCustomer, on_delete=models.CASCADE)  # 关联表
+    invoice_id = models.CharField(max_length=255)
+    invoice_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    company = models.ForeignKey(Carrier, on_delete=models.CASCADE)  # 关联表
+    due_date = models.DateField()  # 截止日期
+    givetoboss_date = models.DateField(blank=True, null=True)  # 付款日期
+    payment_date = models.DateField(blank=True, null=True)  # 付款日期
+    ar_invoice_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
+
+    def __str__(self):
+        return f"{self.customer.name}"
+
+class InvoiceAPRecord(models.Model):
+    vendor = models.ForeignKey(InvoiceVendor, on_delete=models.CASCADE)  # 关联表
+    invoice_id = models.CharField(max_length=255)
+    invoice_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    company = models.ForeignKey(Carrier, on_delete=models.CASCADE)  # 关联表
+    due_date = models.DateField()  # 截止日期
+    givetoboss_date = models.DateField(blank=True, null=True)  # 付款日期
+    payment_date = models.DateField(blank=True, null=True)  # 付款日期
+    ar_invoice_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
+    purposefor = models.ForeignKey(InvoicePurposeFor, on_delete=models.CASCADE)  # 关联表
+    note = models.CharField(max_length=255, default='',blank=True)
+
+    def __str__(self):
+        return f"{self.vendor.name}"

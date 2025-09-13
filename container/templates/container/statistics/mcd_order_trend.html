@@ -1,0 +1,98 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+    <div class="row"> 
+        <!-- 表格区域 -->
+        <!-- <div class="col-md-6">
+            <h2>Outbound Amount List</h2>
+            <table class="table table-bordered mt-4">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Period</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in result.table %}
+                <tr>
+                    <td>{{ row.product }}</td>
+                    <td>{{ row.quantity }}</td>
+                    <td>{{ row.date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div> -->
+
+        <!-- 图表区域 -->
+        <div class="col-md-12">
+            <h2>Mcd Outbound Chart</h2>
+            <div class="mb-2">
+                <label for="trendSelect">Select Trend: </label>
+                <select id="trendSelect" class="form-select form-select-sm" style="width: 200px; display:inline-block;">
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="cumulative">Cumulative</option>
+                    <option value="moving_average">Moving Average</option>
+                    <option value="growth">Growth (MoM %)</option>
+                </select>
+            </div>
+            <div style="height: 600px; width: 100%; max-width: 900px; margin: auto;">
+                <canvas id="outboundChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const chartData = {{ result|safe }};
+const ctx = document.getElementById('outboundChart').getContext('2d');
+let outboundChart;
+
+function renderChart(type) {
+    const dataBlock = chartData[type];
+    if (!dataBlock) return;
+
+    const datasets = dataBlock.datasets.map(ds => ({
+        ...ds,
+        borderWidth: 1,
+        fill: false,
+        tension: 0.3,
+        borderColor: '#' + Math.floor(Math.random()*16777215).toString(16)
+    }));
+
+    if (outboundChart) outboundChart.destroy();
+
+    outboundChart = new Chart(ctx, {
+        type: type === 'growth' ? 'bar' : 'line',
+        data: {
+            labels: dataBlock.labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', align: 'start', labels: { boxWidth: 12, font:{size:10} } }
+            },
+            scales: {
+                y: { beginAtZero:true, title:{display:true, text: type==='growth'?'Growth (%)':'Quantity (case)'} },
+                x: { title:{display:true, text:(type==='monthly'?'Month':'Week')} }
+            }
+        }
+    });
+}
+
+// 默认显示月趋势
+// renderChart('monthly');
+renderChart('weekly');
+
+// 下拉选择切换趋势
+document.getElementById('trendSelect').addEventListener('change', function(){
+    renderChart(this.value);
+});
+</script>
+
+{% endblock %}

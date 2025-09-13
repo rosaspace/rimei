@@ -16,11 +16,13 @@ urlpatterns = [
     # main page
     path("", views.home, name="index"),
     path("index/", views.index, name="index"),    
-    path("invoice_all/", views.invoice_view, name="invoice_all"),    
+    path("invoice_all/", views.invoice_view, name="invoice_all"),
     path("invoice_unpaid_customer/", views.invoice_unpaid_customer, name="invoice_unpaid_customer"),
     path("invoice_unpaid/", views.invoice_unpaid, name="invoice_unpaid"),
     path("invoice_statement/", views.invoice_statement, name="invoice_statement"),
     path("invoice_pallet_labor/", views.invoice_pallet_labor, name="invoice_pallet_labor"), 
+    path("invoice_ap/", views.invoice_ap_view, name="invoice_ap"),
+    path("invoice_ar/", views.invoice_ar_view, name="invoice_ar"),
 
     path("statement_selected_invoices/", views.statement_selected_invoices, name="statement_selected_invoices"),
     path('delete_statement/', views.delete_statement, name='delete_statement'),
@@ -77,6 +79,8 @@ urlpatterns = [
     path('print_converted_invoice/<str:container_id>/', invoice.print_converted_invoice, name='print_converted_invoice'),
     path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/', invoice.print_customer_invoice, name='print_customer_invoice'),
     path("export_pallet_invoice/", invoice.export_pallet_invoice, name="export_pallet_invoice"),    
+    path("add_ar_invoice/", invoice.add_ar_invoice, name="add_ar_invoice"),
+    path("add_ap_invoice/", invoice.add_ap_invoice, name="add_ap_invoice"),
     
     # Payment
     path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
@@ -129,4 +133,5 @@ urlpatterns = [
     path("statistics_inbound", statistics.statistics_inbound,name="statistics_inbound"),
     path("statistics_outbound", statistics.statistics_outbound,name="statistics_outbound"),
     path("statistics_warehouse", statistics.statistics_warehouse,name="statistics_warehouse"),
+    path("statistics_mcd_trend", statistics.statistics_mcd_trend,name="statistics_mcd_trend"),
 ]

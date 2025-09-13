@@ -7,6 +7,10 @@ from collections import OrderedDict,defaultdict
 from django.shortcuts import render, redirect
 from django.db.models import F, ExpressionWrapper, FloatField, Sum, Q, Min, Max,Count
 from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncWeek
+
+from collections import defaultdict
+import pandas as pd
 
 from ..models import Container,Employee,ClockRecord,ContainerItem,OrderItem,RMProduct
 from .getPermission import get_user_permissions
@@ -413,3 +417,91 @@ def month_workdays(dt) -> int:
         if weekday < 5:
             workdays += 1
     return workdays
+
+def statistics_mcd_trend(request):
+
+    # ✅ ORM 查询
+    order_items = OrderItem.objects.filter(
+        order__outbound_date__isnull=False,
+        product__type='Mcdonalds'
+    )
+
+   # ---------- 转换为 DataFrame ----------
+    weekly_df = pd.DataFrame(list(
+        order_items
+        .annotate(week=TruncWeek('order__outbound_date'))
+        .values('product__name','week')
+        .annotate(total_qty=Sum('quantity'))
+        .order_by('week')
+    ))
+    if not weekly_df.empty:
+        weekly_df['week'] = pd.to_datetime(weekly_df['week'])
+        weekly_df = weekly_df.sort_values('week')
+
+    monthly_df = pd.DataFrame(list(
+        order_items
+        .annotate(month=TruncMonth('order__outbound_date'))
+        .values('product__name','month')
+        .annotate(total_qty=Sum('quantity'))
+        .order_by('month')
+    ))
+    if not monthly_df.empty:
+        monthly_df['month'] = pd.to_datetime(monthly_df['month'])
+        monthly_df = monthly_df.sort_values('month')
+
+    # ---------- 构造 chart 数据函数 ----------
+    def build_chart_data(df, date_field, value_field='total_qty'):
+        if df.empty:
+            return {"labels": [], "datasets": []}
+        labels = sorted(df[date_field].dt.strftime("%Y-%m-%d").unique())
+        products = df['product__name'].unique()
+        datasets = []
+        for p in products:
+            data = []
+            for l in labels:
+                val = df[(df['product__name']==p) & (df[date_field].dt.strftime("%Y-%m-%d")==l)][value_field]
+                data.append(int(val.values[0]) if not val.empty else 0)
+            datasets.append({"label": p, "data": data})
+        return {"labels": labels, "datasets": datasets}
+
+    # ---------- 构造 result ----------
+    result = {}
+
+    # 表格默认显示月趋势
+    table_data = []
+    for _, row in weekly_df.iterrows():
+        table_data.append({
+            "product": row["product__name"],
+            "date": row["week"].strftime("%Y-%m-%d"),
+            "quantity": row["total_qty"]
+        })
+    result['table'] = table_data
+
+    # 各类趋势图表数据
+    result['weekly'] = build_chart_data(weekly_df, 'week')
+    result['monthly'] = build_chart_data(monthly_df, 'month')
+
+    # 累计趋势（基于周）
+    if not weekly_df.empty:
+        weekly_df['cumulative'] = weekly_df.groupby('product__name')['total_qty'].cumsum()
+        result['cumulative'] = build_chart_data(weekly_df, 'week', 'cumulative')
+    
+    # 移动平均趋势（基于周，4周均线）
+    if not weekly_df.empty:
+        weekly_df['moving_avg'] = weekly_df.groupby('product__name')['total_qty'].transform(
+            lambda x: x.rolling(7,1).mean()
+        )
+        result['moving_average'] = build_chart_data(weekly_df, 'week', 'moving_avg')
+
+    # 增长分析（环比增长，按月）
+    if not monthly_df.empty:
+        monthly_df['prev_qty'] = monthly_df.groupby('product__name')['total_qty'].shift(1)
+        monthly_df['mom_growth'] = (monthly_df['total_qty'] - monthly_df['prev_qty']) / monthly_df['prev_qty'] * 100
+        monthly_growth = monthly_df.dropna()
+        result['growth'] = build_chart_data(monthly_growth, 'month', 'mom_growth')
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_statistics_mcdTrend, {
+        'result': result,
+        'user_permissions': user_permissions
+    })

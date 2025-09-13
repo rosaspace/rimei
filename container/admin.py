@@ -7,6 +7,7 @@ from .models import RMOrder, RMCustomer,OrderImage
 from .models import InvoiceCustomer,RMProduct
 from .models import Employee, LogisticsCompany,OrderItem,ClockRecord,ContainerItem
 from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation,ContainerStatement,Manufacturer
+from .models import InvoicePurposeFor,InvoicePaidCustomer,InvoiceVendor,InvoiceARRecord,InvoiceAPRecord
 
 class ContainerAdmin(admin.ModelAdmin):
     list_display = ('container_id', 'plts','railway_date', 'pickup_date', 'delivery_date','empty_date',
@@ -42,6 +43,12 @@ class InvoiceCustomerAdmin(admin.ModelAdmin):
 class InboundCategoryAdmin(admin.ModelAdmin):
     list_display = ('id', 'Type','Name')
 
+class InvoiceARRecordAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'invoice_id','invoice_price','company','due_date','givetoboss_date','givetoboss_date')
+
+class InvoiceAPRecordAdmin(admin.ModelAdmin):
+    list_display = ('vendor', 'invoice_id','invoice_price','company','due_date','givetoboss_date','givetoboss_date','purposefor')
+
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
 admin.site.register(Permission)
@@ -63,3 +70,8 @@ admin.site.register(InboundCategory,InboundCategoryAdmin)
 admin.site.register(RailwayStation)
 admin.site.register(ContainerStatement)
 admin.site.register(Manufacturer)
+admin.site.register(InvoicePaidCustomer)
+admin.site.register(InvoiceVendor)
+admin.site.register(InvoicePurposeFor)
+admin.site.register(InvoiceARRecord,InvoiceARRecordAdmin)
+admin.site.register(InvoiceAPRecord,InvoiceAPRecordAdmin)

@@ -332,11 +332,11 @@ def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,o
     product.availableQTY = product.quantity_for_neworder + product.quantity_diff
     product.pallet = product.Pallet
     product.color = product.Color
-    product.palletnumber = product.shownumber//product.Pallet
-    product.case = product.shownumber % product.Pallet
+    product.palletnumber = 0 if product.Pallet == 0 else product.shownumber // product.Pallet
+    product.case = 0 if product.Pallet == 0 else product.shownumber % product.Pallet
     product.Location = product.Location
     product.ShelfRecord = product.ShelfRecord
-    product.totalPallet = math.ceil(product.quantity / product.Pallet)
+    product.totalPallet = 0 if product.Pallet == 0 else math.ceil(product.quantity / product.Pallet)
 
     return product
 
@@ -350,10 +350,10 @@ def get_quality(product):
         'note': 'Initial stock quantity'
     }
 
-    # 入库记录：ContainerItem + Container 的 empty_date
+    # 入库记录：ContainerItem + Container 的 delivery_date
     inbound_logs = ContainerItem.objects.filter(product=product).select_related('container')
     inbound_list = [{
-        'date': item.container.empty_date if item.container else None,
+        'date': item.container.delivery_date if item.container else None,
         'quantity': item.quantity,
         'operator': getattr(item.container, 'created_user', str(item.container)) if hasattr(item, 'container') else 'N/A',
         'note': getattr(item.container, 'container_id', '')

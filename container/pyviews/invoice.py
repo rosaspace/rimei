@@ -27,6 +27,8 @@ from .pdfextract import extract_invoice_data, extract_customer_invoice_data
 from ..constants import constants_address, constants_view
 from .pdfgenerate import extract_text_from_pdf, converter_customer_invoice
 from .inventory_count import get_month_pallet_number, get_quality, get_product_qty
+from .getPermission import get_user_permissions
+from ..models import InvoicePaidCustomer,Carrier,InvoiceVendor,InvoicePurposeFor
 
 # Invoice
 def print_original_do(request, container_id):
@@ -713,3 +715,27 @@ def add_section_header(title, style, width):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
     return [table, Spacer(1, 6)]
+
+def add_ar_invoice(request):
+    paidcustomer = InvoicePaidCustomer.objects.all()
+    receivedcompany = Carrier.objects.all()
+    user_permissions = get_user_permissions(request.user)  
+    
+    user_permissions = get_user_permissions(request.user)  
+    return render(request, constants_view.template_add_ar_invoice,{'user_permissions': user_permissions,
+    'paidcustomer':paidcustomer,
+    'receivedcompany':receivedcompany,
+    })
+
+def add_ap_invoice(request):
+    vendor = InvoiceVendor.objects.all()
+    receivedcompany = Carrier.objects.all()
+    purposefor = InvoicePurposeFor.objects.all()
+    user_permissions = get_user_permissions(request.user) 
+
+    return render(request, constants_view.template_add_ap_invoice,{'user_permissions': user_permissions,
+    'vendor':vendor,
+    'purposefor':purposefor,
+    'receivedcompany':receivedcompany,
+    })
+

@@ -15,51 +15,22 @@ from django.utils import timezone
 from collections import defaultdict
 
 from .models import Container, RMOrder,RMCustomer,AlineOrderRecord,ContainerStatement
-from .models import RMProduct
+from .models import RMProduct, InvoicePaidCustomer,Carrier,InvoiceAPRecord,InvoiceARRecord
 from .pyviews.getPermission import get_user_permissions
 from .constants import constants_view
 
+# home
 @login_required
 def home(request):
-    return render(request, constants_view.template_login)
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_login, {'user_permissions': user_permissions})
 
 @login_required
 def index(request):
     user_permissions = get_user_permissions(request.user)
-    return render(request, constants_view.template_base,{'user_permissions': user_permissions})
+    return render(request, constants_view.template_base, {'user_permissions': user_permissions})
 
-@login_required
-def simplified_view(request):
-    orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('pickup_date')
-    unfinished_orders = orders.filter(
-        Q(is_canceled=False) &
-        Q(is_updateInventory=False)
-    )
-
-    today = date.today()
-    # 计算本周的周一和周日
-    start_of_week = today - timedelta(days=today.weekday())   # 本周一
-    end_of_week = start_of_week + timedelta(days=6)           # 本周日
-    # 下周的时间范围
-    next_start_of_week = start_of_week + timedelta(days=7)
-    next_end_of_week = next_start_of_week + timedelta(days=6)
-    # 下下周
-    next2_start_of_week = start_of_week + timedelta(days=14)
-    next2_end_of_week = next2_start_of_week + timedelta(days=6)
-
-    user_permissions = get_user_permissions(request.user)
-    return render(request, constants_view.template_simplified_order,{
-        'rimeiorders': unfinished_orders,
-        'user_permissions': user_permissions,
-        'today': today,
-        'start_of_week': start_of_week,
-        'end_of_week': end_of_week,
-        "next_start_of_week": next_start_of_week,
-        "next_end_of_week": next_end_of_week,
-        "next2_start_of_week":next2_start_of_week,
-        "next2_end_of_week":next2_end_of_week
-        })
-
+# invoice
 @login_required(login_url='/login/')
 def invoice_view(request):
     containers = Container.objects.all().exclude(
@@ -69,6 +40,7 @@ def invoice_view(request):
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
 
+@login_required(login_url='/login/')
 def invoice_unpaid_customer(request):
     containers = Container.objects.filter(
         Q(ispay=False, customer_ispay=False) 
@@ -88,6 +60,7 @@ def invoice_unpaid(request):
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
 
+@login_required(login_url='/login/')
 def invoice_pallet_labor(request):
     years = [2025]
     months = list(range(1, 13))  # 1 到 12 月
@@ -252,28 +225,50 @@ def aline_payment_view(request):
     user_permissions = get_user_permissions(request.user)  
     return render(request, constants_view.template_payment_aline,{'orders':alineOrders, 'user_permissions': user_permissions})
 
+def invoice_ap_view(request):
+
+    apRecord = InvoiceAPRecord.objects.all()    
+    user_permissions = get_user_permissions(request.user)    
+
+    return render(request, constants_view.template_ap_invoice,{'user_permissions': user_permissions,
+    'apRecord':apRecord
+    })
+
+def invoice_ar_view(request):
+    
+    arRecord = InvoiceARRecord.objects.all()
+    user_permissions = get_user_permissions(request.user)  
+
+    return render(request, constants_view.template_ar_invoice,{'user_permissions': user_permissions,
+    'arRecord':arRecord
+    })
+
+# container
 @login_required(login_url='/login/')
 def container_advance77(request):
     containers = Container.objects.filter(Q(logistics = 1)).order_by('-delivery_date')
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
 
+@login_required(login_url='/login/')
 def container_omar(request):
     containers = Container.objects.filter(Q(logistics = 2)).exclude(Q(customer = 3)).order_by('-delivery_date')
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
 
+@login_required(login_url='/login/')
 def container_mcd(request):
     containers = Container.objects.filter(Q(customer = 3)).order_by('-delivery_date')
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
 
+@login_required(login_url='/login/')
 def container_metal(request):
     containers = Container.objects.filter(Q(customer = 12)).order_by('-delivery_date')
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
 
-
+# order
 @login_required(login_url='/login/')
 def rimeiorder_view(request):
     orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('-pickup_date')
@@ -362,6 +357,39 @@ def rimeiorder_cancel(request):
         'user_permissions': user_permissions
         })
 
+@login_required(login_url='/login/')
+def simplified_view(request):
+    orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('pickup_date')
+    unfinished_orders = orders.filter(
+        Q(is_canceled=False) &
+        Q(is_updateInventory=False)
+    )
+
+    today = date.today()
+    # 计算本周的周一和周日
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+    # 下周的时间范围
+    next_start_of_week = start_of_week + timedelta(days=7)
+    next_end_of_week = next_start_of_week + timedelta(days=6)
+    # 下下周
+    next2_start_of_week = start_of_week + timedelta(days=14)
+    next2_end_of_week = next2_start_of_week + timedelta(days=6)
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_simplified_order,{
+        'rimeiorders': unfinished_orders,
+        'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        "next_start_of_week": next_start_of_week,
+        "next_end_of_week": next_end_of_week,
+        "next2_start_of_week":next2_start_of_week,
+        "next2_end_of_week":next2_end_of_week
+        })
+
+# general
 @login_required(login_url='/login/')
 def permission_view(request):
     # 查询所有用户及其权限

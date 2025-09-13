@@ -1,0 +1,94 @@
+{% extends "container/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h4>Add AP Invoice</h4>
+    <form method="POST" class="needs-validation" action="{% url 'add_order' %}" novalidate>
+        {% csrf_token %}
+        
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label for="so_num" class="form-label required-label">Vendor</label>
+                <select class="form-select" id="customer_name" name="customer_name" required>
+                    <option value="">Select Vendor...</option>
+                    {% for customer in vendor %}
+                    <option value="{{ customer.id }}">
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>  
+            </div>
+            <div class="col-md-3">
+                <label for="customer_name" class="form-label required-label">Invoice No.</label>
+                <input type="text" class="form-control" id="so_num" name="so_num" 
+                    value="{{ so_no|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="po_num" class="form-label required-label">Amount</label>
+                <input type="text" class="form-control" id="po_num" name="po_num" 
+                    value="{{ po_no|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Paid Company</label>
+                <select class="form-select" id="customer_name" name="customer_name" required>
+                    <option value="">Select Company...</option>
+                    {% for customer in receivedcompany %}
+                    <option value="{{ customer.id }}">
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>  
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label for="order_date" class="form-label  required-label">Due Date</label>
+                <input type="date" class="form-control" id="order_date" name="order_date" required
+                    value="{{ order_date|date:'Y-m-d' }}">
+            </div>
+
+            <div class="col-md-3">
+                <label for="pickup_date" class="form-label required-label">Give to Boss Date:</label>
+                <input type="date" class="form-control" id="pickup_date" name="pickup_date" required
+                    value="{{ pickup_date|date:'Y-m-d' }}">                
+            </div>
+            
+            <div class="col-md-3">
+                <label for="outbound_date" class="form-label">Paid Date:</label>
+                <input type="date" class="form-control" id="outbound_date" name="outbound_date">
+            </div>
+
+            <div class="col-md-3">
+                <label for="order_pdf" class="form-label">Invoice PDF</label>
+                <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-md-6">
+                <label for="plts" class="form-label required-label">Purpose For</label>
+                <select class="form-select" id="customer_name" name="customer_name" required>
+                    <option value="">Select Customer...</option>
+                    {% for customer in purposefor %}
+                    <option value="{{ customer.id }}">
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>  
+            </div>
+            <div class="col-md-6">
+                <label for="description" class="form-label">Note</label>
+                <input type="text" class="form-control" id="description" name="description" 
+                    value="{{ container.content }}">
+            </div>
+        </div>
+                
+        <div class="mt-2">            
+            <button type="submit" class="btn btn-primary" id="saveOrder">
+                Add AP Invoice
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
