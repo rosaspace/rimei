@@ -268,6 +268,12 @@ def container_metal(request):
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
 
+@login_required(login_url='/login/')
+def simplified_container_view(request):
+    containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
+    user_permissions = get_user_permissions(request.user) 
+    return render(request, constants_view.template_simplified_container, {'containers': containers,'user_permissions': user_permissions})
+
 # order
 @login_required(login_url='/login/')
 def rimeiorder_view(request):

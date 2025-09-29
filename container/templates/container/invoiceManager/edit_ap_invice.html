@@ -1,0 +1,95 @@
+{% extends "container/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h4>Edit AP Invoice</h4>
+    <form method="POST" class="needs-validation" action="{% url 'edit_ap_invoice' record.invoice_id %}" novalidate>
+        {% csrf_token %}
+        
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label for="vendor_name" class="form-label required-label">Vendor</label>
+                <select class="form-select" id="customer_name" name="vendor_name" required>
+                    <option value="">Select Vendor...</option>
+                    {% for customer in vendor %}
+                    <option value="{{ customer.id }}" {% if customer.id == record.vendor.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>  
+            </div>
+            <div class="col-md-3">
+                <label for="invoice_id" class="form-label required-label">Invoice No.</label>
+                <input type="text" class="form-control" id="invoice_id" name="invoice_id" 
+                    value="{{ record.invoice_id|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="invoice_price" class="form-label required-label">Amount</label>
+                <input type="text" class="form-control" id="invoice_price" name="invoice_price" 
+                    value="{{ record.invoice_price|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="company_name" class="form-label required-label">Paid Company</label>
+                <select class="form-select" id="customer_name" name="company_name" required>
+                    <option value="">Select Company...</option>
+                    {% for customer in receivedcompany %}
+                    <option value="{{ customer.id }}" {% if customer.id == record.company.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>  
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label for="due_date" class="form-label  required-label">Due Date</label>
+                <input type="date" class="form-control" id="due_date" name="due_date" required
+                    value="{{ record.due_date|date:'Y-m-d' }}">
+            </div>
+
+            <div class="col-md-3">
+                <label for="givetoboss_date" class="form-label required-label">Give to Boss Date:</label>
+                <input type="date" class="form-control" id="givetoboss_date" name="givetoboss_date" required
+                    value="{{ record.givetoboss_date|date:'Y-m-d' }}">                
+            </div>
+            
+            <div class="col-md-3">
+                <label for="paid_date" class="form-label">Paid Date:</label>
+                <input type="date" class="form-control" id="paid_date" name="paid_date"
+                    value="{{ record.payment_date|date:'Y-m-d' }}">
+            </div>
+
+            <div class="col-md-3">
+                <label for="invoice_pdf" class="form-label">Invoice PDF</label>
+                <input type="file" class="form-control" id="invoice_pdf" name="invoice_pdf" accept="application/pdf">
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-md-6">
+                <label for="purpose_for" class="form-label required-label">Purpose For</label>
+                <select class="form-select" id="customer_name" name="purpose_for" required>
+                    <option value="">Select Customer...</option>
+                    {% for customer in purposefor %}
+                    <option value="{{ customer.id }}" {% if customer.id == record.purposefor.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>  
+            </div>
+            <div class="col-md-6">
+                <label for="note" class="form-label">Note</label>
+                <input type="text" class="form-control" id="description" name="note" 
+                    value="{{ container.content }}">
+            </div>
+        </div>
+                
+        <div class="mt-2">            
+            <button type="submit" class="btn btn-primary" id="saveOrder">
+                Save AP Invoice
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

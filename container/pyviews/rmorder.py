@@ -114,7 +114,7 @@ def edit_order(request, so_num):
             return render(request, constants_view.template_edit_order, {
                 'order': order,
                 'customers': customers,
-                'order_items': orderitems_new,
+                'order_items': orderitems_new, 
                 'products': products,  # 加上这行
                 'total_weight': total_weight,  # ✅ 加入模板变量
                 'total_quantity': total_quantity,  # ✅ 加入模板变量

@@ -44,10 +44,10 @@ class InboundCategoryAdmin(admin.ModelAdmin):
     list_display = ('id', 'Type','Name')
 
 class InvoiceARRecordAdmin(admin.ModelAdmin):
-    list_display = ('customer', 'invoice_id','invoice_price','company','due_date','givetoboss_date','givetoboss_date')
+    list_display = ('customer', 'invoice_id','invoice_price','company','due_date','givetoboss_date','givetoboss_date','note')
 
 class InvoiceAPRecordAdmin(admin.ModelAdmin):
-    list_display = ('vendor', 'invoice_id','invoice_price','company','due_date','givetoboss_date','givetoboss_date','purposefor')
+    list_display = ('vendor', 'invoice_id','invoice_price','company','due_date','givetoboss_date','givetoboss_date','purposefor','note')
 
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)

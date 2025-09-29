@@ -159,7 +159,7 @@
       
             {% if 'Invoice' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_unpaid_customer invoice_unpaid invoice_all invoice_pallet_labor' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_unpaid_customer invoice_unpaid invoice_all invoice_pallet_labor invoice_ar invoice_ap' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Invoice
               </a>
               <ul class="dropdown-menu">
@@ -259,7 +259,10 @@
 
             {% if 'Simplified' in user_permissions %}
             <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.url_name == 'simplified_view' %}active{% endif %}" href="{% url 'simplified_view' %}">Simplified</a>
+              <a class="nav-link {% if request.resolver_match.url_name == 'simplified_view' %}active{% endif %}" href="{% url 'simplified_view' %}">Sim_Order</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'simplified_container_view' %}active{% endif %}" href="{% url 'simplified_container_view' %}">Sim_Container</a>
             </li>
             {% endif %}
       

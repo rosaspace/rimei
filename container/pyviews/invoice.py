@@ -13,6 +13,7 @@ from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+from django.contrib import messages
 
 import os
 import re
@@ -28,7 +29,7 @@ from ..constants import constants_address, constants_view
 from .pdfgenerate import extract_text_from_pdf, converter_customer_invoice
 from .inventory_count import get_month_pallet_number, get_quality, get_product_qty
 from .getPermission import get_user_permissions
-from ..models import InvoicePaidCustomer,Carrier,InvoiceVendor,InvoicePurposeFor
+from ..models import InvoicePaidCustomer,Carrier,InvoiceVendor,InvoicePurposeFor,InvoiceAPRecord,InvoiceARRecord
 
 # Invoice
 def print_original_do(request, container_id):
@@ -738,4 +739,92 @@ def add_ap_invoice(request):
     'purposefor':purposefor,
     'receivedcompany':receivedcompany,
     })
+
+def edit_ap_invoice(request, invoice_id):
+
+    try:
+        if request.method == "GET":
+            ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
+            vendor = InvoiceVendor.objects.all()
+            receivedcompany = Carrier.objects.all()
+            purposefor = InvoicePurposeFor.objects.all()
+            user_permissions = get_user_permissions(request.user) 
+                        
+            return render(request, constants_view.template_edit_ap_invoice, {
+                'record': ap_record,
+                'vendor':vendor,
+                'purposefor':purposefor,
+                'receivedcompany':receivedcompany,
+                'user_permissions': user_permissions,
+            })
+        elif request.method == "POST":
+            try:
+                ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
+
+                vendor = InvoiceVendor.objects.get(id=request.POST.get('vendor_name'))
+                receivedcompany = Carrier.objects.get(id=request.POST.get('company_name'))
+                purposefor = InvoicePurposeFor.objects.get(id=request.POST.get('purpose_for'))
+
+                ap_record.vendor = vendor
+                ap_record.company = receivedcompany
+                ap_record.purposefor = purposefor
+                ap_record.invoice_id = request.POST.get('invoice_id')
+                ap_record.invoice_price = request.POST.get('invoice_price')
+                ap_record.due_date = clean_date(request.POST.get('due_date'))
+                ap_record.givetoboss_date = clean_date(request.POST.get('givetoboss_date'))
+                ap_record.payment_date = clean_date(request.POST.get('paid_date'))
+                ap_record.note = request.POST.get('note')
+                ap_record.ar_invoice_pdfname = request.POST.get('note') or None 
+
+                # 处理PDF文件
+                if 'invoice_pdf' in request.FILES:
+                    uploaded_file = request.FILES['invoice_pdf']
+                    ap_record.ar_invoice_pdfname = uploaded_file.name  # 保存文件名到模型字段（如果需要）
+
+                    # 打印 PDF 文件名
+                    print(f"Uploaded PDF file name: {order.order_pdfname}")
+
+                    # 构造保存路径
+                    order_dir = os.path.join(settings.MEDIA_ROOT, "invoices", "APInvoice")
+                    os.makedirs(order_dir, exist_ok=True)  # 确保目录存在
+                    file_path = os.path.join(order_dir, uploaded_file.name)
+
+                    # 保存文件
+                    with open(file_path, 'wb+') as destination:
+                        for chunk in uploaded_file.chunks():
+                            destination.write(chunk)
+
+                ap_record.save()
+                
+                return redirect('invoice_ap')
+            except Exception as e:
+                messages.error(request, f'更新信息失败：{str(e)}')
+                ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
+                vendor = InvoiceVendor.objects.all()
+                receivedcompany = Carrier.objects.all()
+                purposefor = InvoicePurposeFor.objects.all()
+                user_permissions = get_user_permissions(request.user) 
+                            
+                return render(request, constants_view.template_edit_ap_invoice, {
+                    'record': ap_record,
+                    'vendor':vendor,
+                    'purposefor':purposefor,
+                    'receivedcompany':receivedcompany,
+                    'user_permissions': user_permissions,
+                })
+        
+        
+    except InvoiceAPRecord.DoesNotExist:
+        messages.error(request, '订单不存在')
+        return redirect('invoice_ap')
+
+
+def clean_date(value):
+    if value in ["", None]:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
 

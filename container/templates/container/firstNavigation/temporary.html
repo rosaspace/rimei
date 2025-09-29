@@ -1,9 +1,9 @@
 {% extends "container/base.html" %}
 {% block content %}
 
-<div class="row">
+<div class="row mb-3">
     <div class="col-md-3">
-        <h4>Import Excel -> Upload Inventory</h4>    
+        <h4>Import Inventory</h4>    
         <!-- Import Inventory -->
         <form action="/import_inventory/" method="post" enctype="multipart/form-data">
             <div class="input-group">
@@ -14,7 +14,7 @@
         </form>
     </div>
     <div class="col-md-3">
-        <h4>Import Excel -> Upload Aline Order</h4>
+        <h4>Import Aline</h4>
         <!-- Import Inventory -->
         <form action="/import_aline/" method="post" enctype="multipart/form-data">
             <div class="input-group">
@@ -25,7 +25,52 @@
         </form>
     </div>
     <div class="col-md-3">
-        <h4>Export Pallets -> Download</h4>
+        <h4>Import Accounting</h4>
+        <form action="/import_accounting/" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                {% csrf_token %}
+                <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
+                <button type="submit" class="btn btn-primary">Upload Excel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <h4>Print Label</h2>
+        <form action="/print_label_only/" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                {% csrf_token %}
+                <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
+                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
+                <button type="submit" class="btn btn-success" id="printLabel">
+                    Print Label
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <h4>Print Label with Lot</h2>
+        <form action="/print_label_containerid_lot/" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                {% csrf_token %}
+                <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
+                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
+                <input type="text" name="containerid" id="containerid" class="form-control" placeholder="ContainerID" required>
+                <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="Lot Number" required>
+                <button type="submit" class="btn btn-success" id="printLabel">
+                    Print Label
+                </button>
+            </div>
+        </form>
+    </div>
+    
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <h4>Export Pallets</h4>
         <form method="GET" action="{% url 'export_pallet' %}" class="mb-3">
             <div class="input-group">
                 <select name="year" class="form-control" required>
@@ -45,67 +90,38 @@
         </form>
     </div>
     <div class="col-md-3">
-        <h4>Export Inventory -> Download</h4>
+        <h4>Export Inventory</h4>
         <div class="input-group">
             <a href="{% url 'export_stock' %}?export=1" class="btn btn-primary">Export Inventory</a>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-3">
-        <h4>Print Label</h2>
-        <form action="/print_label_only/" method="post" enctype="multipart/form-data">
-            <div class="input-group">
-                {% csrf_token %}
-                <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
-                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
-                <button type="submit" class="btn btn-primary" id="printLabel">
-                    Print Label
-                </button>
-            </div>
-        </form>
-    </div>
-    <div class="col-md-6">
-        <h4>Print Label with Lot</h2>
-        <form action="/print_label_containerid_lot/" method="post" enctype="multipart/form-data">
-            <div class="input-group">
-                {% csrf_token %}
-                <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
-                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
-                <input type="text" name="containerid" id="containerid" class="form-control" placeholder="ContainerID" required>
-                <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="Lot Number" required>
-                <button type="submit" class="btn btn-primary" id="printLabel">
-                    Print Label
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
 <hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
 
 <div class="row mt-4">
     <div class="col-md-6">
         <h4>Email Content Preview</h4>
-        <form method="post" action="{% url 'preview_email'%}?type=officedepot"> 
+        <form method="post" action="{% url 'preview_email'%}"> 
             {% csrf_token %}
             <div class="row">
                 <div class="col-6"> 
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                        <input type="text" name="officedepot_number" id="officedepot_number" class="form-control w-auto" placeholder="Enter OfficeDepot Number" required style="min-width: 200px;">
-                        <button type="submit" class="btn btn-primary">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <input type="text" name="officedepot_number" id="officedepot_number" class="form-control" placeholder="OfficeDepot Number" style="width:180px;" required style="min-width: 100px;">
+                        <button type="submit" class="btn btn-outline-primary" name="action" value="officedepot">
                             <i class="fas fa-plus"></i> OfficeDepot
                         </button>
                     </div>
                 </div>
                 <div class="col-6"> 
-                    <a href="{% url 'preview_email'%}?type=inventory" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Inventory
-                    </a>
-                    <a href="{% url 'preview_email'%}?type=default" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Order Received
-                    </a>
-                    <a href="{% url 'container_advance77' %}" class="btn btn-secondary ms-2">Back</a>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="submit" name="action" value="inventory" class="btn btn-outline-primary">
+                            <i class="fas fa-plus"></i> Inventory
+                        </button>
+                        <button type="submit" name="action" value="default" class="btn btn-outline-primary">
+                            <i class="fas fa-plus"></i> Order Received
+                        </button>
+                    </div>
                 </div>
             </div>
         </form>
@@ -119,7 +135,7 @@
 
                 <div class="mb-3">
                     <a href="mailto:{{ recipient }}?subject={{ subject|urlencode }}&body={{ body|urlencode }}" 
-                        class="btn btn-primary">
+                        class="btn btn-secondary">
                         <i class="fas fa-envelope"></i> Open in Outlook
                     </a>
                 </div>

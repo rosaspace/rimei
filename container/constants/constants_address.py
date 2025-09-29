@@ -122,7 +122,7 @@ LABEL_HEIGHT = (PAGE_HEIGHT - MARGIN_TOP * 2) / 5  # Five rows per page
 
 # Font size
 FONT_SIZE = 60  # Larger font size
-# FONT_SIZE = 44  # Larger font size
+# FONT_SIZE =  50  # Larger font size
 # FONT_SIZE = 30  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size

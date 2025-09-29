@@ -1,0 +1,193 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="container">
+    <h4>Print Container</h4>
+    <div class="row">
+        <div class="d-flex flex-wrap align-items-start">
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary  w-100" id="printDetail">Print Detail</a>
+            </div>
+            <div class="me-2 mb-2">
+                <button class="btn btn-primary  w-100" id="printDeliveryOrder">Delivery Order</a>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-2 border-2 opacity-100">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- 左侧：标题和取消订单按钮 -->
+        <div class="d-flex align-items-center">
+            <h4>Container Info</h4>
+        </div>
+        <div class="ml-auto">
+            <a href="{% url 'simplified_container_view' %}" class="btn btn-secondary ms-2">Back</a>
+        </div>
+    </div>
+
+    <div class="container-form">
+        <form id="edit-container-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_container' container.container_id %}">
+            {% csrf_token %}
+            <div class="row mb-2">
+                <div class="col-md-2">
+                    <label class="form-label"><strong>Container ID</strong></label>
+                    <div class="container-id-display">{{ container.container_id }}</div>
+                </div>
+                <div class="col-md-2">
+                    <label for="pickup-number" class="form-label"><strong>Pickup Number</strong></label>
+                    <div class="container-id-display" >{{ container.pickup_number }}</div>
+                </div>
+                <div class="col-md-2">
+                    <label for="lot_number" class="form-label"><strong>Lot Number</strong></label>
+                    <div class="container-id-display" >{{ container.lot }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Container Type</strong></label>
+                    <div class="container-id-display" >{{ container.inboundCategory.Type }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Manufacturer</strong></label>
+                    <div class="container-id-display" >{{ container.manufacturer.name }}</div>
+                </div>                
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <label for="customer_name" class="form-label"><strong>Customer</strong></label>
+                    <div class="container-id-display" >{{ container.customer.name }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label for="logistics_name" class="form-label"><strong>Logistics</strong></label>
+                    <div class="container-id-display" >{{ container.logistics.name }}</div>
+                </div>            
+                <div class="col-md-3">
+                    <label for="station_name" class="form-label"><strong>Railway Station</strong></label>
+                    <div class="container-id-display" >{{ container.railwayStation.name }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label for="carrier_name" class="form-label"><strong>Carrier</strong></label>
+                    <div class="container-id-display" >{{ container.Carrier.name }}</div>
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <label for="railway-date" class="form-label"><strong>Railway Date</strong>/label>
+                    <input type="date" class="form-control" id="railway-date" name="railway_date" 
+                        value="{{ container.railway_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="pickup-date" class="form-label"><strong>Pickup Date</strong></label>
+                    <input type="date" class="form-control" id="pickup-date" name="pickup_date" 
+                        value="{{ container.pickup_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="delivery-date" class="form-label"><strong>Delivery Date</strong></label>
+                    <input type="date" class="form-control" id="delivery-date" name="delivery_date" 
+                        value="{{ container.delivery_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="empty-date" class="form-label"><strong>Empty Date</strong></label>
+                    <input type="date" class="form-control" id="empty-date" name="empty_date" 
+                        value="{{ container.empty_date|date:'Y-m-d' }}">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-1">
+                    <label for="plts" class="form-label"><strong>PLTS</strong></label>
+                    <div class="container-id-display" >{{ container.plts }}</div>
+                </div>
+                <div class="col-md-2">
+                    <label for="plts" class="form-label"><strong>Weight</strong></label>
+                    <div class="container-id-display" >{{ container.weight }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label for="pickup-number" class="form-label"><strong>REF NO</strong></label>
+                    <div class="container-id-display" >{{ container.refnumber }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label for="lot_number" class="form-label"><strong>MBL</strong></label>
+                    <div class="container-id-display" >{{ container.mbl }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label for="container-pdf" class="form-label"><strong>Container PDF</strong></label>
+                    <p class="text-muted mb-0">{{ container.container_pdfname }}</p>                   
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-md-12">
+                    <label for="description" class="form-label"><strong>Description</strong></label>
+                    <div class="container-id-display" >{{ container.content }}</div>
+                </div>
+            </div>
+
+            <!-- 添加Container项目表格 -->
+            <div class="row mb-2">
+                <div class="col-12">
+                    <div class="row align-items-center">
+                        <div class="col d-flex justify-content-between align-items-center">
+                            <!-- <h5>Container Items</h5> -->
+                        </div>
+                    </div>
+                    <table class="table table-bordered mb-0"  id="orderTable">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Quantity</th> 
+                                <th>Pallet</th>
+                                <th>Case</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in container_items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center" ><span>{{ item.product.name }}</span></div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center" ><span>{{ item.quantity }}</span></div>
+                                </td>
+                                <td class="align-middle">
+                                    <div class="d-flex align-items-center" ><span>{{ item.pallet_qty }}</span></div>
+                                </td>
+                                <td class="align-middle">
+                                    <div class="d-flex align-items-center" ><span>{{ item.case_qty }}</span></div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div>
+                        <p class="mb-0">Total Quantity: <strong>{{ total_quantity }}</strong> cases</p>
+                        <p class="mb-0">Total Pallet: <strong>{{ total_pallet }}</strong> plts</p>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const containerID = '{{ container.container_id }}';
+
+        // 打印详单
+        document.getElementById('printDetail').addEventListener('click', function() {
+            window.open(`/print_container_detail/${containerID}/`, '_blank');
+        });
+
+        // 打印标签
+        document.getElementById('printDeliveryOrder').addEventListener('click', function() {
+            window.open(`/print_container_delivery_order/${containerID}/`, '_blank');
+        });
+
+    });
+    
+</script>
+
+{% endblock %}

@@ -21,7 +21,8 @@ from ..constants import constants_address,constants_view
 from ..constants import email_constants
 from .pdfgenerate import print_containerid_lot
 from .getPermission import get_user_permissions
-from ..models import Container,RMProduct,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation,Carrier
+from ..models import Container,RMProduct,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation
+from ..models import InvoiceAPRecord,InvoiceVendor,Carrier,InvoicePurposeFor
 
 # Temp
 def print_label_only(request):
@@ -171,6 +172,45 @@ def import_aline(request):
     
     return JsonResponse({"error": "No file uploaded"}, status=400)
 
+def import_accounting(request):
+    if request.method == "POST" and request.FILES.get("excel_file"):
+        excel_file = request.FILES["excel_file"]
+
+        # Read the Excel file into a DataFrame
+        df = pd.read_excel(excel_file, engine='openpyxl')
+
+        # ✅ 固定选项对象
+        fixed_vendor = InvoiceVendor.objects.get(id=1)
+        fixed_company = Carrier.objects.get(id=1)
+        fixed_purpose = InvoicePurposeFor.objects.get(id=2)
+
+        # Ensure column names match the model fields
+        for index, row in df.iterrows():
+            # 处理日期字段
+            def parse_date(value):
+                if pd.isna(value):
+                    return None
+                if isinstance(value, datetime):
+                    return value.date()
+                return value  # 假如已经是 str 或 date
+
+            # Create RMProduct instance
+            product = InvoiceAPRecord.objects.create(
+                vendor = fixed_vendor,
+                invoice_id = row["Invoice No."],
+                invoice_price = row["Amount"],
+                company = fixed_company,  
+                due_date = parse_date(row["Due Date"]),
+                givetoboss_date = parse_date(row["Give to BOSS Date"]),
+                payment_date = parse_date(row["Paid Date"]),
+                purposefor = fixed_purpose,
+                note = row["Notes"],
+            )
+
+        return JsonResponse({"message": "Excel data imported successfully!"})
+    
+    return JsonResponse({"error": "No file uploaded"}, status=400)
+
 def export_pallet(request):
     # 获取请求中的月份和年份
     month = request.GET.get('month')
@@ -262,7 +302,7 @@ def format_worksheet(ws):
 
 # 邮件  
 def preview_email(request):
-    email_type = request.GET.get("type", "inventory")
+    email_type = request.POST.get("action")
     officedepot_id = request.POST.get('officedepot_number')
     print("officedepot_id: ",officedepot_id)
 

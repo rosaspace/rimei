@@ -236,7 +236,7 @@ def print_order_mcd(request, so_num):
         "07604-034": "GF041124-S",
         "07605-039": "GF100524-M",
         "07606-039": "GF100524-L",
-        "07607-024": "GF100524-XL",
+        "07607-024": "GF052015-XL",
         "07326-024": "GF072124B",
         # Add more mappings if needed
     }

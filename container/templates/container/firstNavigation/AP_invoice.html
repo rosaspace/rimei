@@ -20,19 +20,25 @@
                 <th>BossDate</th>
                 <th>PayDate</th>
                 <th>PurposeFor</th>
+                <th>Note</th>
             </tr>
         </thead>
         <tbody>
             {% for item in apRecord %}
             <tr>
                 <td>{{ item.vendor.name }}</td>
-                <td>{{ item.invoice_id }}</td>
+                <td>
+                    <a href="{% url 'edit_ap_invoice' item.invoice_id %}" class="text-primary text-decoration-underline">
+                        {{ item.invoice_id }}
+                    </a>
+                </td>
                 <td>$ {{ item.invoice_price }}</td>
                 <td>{{ item.company.shortname }}</td>
                 <td>{{ item.due_date |date:"m/d/Y"}}</td>
                 <td>{{ item.givetoboss_date |date:"m/d/Y"}}</td>
                 <td>{{ item.payment_date |date:"m/d/Y"}}</td>
                 <td>{{ item.purposefor.name }}</td>
+                <td>{{ item.note }}</td> 
             </tr>
             {% endfor %}
         </tbody>

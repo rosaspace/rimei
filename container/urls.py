@@ -11,7 +11,9 @@ urlpatterns = [
     path('register/', login.register_view, name='register'),
     path("logout", login.logout_view, name="logout"),
     path("simplified_view/", views.simplified_view, name="simplified_view"),
-    path("edit_order_simple/<str:so_num>/", rmorder.edit_order_simple, name="edit_order_simple"),     
+    path("simplified_container_view/", views.simplified_container_view, name="simplified_container_view"),
+    path("edit_order_simple/<str:so_num>/", rmorder.edit_order_simple, name="edit_order_simple"),
+    path("edit_container_simple/<str:container_id>/", container.edit_container_simple, name="edit_container_simple"),  
 
     # main page
     path("", views.home, name="index"),
@@ -81,6 +83,7 @@ urlpatterns = [
     path("export_pallet_invoice/", invoice.export_pallet_invoice, name="export_pallet_invoice"),    
     path("add_ar_invoice/", invoice.add_ar_invoice, name="add_ar_invoice"),
     path("add_ap_invoice/", invoice.add_ap_invoice, name="add_ap_invoice"),
+    path("edit_ap_invoice/<str:invoice_id>/", invoice.edit_ap_invoice, name="edit_ap_invoice"),
     
     # Payment
     path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
@@ -101,6 +104,7 @@ urlpatterns = [
     # Temporary
     path("import_inventory/", temporary.import_inventory, name="import_inventory"), 
     path("import_aline/", temporary.import_aline, name="import_aline"), 
+    path("import_accounting/", temporary.import_accounting, name="import_accounting"),
     path('export_pallet/',temporary.export_pallet,name='export_pallet'),    
     path("preview_email/", temporary.preview_email,name="preview_email"), 
     path('order_email/<str:so_num>/', temporary.order_email, name='order_email'),

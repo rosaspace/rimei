@@ -18,7 +18,8 @@
                 <th>Company</th>
                 <th>DueDate</th>
                 <th>BossDate</th>
-                <th>PayDate</th>
+                <th>ReceivedDate</th>
+                <th>Note</th>
             </tr>
         </thead>
         <tbody>
@@ -31,6 +32,7 @@
                 <td>{{ item.due_date |date:"m/d/Y"}}</td>
                 <td>{{ item.givetoboss_date |date:"m/d/Y"}}</td>
                 <td>{{ item.payment_date |date:"m/d/Y"}}</td>
+                <td>{{ item.note }}</td>
             </tr>
             {% endfor %}
         </tbody>

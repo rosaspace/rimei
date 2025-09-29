@@ -266,6 +266,39 @@ def edit_container(request, container_id):
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+def edit_container_simple(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+    
+    if request.method == 'GET':
+        products = RMProduct.objects.all().order_by('name')
+        container_items = ContainerItem.objects.filter(container=container)
+        container_items_new = get_product_qty_with_inventory_from_container(container_items)
+        total_quantity = sum(int(item.quantity) for item in container_items_new)
+        total_pallet = sum(int(item.pallet_qty) for item in container_items_new)
+        customers = InvoiceCustomer.objects.all()
+        logistics = LogisticsCompany.objects.all()
+        inboundCategory = InboundCategory.objects.all()
+        manufacturer = Manufacturer.objects.all()
+        railstation = RailwayStation.objects.all()
+        carrier = Carrier.objects.all()
+
+        # 显示编辑页面
+        return render(request, constants_view.template_edit_simple_container, {
+            'container': container, 
+            "products": products,
+            'customers': customers,
+            'logistics': logistics,
+            'inboundCategory':inboundCategory,
+            'manufacturer':manufacturer,
+            'railstation':railstation,
+            'carrier':carrier,
+            "container_items":container_items_new,
+            'total_quantity': total_quantity,  # ✅ 加入模板变量
+            'total_pallet':total_pallet,
+        })
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 # 更新库存
 def receivedin_inventory(request, container_id):
     print("-------------receivedin_inventory--------------")
@@ -642,3 +675,4 @@ def print_container_delivery_order(request, container_num):
         response = HttpResponse(pdf_file.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
         return response
+

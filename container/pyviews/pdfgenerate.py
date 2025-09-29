@@ -43,6 +43,8 @@ def print_pickuplist(target_date):
     weekday_str = target_date.strftime('%A').upper()
     date_str = target_date.strftime('%m/%d')
 
+    title_font_size = 20
+
     # 查询 RMOrder 表中的 Pickup No.
     pickup_orders = RMOrder.objects.filter(
         pickup_date=target_date.date()
@@ -87,11 +89,11 @@ def print_pickuplist(target_date):
     c.drawString(left_margin, y, "PICKUPS:")
 
     # Pickup 编号列表
-    y -= 50
-    c.setFont("Helvetica", 24)
+    y -= 30
+    c.setFont("Helvetica", title_font_size)
     for num in pickup_numbers:
         c.drawString(left_margin, y, num)
-        y -= 50
+        y -= 30
 
     # Delivery 标签
     if not delivery_numbers:
@@ -101,11 +103,11 @@ def print_pickuplist(target_date):
     c.drawString(left_margin, y, "Delivery:")
 
     # Delivery 编号列表
-    y -= 50
-    c.setFont("Helvetica", 24)
+    y -= 30
+    c.setFont("Helvetica", title_font_size)
     for num in delivery_numbers:
         c.drawString(left_margin, y, num)
-        y -= 50
+        y -= 30
 
     c.save()
     return response

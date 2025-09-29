@@ -26,7 +26,9 @@ template_generete_monthLabor = 'container/containerManager/generete_monthLabor.h
 template_add_order = 'container/rmorder/add_order.html'
 template_edit_order = 'container/rmorder/edit_order.html'
 template_edit_simple_order = 'container/rmorder/edit_order_simple.html'
+template_edit_simple_container = 'container/containerManager/edit_container_simple.html'
 template_simplified_order = 'container/rmorder/simplified_order.html'
+template_simplified_container = 'container/rmorder/simplified_container.html'
 
 # weekrecord
 template_add_record = 'container/weekrecord/add_record.html'
@@ -39,6 +41,8 @@ template_edit_aline = 'container/invoiceManager/edit_aline.html'
 template_statement_invoice_preview = "container/invoiceManager/statement_invoice_preview.html"
 template_add_ar_invoice = 'container/invoiceManager/add_ar_invice.html'
 template_add_ap_invoice = 'container/invoiceManager/add_ap_invice.html'
+template_edit_ar_invoice = 'container/invoiceManager/edit_ar_invice.html'
+template_edit_ap_invoice = 'container/invoiceManager/edit_ap_invice.html'
 
 # inventory
 template_order_history = 'container/inventory/order_history.html'

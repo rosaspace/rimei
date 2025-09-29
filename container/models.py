@@ -374,10 +374,11 @@ class InvoiceARRecord(models.Model):
     invoice_id = models.CharField(max_length=255)
     invoice_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     company = models.ForeignKey(Carrier, on_delete=models.CASCADE)  # 关联表
-    due_date = models.DateField()  # 截止日期
+    due_date = models.DateField(blank=True, null=True)  # 截止日期
     givetoboss_date = models.DateField(blank=True, null=True)  # 付款日期
     payment_date = models.DateField(blank=True, null=True)  # 付款日期
-    ar_invoice_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
+    ar_invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 上传的PDF文件名
+    note = models.CharField(max_length=255, default='',blank=True)
 
     def __str__(self):
         return f"{self.customer.name}"
@@ -387,10 +388,10 @@ class InvoiceAPRecord(models.Model):
     invoice_id = models.CharField(max_length=255)
     invoice_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     company = models.ForeignKey(Carrier, on_delete=models.CASCADE)  # 关联表
-    due_date = models.DateField()  # 截止日期
+    due_date = models.DateField(blank=True, null=True)  # 截止日期
     givetoboss_date = models.DateField(blank=True, null=True)  # 付款日期
     payment_date = models.DateField(blank=True, null=True)  # 付款日期
-    ar_invoice_pdfname = models.CharField(max_length=255, blank=True)  # 上传的PDF文件名
+    ar_invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 上传的PDF文件名
     purposefor = models.ForeignKey(InvoicePurposeFor, on_delete=models.CASCADE)  # 关联表
     note = models.CharField(max_length=255, default='',blank=True)
 
