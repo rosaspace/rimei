@@ -236,7 +236,7 @@ def print_weekly_pickuplist(start_date):
     c.save()
     return response
 
-def print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date):
+def print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date, spec, showLot = True):
     try:
         label_count = int(label_count) if label_count is not None else 0
     except ValueError:
@@ -285,7 +285,8 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
                 c.setFont("Helvetica", constants_address.FONT_SIZE_Lot)  # Smaller font size for the new text
                 text_y_small = text_y - 30  # Position for the smaller text below the main label
                 c.drawCentredString(text_x, text_y_small, f"{container_id}    {current_date}")
-                c.drawCentredString(text_x, text_y_small - 20, f"Lot: {lot_number}")
+                if showLot:
+                    c.drawCentredString(text_x, text_y_small - 20, f"Lot: {lot_number}   Qty: {spec}")
     
                 label_count -= 1  # Reduce remaining label count
 
@@ -369,6 +370,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
         ["Chassis", "", "", ""],
         ["Chassis split", "", "", ""],
         ["OW TICKET", "", "", ""],
+        ["Overweight", "", "", ""],
         ["Pre-pull", "", "", ""],
         ["Yard storage", "", "", ""],
         ["Empty container relocate/SOC", "", "", ""],
@@ -488,7 +490,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
 
     # 绘制表格
     table.wrapOn(c, width, height)
-    table.drawOn(c, 40, height - 650 - y_offset)
+    table.drawOn(c, 40, height - 690 - y_offset)
 
     # 关闭 canvas 并写入 buffer
     c.save()
@@ -546,30 +548,36 @@ def print_checklist_template(title,filename, contentTitle, container_info,can_li
             c.line(x_line_start, y - 2, x_line_start + line_length, y - 2)
             y -= line_spacing
 
+        x_line_1 = 80
+        x_line_2 = 210
+        x_line_3 = 290
+        x_line_4 = 370
+
         if key == "Total Pallets":
             # 插入子表头
             c.setFont(font_Helvetica_Bold, 11)
             c.drawString(x_sub_table + 0, y, "Size")
-            c.drawString(x_sub_table + 100, y, "Name")
-            c.drawString(x_sub_table + 220, y, "CTNS")
-            # c.drawString(x_sub_table + 280, y, "CTNS")
-            c.drawString(x_sub_table + 340, y, "PLTS")
+            c.drawString(x_sub_table + x_line_1 + 10, y, "Name")
+            c.drawString(x_sub_table + x_line_2, y, "CTNS")
+            c.drawString(x_sub_table + x_line_3, y, "PLTS")
+            c.drawString(x_sub_table + x_line_4, y, "Case")
             y -= 20
 
             c.setFont("Helvetica", 11)
             for item in can_liner_details:
                 c.drawString(x_sub_table, y, item["Size"])
 
-                c.drawString(x_sub_table + 100, y, item["Name"])
-                c.line(x_sub_table + 80, y - 2, x_sub_table + 180, y - 2)  # Name 下划线
+                c.drawString(x_sub_table + x_line_1 + 10, y, item["Name"])
+                c.line(x_sub_table + x_line_1 - 10, y - 2, x_sub_table + x_line_1 + 100, y - 2)  # Name 下划线
 
-                c.drawString(x_sub_table + 220, y, item["Qty"])
-                c.line(x_sub_table + 200, y - 2, x_sub_table + 300, y - 2)  # QTY 下划线
+                c.drawString(x_sub_table + x_line_2 + 10, y, item["Qty"])
+                c.line(x_sub_table + x_line_2 - 10, y - 2, x_sub_table + x_line_2 + 50, y - 2)  # QTY 下划线
 
-                # c.drawString(x_sub_table + 280, y, "CTNS")
+                c.drawString(x_sub_table + x_line_3 + 10, y, item["PLTS"])
+                c.line(x_sub_table + x_line_3 - 10, y - 2, x_sub_table + x_line_3 + 50, y - 2)  # QTY 下划线
 
-                c.drawString(x_sub_table + 340, y, item["PLTS"])
-                c.line(x_sub_table + 320, y - 2, x_sub_table + 400, y - 2)  # QTY 下划线
+                c.drawString(x_sub_table + x_line_4 + 10, y, item["Case"])
+                c.line(x_sub_table + x_line_4 - 10, y - 2, x_sub_table + x_line_4 + 50, y - 2)  # Case 下划线
 
                 y -= 20
 

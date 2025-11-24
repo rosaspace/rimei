@@ -63,7 +63,7 @@
                     </td>
 
                     <td>
-                        {% if container.customer.name != "GoldenFeather" and container.customer.name != "Metal Studs" %}
+                        {% if container.customer.id != 3 and container.customer.id != 12 %}
                             {{ container.customer_invoiceId }}
                         {% else %}
                             <!-- or leave blank -->
@@ -71,35 +71,35 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if container.customer.name != "GoldenFeather" and container.customer.name != "Metal Studs" %}
+                        {% if container.customer.id != 3 and container.customer.id != 12 %}
                             {{ container.customer_price }}
                         {% else %}
                             -
                         {% endif %}
                     </td>
                     <td>
-                        {% if container.customer.name != "GoldenFeather" and container.customer.name != "Metal Studs" %}
+                        {% if container.customer.id != 3 and container.customer.id != 12 %}
                             {{ container.customer_invoice_date|date:"m/d/Y" }}
                         {% else %}
                             -
                         {% endif %}
                     </td>
                     <td>
-                        {% if container.customer.name != "GoldenFeather" and container.customer.name != "Metal Studs" %}
+                        {% if container.customer.id != 3 and container.customer.id != 12 %}
                             {{ container.customer_due_date|date:"m/d/Y" }}
                         {% else %}
                             -
                         {% endif %}
                     </td>
                     <td>
-                        {% if container.customer.name != "GoldenFeather" and container.customer.name != "Metal Studs" %}
+                        {% if container.customer.id != 3 and container.customer.id != 12 %}
                             {{ container.customer_payment_date|date:"m/d/Y" }}
                         {% else %}
                             -
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        {% if container.customer.name != "GoldenFeather" and container.customer.name != "Metal Studs"%}
+                        {% if container.customer.id != 3 and container.customer.id != 12 %}
                             {% if container.customer_ispay %}
                             <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
                             {% else %}

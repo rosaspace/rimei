@@ -230,7 +230,7 @@ def show_pallet_number(request):
     total_plts = total_in_plts + total_out_plts
 
     # ✅ 总价格
-    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4+total_plts * 12+total_storage_pallets * 6
+    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4+total_plts * 12 + total_storage_pallets * 6
 
     # 成本统计表格
     cost_table = [{
@@ -271,17 +271,20 @@ def get_month_pallet_number(select_month, select_year):
     else:
         end_date = datetime(int(select_year), int(select_month) + 1, 1)  # 下个月的1日
 
+    # 排除 	GoldenFeather:3, Metal Studs:12, Other Freight Forwarders / Omar Transfer:6
     container_in_orders = Container.objects.filter(
         empty_date__gte=start_date, 
         empty_date__lt=end_date
+    # ).exclude(Q(customer="6")).order_by('-customer')
     ).exclude(Q(customer="3") | Q(customer="6")| Q(customer="12")).order_by('empty_date')
     print("container in : ",len(container_in_orders))
 
     # 查询 "gloves in" 数据
+    # 排除 	GoldenFeather：3,	Metal Studs：12
     gloves_in_orders = Container.objects.filter(
         empty_date__gte=start_date, 
         empty_date__lt=end_date
-    ).exclude(Q(customer="3") | Q(customer="12")).order_by('empty_date')
+    ).exclude(Q(customer="3") | Q(customer="12")).order_by('-customer')
     print("golve in : ",len(gloves_in_orders))
 
     # 创建 "gloves in" DataFrame
@@ -295,10 +298,15 @@ def get_month_pallet_number(select_month, select_year):
     ]
 
     # 查询 "gloves out" 数据（根据您的需求进行调整）
+    # 排除 Omar Sample:8, 	OBL:19
+    # gloves_out_orders = RMOrder.objects.filter(
+    #     outbound_date__gte=start_date, 
+    #     outbound_date__lt=end_date
+    # ).exclude(Q(customer_name="8") | Q(customer_name="19")).order_by('outbound_date')
     gloves_out_orders = RMOrder.objects.filter(
-        outbound_date__gte=start_date, 
-        outbound_date__lt=end_date
-    ).exclude(Q(customer_name="8") | Q(customer_name="19")).order_by('outbound_date')
+        pickup_date__gte=start_date, 
+        pickup_date__lt=end_date
+    ).exclude(Q(customer_name="8") | Q(customer_name="19")).order_by('pickup_date')
     print("golve out : ",len(gloves_out_orders))
 
     # ✅ 计算 Container in 总数
@@ -444,7 +452,7 @@ def export_inventory_to_excel(items):
 
     # Define headers
     headers = ["Product", "QTY", "QTY removing order", "Diff","Show QTY","Available QTY", "Each","Color", "Location", "Pallets", "Cases","ShelfRecord"]
-    ws.append(headers)
+    # ws.append(headers)
 
     # Write data rows
     for i, (type_name, grouped_items) in enumerate(type_groups.items()):

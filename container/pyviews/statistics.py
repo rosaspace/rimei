@@ -5,7 +5,7 @@ import datetime
 from collections import OrderedDict,defaultdict
 
 from django.shortcuts import render, redirect
-from django.db.models import F, ExpressionWrapper, FloatField, Sum, Q, Min, Max,Count
+from django.db.models import Case, When, Value, FloatField, F, ExpressionWrapper, FloatField, Sum, Q, Min, Max,Count
 from django.db.models.functions import TruncMonth
 from django.db.models.functions import TruncWeek
 
@@ -23,9 +23,13 @@ def statistics_invoice(request):
         logistics=2
     ).annotate(
         # 添加价格差字段
-        price_diff=ExpressionWrapper(
+        price_diff=Case(
+        When(customer_price__lt=F('price'), then=Value(0)),
+        default=ExpressionWrapper(
             F('customer_price') - F('price'),
             output_field=FloatField()
+        ),
+        output_field=FloatField()
         )
     ).order_by('-payment_date')
 
@@ -257,9 +261,9 @@ def statistics_warehouse(request):
     ).annotate(month=TruncMonth('container__delivery_date'))
 
     out_items = OrderItem.objects.filter(
-        order__outbound_date__isnull=False,
+        order__pickup_date__isnull=False,
         product__type='Rimei'
-    ).annotate(month=TruncMonth('order__outbound_date'))
+    ).annotate(month=TruncMonth('order__pickup_date'))
 
     inbound_by_month = in_items.values('month').annotate(total_qty=Sum('quantity')).order_by('month')
     outbound_by_month = out_items.values('month').annotate(total_qty=Sum('quantity')).order_by('month')
@@ -422,14 +426,14 @@ def statistics_mcd_trend(request):
 
     # ✅ ORM 查询
     order_items = OrderItem.objects.filter(
-        order__outbound_date__isnull=False,
+        order__pickup_date__isnull=False,
         product__type='Mcdonalds'
     )
 
    # ---------- 转换为 DataFrame ----------
     weekly_df = pd.DataFrame(list(
         order_items
-        .annotate(week=TruncWeek('order__outbound_date'))
+        .annotate(week=TruncWeek('order__pickup_date'))
         .values('product__name','week')
         .annotate(total_qty=Sum('quantity'))
         .order_by('week')
@@ -440,7 +444,7 @@ def statistics_mcd_trend(request):
 
     monthly_df = pd.DataFrame(list(
         order_items
-        .annotate(month=TruncMonth('order__outbound_date'))
+        .annotate(month=TruncMonth('order__pickup_date'))
         .values('product__name','month')
         .annotate(total_qty=Sum('quantity'))
         .order_by('month')

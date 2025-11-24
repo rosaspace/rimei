@@ -100,7 +100,7 @@
 <hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
 
 <div class="row mt-4">
-    <div class="col-md-6">
+    <div class="col-md-4">
         <h4>Email Content Preview</h4>
         <form method="post" action="{% url 'preview_email'%}"> 
             {% csrf_token %}
@@ -143,7 +143,7 @@
         </div>
     </div>
 
-    <div class="col-md-6">
+    <div class="col-md-8">
         <h4>Inventory Count Number</h4>
         <a href="{% url 'inventory_summary' %}" class="btn btn-primary mb-3">Inventory Summary</a>
         <table class="table table-bordered table-striped">

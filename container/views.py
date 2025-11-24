@@ -43,7 +43,7 @@ def invoice_view(request):
 @login_required(login_url='/login/')
 def invoice_unpaid_customer(request):
     containers = Container.objects.filter(
-        Q(ispay=False, customer_ispay=False) 
+        Q(ispay=False, customer_ispay=False) & ~Q(price=0) & (~Q(customer = 3) & ~Q(customer = 12) )
     ).exclude(
         logistics=2
     ).order_by('-due_date')

@@ -99,10 +99,11 @@ def add_order(request):
 
 @require_http_methods(["GET", "POST"])
 def edit_order(request, so_num):
-    print("--------edit_order------",so_num)
+    print("--------edit_order------",so_num) 
     try:
         if request.method == "GET":
             order = RMOrder.objects.get(so_num=so_num)
+            print("customer_name:",order.customer_name)
             customers = RMCustomer.objects.all()
             order_items = OrderItem.objects.filter(order=order)
             orderitems_new = get_product_qty_with_inventory_from_order(order_items)
@@ -110,7 +111,15 @@ def edit_order(request, so_num):
             total_weight = sum(float(item.weight) for item in orderitems_new if item.weight)
             total_quantity = sum(int(item.quantity) for item in orderitems_new)
             total_pallet = sum(int(item.pallet_qty) for item in orderitems_new)
-            products = RMProduct.objects.all().order_by('name')
+
+            # products = RMProduct.objects.all().order_by('name')
+            if order.customer_name.id != 19:
+                products = RMProduct.objects.exclude(type="Metal").order_by('name')
+                print("Hello, Gloves")
+            else:
+                products = RMProduct.objects.filter(type="Metal").order_by('name')
+                print("Hello, OBL")
+
             return render(request, constants_view.template_edit_order, {
                 'order': order,
                 'customers': customers,
@@ -172,7 +181,7 @@ def edit_order(request, so_num):
                 if items_json :
                     items = json.loads(items_json )
 
-                    # ⚠️ 先清空旧的条目（如果你是编辑页面）
+                    # 先清空旧的条目（如果你是编辑页面）
                     OrderItem.objects.filter(order=order).delete()
                     for item in items:
                         product = RMProduct.objects.get(id=item['product_id'])

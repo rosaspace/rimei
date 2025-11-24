@@ -282,6 +282,7 @@ class Container(models.Model):
     mbl = models.CharField(max_length=255, blank=True, default="")
     Carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE, default=get_default_carrier)
     weight = models.CharField(max_length=255, blank=True, default="")
+    # is_canceled = models.BooleanField(default=False) # 是否被取消
 
     invoice_id = models.CharField(max_length=255, blank=True, null=True)  # 发票ID
     invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 发票PDF文件名

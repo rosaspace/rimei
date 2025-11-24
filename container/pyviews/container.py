@@ -160,7 +160,14 @@ def edit_container(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
     
     if request.method == 'GET':
-        products = RMProduct.objects.all().order_by('name')
+        # products = RMProduct.objects.all().order_by('name') 
+        if container.inboundCategory.id != 13:
+            products = RMProduct.objects.exclude(type="Metal").order_by('name')
+            print("Hello, Gloves")
+        else:
+            products = RMProduct.objects.filter(type="Metal").order_by('name')
+            print("Hello, OBL")
+
         container_items = ContainerItem.objects.filter(container=container)
         container_items_new = get_product_qty_with_inventory_from_container(container_items)
         total_quantity = sum(int(item.quantity) for item in container_items_new)
@@ -408,11 +415,18 @@ def print_container_color_label(request, container_num):
     for item in containerItems:
         pallet_qty = item.product.Pallet or 1  # 避免除以0
         plts = math.ceil(item.quantity / pallet_qty)
+
         try:
-            order = item.product
-            if order and order.shortname:
-                so_num = order.shortname
-                so_label_map[so_num] = so_label_map.get(so_num, 0) + plts
+            product = item.product
+            if product and product.shortname:
+                so_num = product.shortname
+                spec = product.Pallet
+
+                if so_num not in so_label_map:
+                    so_label_map[so_num] = {"count": 0, "spec": spec}
+
+                so_label_map[so_num]["count"] += plts
+
         except AttributeError:
             continue
 
@@ -423,7 +437,7 @@ def print_container_color_label(request, container_num):
     container_id = container.container_id
     lot_number = container.lot
     # current_date = datetime.now().strftime('%m/%d/%Y')
-    current_date = container.delivery_date
+    current_date = container.delivery_date.strftime('%m/%d/%Y')
 
     # PDF 路径设置
     pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.LABEL_FOLDER)
@@ -434,14 +448,22 @@ def print_container_color_label(request, container_num):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
 
-    for so_num, total_count in so_label_map.items():
+    # 设置showLot
+    showLot = True
+    if container.inboundCategory.id == 13:
+        showLot = False
+
+    for so_num, info in so_label_map.items():
+        total_count = info["count"]
+        spec = info["spec"]
+
         pages = (total_count + 9) // 10  # 计算需要的总页数，每页最多 10 个
 
         for page in range(pages):
             # 计算当前页应打印的 label 数量
             page_label_count = min(10, total_count - page * 10)
             try:
-                print_containerid_lot(c, so_num, page_label_count, container_id, lot_number, current_date)
+                print_containerid_lot(c, so_num, page_label_count, container_id, lot_number, current_date, spec, showLot)
                 c.showPage()
             except Exception as e:
                 print(f"生成标签出错：{e}")
@@ -469,13 +491,15 @@ def print_container_detail(request, container_num):
 
     for item in containerItems:
         pallet_qty = item.product.Pallet or 1  # 避免除以0
-        plts = math.ceil(item.quantity / pallet_qty)
+        plts = math.ceil(item.quantity // pallet_qty)
+        case = item.quantity % pallet_qty
         total_plts += plts  # 累加托盘总数
         can_liner_details.append({
             "Size": item.product.size if hasattr(item.product, 'size') else "N/A",
             "Name": item.product.shortname,
             "Qty": str(item.quantity),
-            "PLTS": str(plts)
+            "PLTS": str(plts),
+            "Case": str(case),
         })
 
     # 基本信息
@@ -520,7 +544,8 @@ def print_container_delivery_order(request, container_num):
         "size_type": "40HQ",                        # 集装箱尺寸/类型
         "weight": f"{container.weight} LBS",                       # 重量
         "seal_number": "",                # 封条号
-        "commodity": "Plastic Bag",                 # 商品描述
+        "Remarks":"Overweight" if container.customer.id in [12, 3] else "",
+        "commodity": "Metal" if container.customer.id == 12 else "Plastic Bag" ,                # 商品描述
         "vessel": "",               # 船名
         "voyage": "",                          # 航次
         "ssl": "",                          # 船公司（Shipping Line）
@@ -645,7 +670,7 @@ def print_container_delivery_order(request, container_num):
         containerInfo['size_type'],
         containerInfo['weight'],
         containerInfo['seal_number'],
-        ""
+        containerInfo['Remarks']
     ]
     for value, w in zip(row_values, col_widths):
         draw_text(x, y, str(value))
