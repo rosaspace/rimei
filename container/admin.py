@@ -23,7 +23,7 @@ class ClockRecordAdmin(admin.ModelAdmin):
     list_display = ('employee_name', 'date',"weekday","total_hours")
 
 class RMProductdAdmin(admin.ModelAdmin):
-    list_display = ('name', 'id','shortname','size','TI','HI','Pallet','Color',"Location","ShelfRecord","blongTo","quantity_init","quantity_diff","type")
+    list_display = ('name', 'id','shortname','size','TI','HI','Pallet','Color',"Location","ShelfRecord","blongTo","quantity_init","quantity_diff","type","price")
 
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'id','belongTo')
@@ -58,7 +58,6 @@ admin.site.register(RMCustomer,RMCustomerAdmin)
 admin.site.register(OrderImage)
 admin.site.register(InvoiceCustomer,InvoiceCustomerAdmin)
 admin.site.register(RMProduct, RMProductdAdmin)
-# admin.site.register(RMInventory, RMInventoryAdmin)
 admin.site.register(ClockRecord,ClockRecordAdmin)
 admin.site.register(Employee,EmployeeAdmin)
 admin.site.register(LogisticsCompany)

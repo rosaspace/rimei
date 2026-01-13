@@ -279,7 +279,7 @@ def export_week_records(request):
         print("---group: ",group)
         filename = f'Working_Hours_{group}_{select_week_start.strftime("%m.%d")}-{select_week_end.strftime("%m.%d")}.2025.xlsx'
         # 拼接完整路径
-        save_dir = os.path.join(os.getcwd(), 'media/workrecord')
+        save_dir = os.path.join(os.getcwd(), constants_address.UPLOAD_DIR_workrecord)
         os.makedirs(save_dir, exist_ok=True)
         full_path = os.path.join(save_dir, filename)
         

@@ -10,6 +10,7 @@
               <thead class="table-light">
                 <tr>
                   <th>Month</th>
+                  <th>Container#</th>
                   <th>Price Diff (USD)</th>
                 </tr>
               </thead>
@@ -17,11 +18,13 @@
                 {% for item in chart_data_list %}
                 <tr>
                   <td>{{ item.month }}</td>
+                  <td>{{ item.container_count }}</td>
                   <td>${{ item.total_diff|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
+
             <h2>Invoice Amount List</h2>
             <table class="table table-bordered table-striped">
                 <thead>
@@ -30,23 +33,25 @@
                     <th>Pay Date</th>
                     <th>Container</th>
                     <th>Customers</th>
+                    <th>Customers</th>
                     <th>Price</th>
                     <th>PriceII</th>
                     <th>Diff</th>
                 </tr>
                 </thead>
                 <tbody id="invoiceTableBody">
-                {% for container in containers %}
-                <tr>
-                  <td>{{ container.delivery_date |date:"m/d/Y" }}</td>
-                  <td>{{ container.payment_date |date:"m/d/Y" }}</td>
-                  <td>{{ container.container_id }}</td>
-                  <td>{{ container.customer.name }}</td>
-                  <td>${{ container.price }}</td>
-                  <td>${{ container.customer_price }}</td>
-                  <td>${{ container.price_diff }}</td>
-                </tr>
-                {% endfor %}
+                  {% for container in containers %}
+                  <tr>
+                    <td>{{ container.empty_date |date:"m/d/Y" }}</td>
+                    <td>{{ container.payment_date |date:"m/d/Y" }}</td>
+                    <td>{{ container.container_id }}</td>
+                    <td>{{ container.customer.name }}</td>
+                    <td>{{ container.logistics.name }}</td>
+                    <td>${{ container.price }}</td>
+                    <td>${{ container.customer_price }}</td>
+                    <td>${{ container.price_diff }}</td>
+                  </tr>
+                  {% endfor %}
                 </tbody>
             </table>
         </div>

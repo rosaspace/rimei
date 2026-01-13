@@ -257,7 +257,7 @@ def export_pallet(request):
         }
         gloves_out_df = pd.DataFrame(gloves_out_data) 
 
-        full_path = os.path.join(settings.MEDIA_ROOT, "orderpallets")
+        full_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_orderpallets)
         os.makedirs(full_path, exist_ok=True)  # 确保目录存在
         filename = f'Pallets_{year}_{month}.xlsx'
         file_path = os.path.join(full_path, filename)

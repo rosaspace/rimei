@@ -410,6 +410,13 @@ def print_container_color_label(request, container_num):
     container = get_object_or_404(Container, container_id=container_num)
     containerItems = ContainerItem.objects.filter(container=container)
 
+    small_font = request.GET.get("small_font") == "1"
+
+    # 设置continuous
+    continuous = False
+    if(container.customer.id == 12):
+        continuous = True
+
     # 统计每个 so_num 的数量
     so_label_map = {}
     for item in containerItems:
@@ -437,7 +444,10 @@ def print_container_color_label(request, container_num):
     container_id = container.container_id
     lot_number = container.lot
     # current_date = datetime.now().strftime('%m/%d/%Y')
-    current_date = container.delivery_date.strftime('%m/%d/%Y')
+    if container.delivery_date:
+        current_date = container.delivery_date.strftime('%m/%d/%Y')
+    else:
+        current_date = "None"
 
     # PDF 路径设置
     pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.LABEL_FOLDER)
@@ -453,21 +463,56 @@ def print_container_color_label(request, container_num):
     if container.inboundCategory.id == 13:
         showLot = False
 
+    # ===== 新增：连续打印控制 =====
+    current_page_count = 0  # 当前页已打印 label 数量（最多 10）
+
+    # for so_num, info in so_label_map.items():
+    #     total_count = info["count"]
+    #     spec = info["spec"]
+
+    #     pages = (total_count + 9) // 10  # 计算需要的总页数，每页最多 10 个
+
+    #     for page in range(pages):
+    #         # 计算当前页应打印的 label 数量
+    #         page_label_count = min(10, total_count - page * 10)
+    #         try:
+    #             print_containerid_lot(c, so_num, page_label_count, container_id, lot_number, current_date, spec, showLot)
+    #             c.showPage()
+    #         except Exception as e:
+    #             print(f"生成标签出错：{e}")
+    #             return HttpResponse(f"生成标签时出错：{e}", status=500)
+
     for so_num, info in so_label_map.items():
         total_count = info["count"]
         spec = info["spec"]
 
-        pages = (total_count + 9) // 10  # 计算需要的总页数，每页最多 10 个
+        remaining = total_count
 
-        for page in range(pages):
-            # 计算当前页应打印的 label 数量
-            page_label_count = min(10, total_count - page * 10)
+        while remaining > 0:
+            available_slots = 10 - current_page_count
+            print_count = min(remaining, available_slots)
+
             try:
-                print_containerid_lot(c, so_num, page_label_count, container_id, lot_number, current_date, spec, showLot)
-                c.showPage()
+                print_containerid_lot(c, so_num, print_count, container_id, lot_number, current_date, spec, showLot, start_index=current_page_count, smallFont = small_font)
             except Exception as e:
-                print(f"生成标签出错：{e}")
                 return HttpResponse(f"生成标签时出错：{e}", status=500)
+
+            current_page_count += print_count
+            remaining -= print_count
+
+            # 页面满了才换页
+            if current_page_count == 10:
+                c.showPage()
+                current_page_count = 0
+
+        # 🔴 非连续模式：不同类型强制换页
+        if not continuous and current_page_count > 0:
+            c.showPage()
+            current_page_count = 0
+
+    # 如果最后一页没满，也要结束页面
+    if current_page_count > 0:
+        c.showPage()
 
     c.save()
     buffer.seek(0)
@@ -492,8 +537,9 @@ def print_container_detail(request, container_num):
     for item in containerItems:
         pallet_qty = item.product.Pallet or 1  # 避免除以0
         plts = math.ceil(item.quantity // pallet_qty)
+        plts_withextracase = math.ceil(item.quantity / pallet_qty)
         case = item.quantity % pallet_qty
-        total_plts += plts  # 累加托盘总数
+        total_plts += plts_withextracase  # 累加托盘总数
         can_liner_details.append({
             "Size": item.product.size if hasattr(item.product, 'size') else "N/A",
             "Name": item.product.shortname,

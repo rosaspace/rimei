@@ -1,0 +1,111 @@
+{% extends 'container/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center">
+        <!-- 左侧：标题和取消订单按钮 -->
+        <div class="d-flex align-items-center">
+            <h4 class="mr-3">Edit Product</h4>
+        </div>
+        <div class="ml-auto">
+            <a href="{% url 'inventory' %}" class="btn btn-secondary">Back</a>
+        </div>
+    </div>
+
+    <form id="edit-order-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_product' product.id %}" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row mb-2" >
+            <div class="col-md-3">
+                <label for="so_num" class="form-label required-label">Product</label>
+                <input type="text" class="form-control" id="so_num" name="name" value="{{ product.name|default:'' }}" required>
+            </div>
+
+            <div class="col-md-3">
+                <label for="customer_name" class="form-label required-label">Shortname</label>
+                <input type="text" class="form-control" id="so_num" name="shortname" value="{{ product.shortname|default:'' }}" required>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="po_num" class="form-label required-label">Size</label>
+                <input type="text" class="form-control" id="so_num" name="size" value="{{ product.size|default:'' }}" required>
+            </div>
+
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Color</label>
+                <input type="text" class="form-control" id="so_num" name="Color" value="{{ product.Color|default:'' }}" required>
+            </div>            
+        </div>
+        <div class="row mb-2" >
+            <div class="col-md-3">
+                <label for="so_num" class="form-label required-label">TI</label>
+                <input type="text" class="form-control" id="so_num" name="TI" value="{{ product.TI|default:'' }}" required>
+            </div>
+
+            <div class="col-md-3">
+                <label for="customer_name" class="form-label required-label">HI</label>
+                <input type="text" class="form-control" id="so_num" name="HI" value="{{ product.HI|default:'' }}" required>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="po_num" class="form-label required-label">Pallet</label>
+                <input type="text" class="form-control" id="so_num" name="Pallet" value="{{ product.Pallet|default:'' }}" required>
+            </div>
+
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Location</label>
+                <input type="text" class="form-control" id="so_num" name="Location" value="{{ product.Location|default:'' }}" required>
+            </div>            
+        </div>
+        <div class="row mb-2" >
+            <div class="col-md-3">
+                <label for="so_num" class="form-label required-label">QTY Init</label>
+                <input type="text" class="form-control" id="so_num" name="quantity_init" value="{{ product.quantity_init|default:'' }}" required>
+            </div>
+
+            <div class="col-md-3">
+                <label for="customer_name" class="form-label required-label">QTY Diff</label>
+                <input type="text" class="form-control" id="so_num" name="quantity_diff" value="{{ product.quantity_diff|default:'' }}" required>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="po_num" class="form-label required-label">Type</label>
+                <input type="text" class="form-control" id="so_num" name="type" value="{{ product.type|default:'' }}" required>
+            </div>
+
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Price</label>
+                <input type="text" class="form-control" id="so_num" name="price" value="{{ product.price|default:'' }}" required>
+            </div>            
+        </div>
+        <div class="row mb-2" >
+            <div class="col-md-9">
+                <label for="plts" class="form-label required-label">ShelfRecord</label>
+                <input type="text" class="form-control" id="so_num" name="ShelfRecord" value="{{ product.ShelfRecord|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Belong To</label>
+                <select class="form-select" id="blongTo" name="blongTo" required>
+                    <option value="">Select...</option>
+                    {% for customer in employee %}
+                    <option value="{{ customer.id }}" {% if customer.id == product.blongTo.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div>                           
+            <button type="submit" class="btn btn-primary">
+                Save Product
+            </button>                     
+        </div>  
+</div>
+    
+{% endblock %}
+
+{% block scripts %}
+<script>
+</script>
+{% endblock %}

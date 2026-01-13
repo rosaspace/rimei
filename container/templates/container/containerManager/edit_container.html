@@ -5,13 +5,22 @@
     <h4>Print Container</h4>
     <div class="row">
         <div class="d-flex flex-wrap align-items-start">
+            <!-- 左侧按钮组-->
             <div class="me-2 mb-2">
                 <button class="btn btn-primary  w-100" id="printDetail">Print Detail</a>
             </div>
-            <!-- <div class="me-2 mb-2">
-                <button class="btn btn-primary  w-100" id="printLabel">Print Label</a>
-            </div> -->
-            <div class="me-2 mb-2">
+            <div class="me-2 mb-2 d-flex align-items-center gap-2">
+                <div class="form-check mb-0">
+                    <input
+                        type="checkbox"
+                        class="form-check-input"
+                        id="smallFont"
+                        name="smallFont"
+                    >
+                    <label class="form-check-label" for="smallFont">
+                        SmallFont
+                    </label>
+                </div>
                 <button class="btn btn-primary  w-100" id="printColorLabel">Print Color Label</a>
             </div>
             <div class="me-2 mb-2">
@@ -282,13 +291,11 @@
         });
 
         // 打印标签
-        // document.getElementById('printLabel').addEventListener('click', function() {
-        //     window.open(`/print_container_label/${containerID}/`, '_blank');
-        // });
-
-        // 打印标签
         document.getElementById('printColorLabel').addEventListener('click', function() {
-            window.open(`/print_container_color_label/${containerID}/`, '_blank');
+            const smallFont = document.getElementById("smallFont").checked;
+            const url = `/print_container_color_label/${containerID}/?small_font=${smallFont ? 1 : 0}`;
+
+            window.open(url, '_blank');
         });
 
         // 打印标签

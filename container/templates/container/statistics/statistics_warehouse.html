@@ -5,7 +5,7 @@
     <div class="row">
     <!-- 表格区域 -->
     <div class="col-md-6">
-      <h2>Monthly Inbound and Outbound Totals</h2>
+      <h2>Monthly Omar Inbound and Outbound Totals</h2>
       <table class="table table-bordered mt-4">
         <thead>
           <tr>
@@ -16,19 +16,46 @@
           </tr>
         </thead>
         <tbody>
-          {% for item in table_data %}
-          <tr>
-            <td>{{ item.month }}</td>
-            <td>{{ item.initItems }}</td>
-            <td>{{ item.inbound }}</td>
-            <td>{{ item.outbound }}</td>
-          </tr>
-          {% endfor %}
+          {% with rimei=data.Rimei %}
+            {% for item in rimei.table_data %}
+            <tr>
+              <td>{{ item.month }}</td>
+              <td>{{ item.initItems }}</td>
+              <td>{{ item.inbound }}</td>
+              <td>{{ item.outbound }}</td>
+            </tr>
+            {% endfor %}
+          {% endwith %}
         </tbody>
       </table>
 
-      <h4>Obsolete Products (No Outbound in the Last 90 Days)</h4>
-      {% if dead_products %}
+      <h2>Monthly Mcd Inbound and Outbound Totals</h2>
+      <table class="table table-bordered mt-4">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Init Quantity (case)</th>
+            <th>Inbound Quantity (case)</th>
+            <th>Outbound Quantity (case)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% with mcd=data.MCD %}
+            {% for item in mcd.table_data %}
+            <tr>
+              <td>{{ item.month }}</td>
+              <td>{{ item.initItems }}</td>
+              <td>{{ item.inbound }}</td>
+              <td>{{ item.outbound }}</td>
+            </tr>
+            {% endfor %}
+          {% endwith %}
+        </tbody>
+      </table>
+
+      <h4>Obsolete Products (No Outbound in the Last 180 Days)</h4>
+      {% with rimei=data.Rimei %}
+      {% if rimei.dead_products %}
         <table class="table table-bordered mt-3">
           <thead>
             <tr>
@@ -36,52 +63,58 @@
               <th>Inventory Quantity</th>
             </tr>
           </thead>
-          <tbody>
-            {% for item in dead_products %}
-            <tr>
-              <td>{{ item.name }}</td>
-              <td>{{ item.quantity }}</td>
-            </tr>
-            {% endfor %}
+          <tbody>            
+              {% for item in rimei.dead_products %}
+              <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.quantity }}</td>
+              </tr>
+              {% endfor %}            
           </tbody>
         </table>
         {% else %}
         <p>No obsolete products</p>
         {% endif %}
+        {% endwith %}
     </div>
 
-    <!-- 图表区域 -->
+    
     <div class="col-md-6">
+      <!-- 图表区域 -->
       <h2>Monthly Inbound and Outbound Trend Chart</h2>
       <div style="height: 500px; max-width: 700px; margin: auto;">
         <canvas id="warehouseChart"></canvas>
       </div>
+
+      <!-- 指标区域 -->
       <h4>Inventory Turnover (Total Outbound / Average Inventory)</h4>
-      <p><strong>{{ inventory_turnover }}</strong></p>
+      <p><strong>{{ data.Rimei.inventory_turnover }}</strong></p>
 
       <h4>Inventory Accuracy (Number of Inaccurate Products / Total Products)</h4>
-      <p><strong>{{ inventory_accuracy }} %</strong></p>
+      <p><strong>{{ data.Rimei.inventory_accuracy }} %</strong></p>
 
       <h4>Average Inventory Level (Initial + Inbound - Outbound)</h4>
-      <p><strong>{{ avg_inventory }} cases</strong></p>
+      <p><strong>{{ data.Rimei.avg_inventory }} cases</strong></p>
       
       <h4>Stockout Rate (Stockout Quantity / Total Stock)</h4>
-      <p><strong>{{ stockout_rate }} %</strong></p>
+      <p><strong>{{ data.Rimei.stockout_rate }} %</strong></p>
 
       <h4>Fast-Moving Inventory Ratio (High-Frequency Outbound Products)</h4>
-      <p><strong>{{ fast_moving_ratio }} %</strong></p>
+      <p><strong>{{ data.Rimei.fast_moving_ratio }} %</strong></p>
 
       <h4>Obsolete Inventory Ratio (Dead Stock / Total Stock)</h4>
-      <p><strong>{{ obsolete_inventory_ratio }} %</strong></p>
+      <p><strong>{{ data.Rimei.obsolete_inventory_ratio }} %</strong></p>
     </div>
   </div>
 </div>
 
 <script>
   const ctx = document.getElementById('warehouseChart').getContext('2d');
-  const labels = {{ months|safe }};
-  const inboundData = {{ inbound_data|safe }};
-  const outboundData = {{ outbound_data|safe }};
+
+  const rimei = {{ data.Rimei|safe }};
+  const labels = rimei.months;
+  const inboundData = rimei.inbound_data;
+  const outboundData = rimei.outbound_data;
 
   new Chart(ctx, {
     type: 'line',

@@ -1,6 +1,7 @@
 import os
 from django.conf import settings
 from reportlab.lib.pagesizes import letter
+from decimal import Decimal
 
 # 替换文本 & 插入图片
 NEW_ADDRESS = """RIMEI INTERNATION INC
@@ -60,10 +61,16 @@ Rimei International Inc<br/>
 Lemont, IL 60439"""
 
 labor_right_text = """
-Citi Bank<br/>
-Routing# 271070801<br/>
-Account# 801776329<br/>
-Account Name: Rimei International Inc"""
+Cathay Bank<br/>
+Routing# 122203950<br/>
+Account# 100719015<br/>
+Account Name: Rimei International INC"""
+
+# labor_right_text = """
+# Citi Bank<br/>
+# Routing# 271070801<br/>
+# Account# 801776329<br/>
+# Account Name: Rimei International Inc"""
 
 # Invoice
 Chassis_rate = 40
@@ -75,6 +82,7 @@ Yard_storage_rate = 45
 # 描述映射：原始 → 表格描述
 description_mapping = {
     "INTERM1": "Drayage (FSC all included)",
+    "INTERM2": "Drayage (FSC all included)",
     "Chassis use": "Chassis",
     "Chassis split": "Chassis split", 
     "Storage": "Yard storage",
@@ -91,24 +99,30 @@ description_mapping = {
     # 可继续扩展其他映射项
 }
 
-UPLOAD_DIR = "uploads/"
-UPLOAD_DIR_order = "orders/"
+# media中的一级目录
 UPLOAD_DIR_container = "containers/"
 UPLOAD_DIR_invoice = "invoices/"
+UPLOAD_DIR_orderpallets = "orderpallets/"
+UPLOAD_DIR_order = "orders/"
 UPLOAD_DIR_temp = "temp/"
+UPLOAD_DIR_workrecord = "workrecord/"
 
-# Order
+# Order中的二级目录
 BOL_FOLDER = "BOL/"
 ORDER_FOLDER = "ORDER/"
 ORDER_CONVERTED_FOLDER = "CONVERTED/"
 LABEL_FOLDER = "label"
-# Container
+
+# Container中的二级目录
 CHECKLIST_FOLDER = "checklist/"
 DO_FOLDER = "DO/"
-# INVOICE
+ORIGINAL_DO_FOUDER = "original"
+
+# INVOICE中的二级目录
 INVOICE_FOUDER = "INVOICE"
 CUSTOMER_INVOICE_FOLDER = "CustomerInvoice"
-ORIGINAL_DO_FOUDER = "original"
+INVOICE_METAL_ORDER = "metalInvoice"
+INVOICE_AP = "APInvoice"
 
 # logo
 Rimei_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/remei.jpg')
@@ -122,9 +136,13 @@ MARGIN_LEFT = 5  # Left margin
 LABEL_WIDTH = (PAGE_WIDTH - MARGIN_LEFT * 2) / 2  # Two labels per row
 LABEL_HEIGHT = (PAGE_HEIGHT - MARGIN_TOP * 2) / 5  # Five rows per page
 
+# TAX Rate
+Tax_rate = Decimal("0.0825")   # ← 税率，可自行调整
+Credit_rate = Decimal("1.03")
+
 # Font size
-# FONT_SIZE = 60  # Larger font size
-FONT_SIZE =  50  # Larger font size
+FONT_SIZE = 60  # Larger font size
+FONT_SIZE_SMALL =  50  # Larger font size
 # FONT_SIZE = 30  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size

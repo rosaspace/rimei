@@ -13,8 +13,11 @@ from datetime import timedelta
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
-from reportlab.platypus import Table, TableStyle, Image
+from reportlab.platypus import Table, TableStyle, Image, Paragraph, Spacer
 from reportlab.lib import colors
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
+
 from decimal import Decimal
 from datetime import datetime, timedelta
 
@@ -236,64 +239,71 @@ def print_weekly_pickuplist(start_date):
     c.save()
     return response
 
-def print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date, spec, showLot = True):
+def print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date, spec, showLot = True, start_index=0, smallFont = False):
     try:
         label_count = int(label_count) if label_count is not None else 0
     except ValueError:
         label_count = 10  # Handle invalid input gracefully
 
     # Set font
-    c.setFont(font_Helvetica_Bold, constants_address.FONT_SIZE)
+    font_size = (
+        constants_address.FONT_SIZE_SMALL
+        if smallFont
+        else constants_address.FONT_SIZE
+    )
+    c.setFont(font_Helvetica_Bold, font_size)
     
-    y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
-    labels_on_page = 0  # Track labels per page
-    first_page = True
+    # 一页最多 10 个（5 行 × 2 列）
+    for i in range(label_count):
+        index = start_index + i   # 👈 核心
 
-    while label_count > 0:
-        if not first_page:  
-            c.showPage()  # Create a new page *only if necessary*
-            c.setFont(font_Helvetica_Bold, constants_address.FONT_SIZE)  # Reset font on new page
-            y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
-            labels_on_page = 0  # Reset row counter
+        row = index // 2          # 每行 2 个
+        col = index % 2
 
-        first_page = False 
+        if row >= 5:
+            # 超出本页的内容，交由外层处理分页
+            break
 
-        for _ in range(5):  # Max 5 rows per page
-            if label_count <= 0:
-                break  # Stop when all labels are printed
-    
-            # Two labels per row, calculate positions
-            x_positions = [constants_address.MARGIN_LEFT, constants_address.MARGIN_LEFT + constants_address.LABEL_WIDTH]
+        x = constants_address.MARGIN_LEFT + col * constants_address.LABEL_WIDTH
+        y_top = (
+            constants_address.PAGE_HEIGHT
+            - constants_address.MARGIN_TOP
+            - row * constants_address.LABEL_HEIGHT
+        )
 
-            for x in x_positions:
-                if label_count <= 0:  
-                    break  # Stop if all labels are printed
-    
-                # Center text in each label
-                text_x = x + (constants_address.LABEL_WIDTH / 2)
-                text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 0
-                
-                # Set font and draw text
-                c.setFont(font_Helvetica_Bold, constants_address.FONT_SIZE)
-                c.drawCentredString(text_x, text_y, so_num)
-    
-                # Draw label borders (for testing)
-                if constants_address.DRAW_BORDERS:
-                    c.rect(x, y_position - constants_address.LABEL_HEIGHT, constants_address.LABEL_WIDTH, constants_address.LABEL_HEIGHT)
+        # 中心点
+        text_x = x + constants_address.LABEL_WIDTH / 2
+        text_y = y_top - constants_address.LABEL_HEIGHT / 2
 
-                # Add smaller text for container_id, lot_number, and current date below the label
-                c.setFont("Helvetica", constants_address.FONT_SIZE_Lot)  # Smaller font size for the new text
-                text_y_small = text_y - 30  # Position for the smaller text below the main label
-                c.drawCentredString(text_x, text_y_small, f"{container_id}    {current_date}")
-                if showLot:
-                    c.drawCentredString(text_x, text_y_small - 20, f"Lot: {lot_number}   Qty: {spec}")
-    
-                label_count -= 1  # Reduce remaining label count
+        # 主标题
+        c.setFont(font_Helvetica_Bold, font_size)
+        c.drawCentredString(text_x, text_y, so_num)
 
-            y_position -= constants_address.LABEL_HEIGHT  # Move to next row
-            labels_on_page += 2  # Two labels per row
+        # 边框（调试用）
+        if constants_address.DRAW_BORDERS:
+            c.rect(
+                x,
+                y_top - constants_address.LABEL_HEIGHT,
+                constants_address.LABEL_WIDTH,
+                constants_address.LABEL_HEIGHT
+            )
 
-def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit):
+        # 底部信息
+        c.setFont("Helvetica", constants_address.FONT_SIZE_Lot)
+        c.drawCentredString(
+            text_x,
+            text_y - 30,
+            f"{container_id}    {current_date}"
+        )
+
+        if showLot:
+            c.drawCentredString(
+                text_x,
+                text_y - 50,
+                f"Lot: {lot_number}   Qty: {spec}"
+            )
+
+def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull):
     # 构建新的PDF文件（使用 reportlab）
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -306,22 +316,6 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
     if os.path.exists(constants_address.SSA_LOGO_PATH):
         c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
     
-    # === Helper function to draw section headers ===
-    def draw_section_header(title, x, y):
-        c.setFont(font_Helvetica_Bold, 11)
-        c.drawString(x, y, title)
-        c.setLineWidth(0.5)
-        c.line(x, y - 2, x + 150, y - 2)
-        c.setFont("Helvetica", 11)
-
-    def draw_address_block(c, label, address_lines, x, y_start):
-        draw_section_header(label, x, y_start)
-        line_height = 15
-        y = y_start - line_height
-        for line in address_lines:
-            c.drawString(x, y, line)
-            y -= line_height
-
     ADDRESS_MAPPING = {
         "SHIPPER": constants_address.SSA_ADDRESS,
         "CONSIGNEE": constants_address.CONSIGNEE
@@ -340,13 +334,13 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
     # c.rect(350, height - 160 - y_offset, 160, 70)
     invoice_date = datetime.today()
     due_date = invoice_date + timedelta(days=30)
-    draw_section_header("INVOICE:", 360, height - 75 - y_offset)
+    draw_section_header(c, "INVOICE:", 360, height - 75 - y_offset)
     c.drawString(360, height - 90 - y_offset, f"INVOICE NO.: {full_invoice_no}")
     c.drawString(360, height - 105 - y_offset, f"INVOICE DATE: {invoice_date.strftime('%m/%d/%Y')}")
     c.drawString(360, height - 120 - y_offset, f"DUE DATE: {due_date.strftime('%m/%d/%Y')}")
 
     # --- Ship Info ---
-    draw_section_header("SHIP INFO:", 360, height - 145 - y_offset)
+    draw_section_header(c, "SHIP INFO:", 360, height - 145 - y_offset)
     c.drawString(360, height - 160 - y_offset, f"SHIP DATE: {container.delivery_date.strftime('%m/%d/%Y')}")
     c.drawString(360, height - 175 - y_offset, f"BILL OF LADING: {container.container_id}")
     c.drawString(360, height - 190 - y_offset, f"REFERENCE NO: {container.refnumber}")
@@ -387,6 +381,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
 
     # 遍历金额项目并填入表格
     for raw_desc, units, rate, charge in amount_items:
+        # print('decp: ',raw_desc)
         mapped_desc = constants_address.description_mapping.get(raw_desc, raw_desc)
         row = desc_to_row.get(mapped_desc)
         if not row:
@@ -399,10 +394,14 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
 
         # 自定义逻辑
         if mapped_desc == "Drayage (FSC all included)":
-            charge += 30
-            new_rate = charge
-            display_rate = f"${new_rate:,.2f}"
-            display_charge = f"${charge:,.2f}"
+            base_charge = Decimal(str(charge or 0))
+            fsc = Decimal("30.00")
+            final_charge = base_charge + fsc
+
+            display_units = "1.0"      
+            display_rate = f"${final_charge:,.2f}"
+            display_charge = f"${final_charge:,.2f}"
+            charge = final_charge
 
         elif mapped_desc == "Chassis":
             orig_units = float(units or 0)
@@ -469,6 +468,30 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
             relocate_row[2] = f"${relocate_rate:,.2f}"
             relocate_row[3] = f"${relocate_charge:,.2f}"
             total += Decimal(str(relocate_charge))
+
+    print("isPrepull: ", isPrepull)
+    if isPrepull == "1":
+        # 找到对应行
+        relocate_row = desc_to_row.get("Pre-pull")
+        if relocate_row:
+            relocate_units = 1
+            relocate_rate = constants_address.Pre_pull_rate
+            relocate_charge = relocate_units * relocate_rate
+            relocate_row[1] = relocate_units
+            relocate_row[2] = f"${relocate_rate:,.2f}"
+            relocate_row[3] = f"${relocate_charge:,.2f}"
+            total += Decimal(str(relocate_charge))
+
+        extra_row = desc_to_row.get("Yard storage") 
+        if extra_row:
+            extra_units = 1
+            extra_rate = constants_address.Yard_storage_rate
+            extra_charge = extra_units * extra_rate
+            extra_row[1] = extra_units
+            extra_row[2] = f"${extra_rate:,.2f}"
+            extra_row[3] = f"${extra_charge:,.2f}"
+
+            total += Decimal(str(extra_charge))
 
     # 填入总金额
     data[-1][-1] = f"${total:,.2f}"
@@ -675,11 +698,11 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
             for i, line in enumerate(address_lines):
                 draw_text(x_label + 60, y, line)
                 if i == len(address_lines) - 1:
-                    # c.line(x_label + 60, y - 2, x_label + line_length, y - 2)  # 只画最后一行的下划线
                     y -= 18
                     items_Y = y
                 else:
                     y -= 14  # 多行地址行间距
+        # 右侧其他Number
         else:
             # 右上角信息
             right_x = width - 280
@@ -755,3 +778,180 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     # 保存 PDF
     c.save()
 
+def converter_metal_invoice(container, amount_items, output_dir, new_filename, isOrder):
+    # 构建新的PDF文件（使用 reportlab）
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4    
+
+    y = height - 80
+    y_offset = 30  # ✅ 向下移动整体内容高度
+
+    # ✅ Logo 和标题
+    if os.path.exists(constants_address.SSA_LOGO_PATH):
+        c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
+
+    ADDRESS_MAPPING = {
+        "SHIPPER": constants_address.SSA_ADDRESS,
+        "CONSIGNEE": constants_address.CONSIGNEE
+    }
+
+    invoice_prefix = {
+        "Speedier": "OS",
+        "Trans Knights": "OT"
+    }.get(container.so_num, "")  # 默认为空字符串
+    full_invoice_no = f"{invoice_prefix}{container.so_num}"
+
+    # --- Shipper Info ---
+    draw_address_block(c, "SHIPPER:", ADDRESS_MAPPING["SHIPPER"], 40, height - 130 - y_offset)
+
+    # --- Invoice Box ---
+    invoice_date = datetime.today()
+    due_date = invoice_date + timedelta(days=30)
+    draw_section_header(c, "INVOICE:", 360, height - 130 - y_offset)
+    c.drawString(360, height - 145 - y_offset, f"INVOICE NO.: {full_invoice_no}")
+    c.drawString(360, height - 160 - y_offset, f"INVOICE DATE: {invoice_date.strftime('%m/%d/%Y')}")
+    c.drawString(360, height - 175 - y_offset, f"DUE DATE: {due_date.strftime('%m/%d/%Y')}")
+
+    # --- Bill To ---
+    bill_to_address = container.bill_to
+    draw_address_block2(c, "BILL TO:", container.bill_to, 40, height - 220 - y_offset)
+
+    # --- Consignee ---
+    draw_address_block2(c, "SHIP TO:", container.ship_to, 360, height - 220 - y_offset)
+
+    # --- Table Data ---
+    # 初始化总金额
+    total = Decimal("0.00")
+
+    # --- Table Data (Dynamic Version) ---
+    table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "CHARGES"]]
+    total = Decimal("0.00")
+
+    for item, desc, units, rate, charge in amount_items:
+        display_item = str(item) if item else ""
+        display_desc = desc
+        
+        # 默认显示值
+        display_units = f"{units:.0f}" if units else ""
+        display_rate = f"${rate:,.2f}" if rate else ""
+        display_charge = f"${charge:,.2f}" if charge else ""
+
+        # 添加一行到 table
+        table_data.append([
+            display_item,
+            display_desc,
+            display_units,
+            display_rate,
+            display_charge
+        ])
+
+        total += Decimal(str(charge))
+
+
+    # --- Build Table ---
+    table = Table(table_data, colWidths=[80, 260, 40, 60, 60])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("LEADING", (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BACKGROUND", (-2, -1), (-1, -1), colors.lightgrey),  # Total row color
+    ]))
+
+    table.wrapOn(c, width, height)
+    table.drawOn(c, 40, height - 420 - y_offset)
+
+    # Amount summary block
+    summary_x = 360   # 靠右
+    summary_y = height - 440 - y_offset
+    line_height = 16
+
+    c.setFont("Helvetica-Bold", 11)
+
+    # 准备数值
+    tax_amount = (total * constants_address.Tax_rate).quantize(Decimal("0.01"))
+    grand_total = (total + tax_amount).quantize(Decimal("0.01"))
+    credit_total = (grand_total * constants_address.Credit_rate).quantize(Decimal("0.01"))
+
+    # Subtotal
+    c.drawRightString(summary_x + 180, summary_y, f"Subtotal:   ${total:,.2f}")
+    summary_y -= line_height
+
+    # Tax
+    c.drawRightString(summary_x + 180, summary_y, f"Tax (8.25%):   ${tax_amount:,.2f}")
+    summary_y -= line_height* 1.3
+
+    # Total
+    # c.setFont("Helvetica-Bold", 12)
+    c.drawRightString(summary_x + 180, summary_y, f"Total:   ${grand_total:,.2f}")
+    summary_y -= line_height
+
+    # Credit card total 3%
+    # c.setFont("Helvetica-Bold", 12)
+    c.drawRightString(summary_x + 180, summary_y, f"Credit Card (3%):   ${credit_total:,.2f}")
+    summary_y -= line_height
+
+    # --- 在表格之后插入说明文字 ---
+    y_text = 240   # 根据表格位置调整，越大越靠上
+
+    # 2 行：靠左显示
+    c.setFont("Helvetica", 10)
+    c.drawString(40, y_text, "*Products availability and lead time may change")
+    c.drawString(40, y_text - 15, "*SSA reserve the right to change pricing and terms without notice")
+
+    # 3 行：居中显示（电话、邮箱、公司名）
+    center_x = width / 2
+    c.drawCentredString(center_x, y_text - 45, "If you have questions concerning this invoice, contact us")
+    c.drawCentredString(center_x, y_text - 60, "Phone: (708) 882-1188")
+    c.drawCentredString(center_x, y_text - 75, "Email: info@securesourceamerica.com")
+
+
+    # 关闭 canvas 并写入 buffer
+    c.save()
+    buffer.seek(0)
+
+    # 确保输出目录存在
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, new_filename)
+
+    # 写入 PDF 文件
+    with open(output_path, "wb") as f:
+        f.write(buffer.read())
+
+# === Helper function to draw section headers ===
+def draw_section_header(c, title, x, y):
+    c.setFont(font_Helvetica_Bold, 11)
+    c.drawString(x, y, title)
+    c.setLineWidth(0.5)
+    c.line(x, y - 2, x + 150, y - 2)
+    c.setFont("Helvetica", 11)
+
+def draw_address_block(c, label, address_lines, x, y_start):
+    draw_section_header(c, label, x, y_start)
+
+    line_height = 15
+    y = y_start - line_height
+    for line in address_lines:
+        c.drawString(x, y, line)
+        y -= line_height
+
+def draw_address_block2(c, title, text, x, y):
+    draw_section_header(c, title, x, y)
+
+    # c.setFont("Helvetica-Bold", 10)
+    # c.drawString(x, y, title)
+    c.setFont("Helvetica", 10)
+
+    # 处理多行地址
+    lines = text.split("\n")
+
+    offset = 15
+    for line in lines:
+        c.drawString(x, y - offset, line)
+        offset += 15

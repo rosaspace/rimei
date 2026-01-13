@@ -55,6 +55,7 @@ urlpatterns = [
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    
     path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),
     path('show_pallet_number/',inventory_count.show_pallet_number,name='show_pallet_number'),
+    path('edit_product/<int:product_id>/',inventory_count.edit_product,name='edit_product'),
 
     # container
     path('add_container/', container.add_container, name='add_container'), 
@@ -72,18 +73,23 @@ urlpatterns = [
     # Invoice
     path("edit_invoice_file/<str:container_id>/", invoice.edit_invoice_file, name="edit_invoice_file"),
     path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
+    path("edit_ladingcargo_invoice_file/<str:container_id>/", invoice.edit_ladingcargo_invoice_file, name="edit_ladingcargo_invoice_file"),
     path("edit_customer_invoice_file/<str:container_id>/", invoice.edit_customer_invoice_file, name="edit_customer_invoice_file"),
     path("edit_customer_invoice/<str:container_id>/", invoice.edit_customer_invoice, name="edit_customer_invoice"),
+
     path("print_statement_invoice_pdf/", invoice.print_statement_invoice_pdf, name="print_statement_invoice_pdf"),
     path("print_statement_customer_invoice_pdf/", invoice.print_statement_customer_invoice_pdf, name="print_statement_customer_invoice_pdf"),
     path('print_original_do/<str:container_id>/', invoice.print_original_do, name='print_original_do'),
     path('print_original_invoice/<str:container_id>/', invoice.print_original_invoice, name='print_original_invoice'),
     path('print_converted_invoice/<str:container_id>/', invoice.print_converted_invoice, name='print_converted_invoice'),
-    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/', invoice.print_customer_invoice, name='print_customer_invoice'),
+    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/<str:isPrepull>/', invoice.print_customer_invoice, name='print_customer_invoice'),
+
     path("export_pallet_invoice/", invoice.export_pallet_invoice, name="export_pallet_invoice"),    
     path("add_ar_invoice/", invoice.add_ar_invoice, name="add_ar_invoice"),
     path("add_ap_invoice/", invoice.add_ap_invoice, name="add_ap_invoice"),
     path("edit_ap_invoice/<str:invoice_id>/", invoice.edit_ap_invoice, name="edit_ap_invoice"),
+
+    path("print_original_ap_invoice/<str:so_num>/", invoice.print_original_ap_invoice, name="print_original_ap_invoice"),
     
     # Payment
     path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
@@ -100,6 +106,7 @@ urlpatterns = [
     path("upload_orderpdf/", rmorder.upload_orderpdf, name="upload_orderpdf"),
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
+    path('print_metal_invoice/<str:order_id>/<str:isOrder>/',rmorder.print_metal_invoice,name='print_metal_invoice'),
     
     # Temporary
     path("import_inventory/", temporary.import_inventory, name="import_inventory"), 

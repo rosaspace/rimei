@@ -21,6 +21,12 @@
             <div class="me-2">
                 <button class="btn btn-primary" id="printMcdOrder">Mcd Order</button>
             </div>
+            <div class="me-2">
+                <button class="btn btn-success" id="printMetalOrder">Metal Order</button>
+            </div>
+            <div class="me-2">
+                <button class="btn btn-success" id="printMetalInvoice">Metal Invoice</button>
+            </div>
             <!-- Push this button to the right -->
             <div class="ms-auto">
                 <a href="{% url 'order_email' order.so_num %}?type=shippeout" class="btn btn-primary">
@@ -124,7 +130,7 @@
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" id="is_sendemail" name="is_sendemail"
                         {% if order.is_sendemail %} checked {% endif %}>
-                    <label class="form-check-label" for="is_sendemail">Send Email</label>
+                    <label class="form-check-label" for="is_sendemail">Is Pay</label>
                 </div>
             </div>
             <div class="col-md-3">
@@ -171,6 +177,8 @@
                             <th>Case</th>
                             <th>Weight</th>
                             <th>Inventory</th>
+                            <th>Price</th>
+                            <th>Sum</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -206,9 +214,15 @@
                                 <div class="d-flex align-items-center">
                                     <span>{{ item.inventory_qty }}</span>
                                     {% if item.quantity > item.inventory_qty %}
-                                        <span class="text-danger ms-2">This order doesn't have enough inventory</span>
+                                        <span class="text-danger ms-2">Insufficient inventory, {{ item.shortage }}</span>
                                     {% endif %}
                                 </div>
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.price }}</span></div>
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.totalprice }}</span></div>
                             </td>
                             
                             <td class="align-middle">
@@ -218,10 +232,20 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <div>
-                    <p class="mb-0">Total Weight: <strong>{{ total_weight|floatformat:0 }}</strong> LBS</p>
-                    <p class="mb-0">Total Quantity: <strong>{{ total_quantity }}</strong> cases</p>
-                    <p class="mb-0">Total Pallet: <strong>{{ total_pallet }}</strong> plts</p>
+                <div class="d-flex justify-content-between">
+                    <!-- Left Column -->
+                    <div>
+                        <p class="mb-0">Total Weight: <strong>{{ total_weight|floatformat:0 }}</strong> LBS</p>
+                        <p class="mb-0">Total Quantity: <strong>{{ total_quantity }}</strong> cases</p>
+                        <p class="mb-0">Total Pallet: <strong>{{ total_pallet }}</strong> plts</p>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div>
+                        <p class="mb-0">Total Price: <strong>$ {{ total_price }}</strong></p>
+                        <p class="mb-0">Total Grand: <strong>$ {{ total_grand }}</strong></p>
+                        <p class="mb-0">Total Credit Grand: <strong>$ {{ total_credit_price }}</strong></p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -238,6 +262,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const soNum = '{{ order.so_num }}';
+    const isOrder = '1';
     
     // 打印原始订单
     document.getElementById('printOrder').addEventListener('click', function() {
@@ -262,6 +287,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 打印Mcd订单
     document.getElementById('printMcdOrder').addEventListener('click', function() {
         window.open(`/print_order_mcd/${soNum}/`, '_blank');
+    });
+
+    // 打印Metal Invoice
+    document.getElementById('printMetalInvoice').addEventListener('click', function() {
+        window.open(`/print_metal_invoice/${soNum}/${isOrder}`, '_blank');
     });
 
     // 编辑订单条目

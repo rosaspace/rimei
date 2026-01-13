@@ -8,13 +8,15 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.http import HttpResponse
 
 from datetime import datetime,date
+from decimal import Decimal, ROUND_HALF_UP
 
 from ..models import RMOrder, RMCustomer, OrderImage, RMProduct,OrderItem, UserAndPermission
 from .pdfextract import get_product_qty_with_inventory_from_order,extract_order_info,extract_items_from_pdf,get_product_qty_with_inventory
 from ..constants import constants_address,constants_view
-from .pdfgenerate import extract_text_from_pdf
+from .pdfgenerate import extract_text_from_pdf, converter_metal_invoice
 
 def add_order(request):
     if request.method == "POST":
@@ -112,6 +114,13 @@ def edit_order(request, so_num):
             total_quantity = sum(int(item.quantity) for item in orderitems_new)
             total_pallet = sum(int(item.pallet_qty) for item in orderitems_new)
 
+            # price
+            total_price = sum((Decimal(item.totalprice) for item in orderitems_new), Decimal('0.00'))
+            total_price = total_price.quantize(Decimal('0.00'),rounding=ROUND_HALF_UP)
+            total_tax = (total_price * Decimal('0.0825')).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+            total_grand = total_price + total_tax
+            total_credit_price = total_grand + (total_grand * Decimal('0.025')).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+
             # products = RMProduct.objects.all().order_by('name')
             if order.customer_name.id != 19:
                 products = RMProduct.objects.exclude(type="Metal").order_by('name')
@@ -128,6 +137,9 @@ def edit_order(request, so_num):
                 'total_weight': total_weight,  # ✅ 加入模板变量
                 'total_quantity': total_quantity,  # ✅ 加入模板变量
                 'total_pallet':total_pallet,
+                'total_price':total_price,
+                'total_grand':total_grand,
+                'total_credit_price':total_credit_price,
             })
         elif request.method == "POST":
             try:
@@ -319,3 +331,42 @@ def edit_order_simple(request, so_num):
     except RMOrder.DoesNotExist:
         messages.error(request, '订单不存在')
         return redirect('rimeiorder')
+
+def print_metal_invoice(request, order_id, isOrder=0 ):
+    print("----------print_metal_invoice----------")
+    print("isOrder: ", isOrder)
+    
+    order = get_object_or_404(RMOrder, so_num=order_id)
+    order_items = OrderItem.objects.filter(order=order)
+    orderitems_new = get_product_qty_with_inventory_from_order(order_items)
+
+    # 填充发票条目
+    amount_items = []
+    for obj in orderitems_new:
+        item = obj.so_num  # 保留原始 item 对象（不是字符串）
+
+        desc = getattr(obj, "description", "").strip()
+        units = Decimal(str(getattr(obj, "quantity", 0) or 0))
+        rate = Decimal(str(getattr(obj, "price", 0) or 0))
+
+        # totalprice 优先
+        if hasattr(item, "totalprice") and item.totalprice:
+            amount = Decimal(item.totalprice)
+        else:
+            amount = Decimal(units) * Decimal(rate)
+
+        amount_items.append((item, desc, units, rate, amount))
+        print("desc: ",desc)
+
+
+    # 构造新的文件路径
+    new_filename = f"{order.so_num}.pdf"
+    output_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_METAL_ORDER)
+    output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
+    converter_metal_invoice(order, amount_items, output_dir, new_filename, isOrder)
+    
+    # 打开并读取PDF文件
+    with open(output_file_path , 'rb') as pdf:
+        response = HttpResponse(pdf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{new_filename}"'
+        return response

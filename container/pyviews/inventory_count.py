@@ -1,7 +1,7 @@
 import openpyxl
 import math
 
-from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission
+from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission, Employee
 
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect
@@ -75,7 +75,7 @@ def inventory_metal(request):
     return render(request, constants_view.template_inventory, {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
 
 def inventory_mcd(request):
-    inventory_items = RMProduct.objects.filter(Q(type="Mcdonalds") | Q(type="Other"))
+    inventory_items = RMProduct.objects.filter(Q(type="Mcdonalds") | Q(type="Other") | Q(type="MCD"))
 
     inventory_items_converty = []  # 用来存储有差异的库存记录
     for product in inventory_items:
@@ -263,6 +263,36 @@ def show_pallet_number(request):
         'selectYear':select_year,'selectMonth':select_month,
     }) 
 
+def edit_product(request,product_id):
+    product = get_object_or_404(RMProduct, id=product_id)
+    employee = Employee.objects.filter(belongTo = "CabinetsDepot")
+
+    if request.method == 'POST':
+        product.name = request.POST.get('name')
+        product.shortname = request.POST.get('shortname')
+        product.size = request.POST.get('size')
+        product.TI = request.POST.get('TI') or 0
+        product.HI = request.POST.get('HI') or 0
+        product.Pallet = request.POST.get('Pallet') or 0
+        product.Color = request.POST.get('Color')
+        product.Location = request.POST.get('Location')
+        product.ShelfRecord = request.POST.get('ShelfRecord')
+        product.description = request.POST.get('description')
+        product.quantity_init = request.POST.get('quantity_init') or 0
+        product.quantity_diff = request.POST.get('quantity_diff') or 0
+        product.type = request.POST.get('type')
+        product.price = request.POST.get('price') or 0
+        product.blongTo = Employee.objects.get(id=request.POST.get('blongTo'))
+
+        product.save()
+        return redirect('inventory')
+
+    return render(request, constants_view.template_edit_product, {
+        'product': product,
+        'employee': employee,
+    })
+
+# sub function
 def get_month_pallet_number(select_month, select_year):
         # 过滤出指定月份的订单
     start_date = datetime(int(select_year), int(select_month), 1)
@@ -343,7 +373,7 @@ def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,o
     product.palletnumber = 0 if product.Pallet == 0 else product.shownumber // product.Pallet
     product.case = 0 if product.Pallet == 0 else product.shownumber % product.Pallet
     product.Location = product.Location
-    product.ShelfRecord = product.ShelfRecord
+    product.ShelfRecord = product.ShelfRecord or '-'
     product.totalPallet = 0 if product.Pallet == 0 else math.ceil(product.quantity / product.Pallet)
 
     return product
@@ -401,6 +431,7 @@ def get_quality(product):
     # 插入初始记录到入库列表最前
     inbound_actual_list.insert(0, initial_log)    
 
+    # 实际出库记录
     outbound_actual_logs = OrderItem.objects.filter(
         product=product,
         order__is_updateInventory=True
@@ -416,6 +447,7 @@ def get_quality(product):
         'note': getattr(item.order, 'so_num', '')
     } for item in outbound_actual_logs]
 
+    # 备货区数量
     outbound_stock_logs = OrderItem.objects.filter(product=product,order__is_allocated_to_stock=True).select_related('order')
     outbound_stock_list = [{
         'date': item.order.pickup_date if item.order and item.order.pickup_date else 'N/A',

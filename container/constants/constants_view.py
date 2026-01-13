@@ -46,6 +46,7 @@ template_edit_ap_invoice = 'container/invoiceManager/edit_ap_invice.html'
 
 # inventory
 template_order_history = 'container/inventory/order_history.html'
+template_edit_product = 'container/inventory/edit_product.html'
 
 # statistics
 template_statistics_invoice = 'container/statistics/invoice_Statistics.html'

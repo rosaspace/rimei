@@ -83,7 +83,8 @@ class RMProduct(models.Model):
     blongTo = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)  # 关联到 RMOrder
     quantity_init =  models.IntegerField(blank=True, null=True)  # 初始数量
     quantity_diff =  models.IntegerField(default=0)  # 初始差异
-    type = models.CharField(max_length=255, default='Rimei')
+    type = models.CharField(max_length=255, default='Rimei') # 类型
+    price = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 价格
 
     def __str__(self):
         return self.name
@@ -95,23 +96,6 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.product.name} - {self.quantity} pcs"
-
-class RMInventory(models.Model):
-    product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联产品
-    quantity_init =  models.IntegerField(blank=True, null=True)  # 初始数量
-    quantity_diff =  models.IntegerField(default=0)  # 初始差异
-    quantity = models.IntegerField()  # 已完成的出库（物流发货/交付给客户）
-    quantity_for_neworder = models.IntegerField(default=0)  # 因新订单预定而预留的库存，还未出库
-    quantity_to_stock = models.IntegerField(default=0)  # 放入备货区（内部使用、备货用途）所减少的库存
-
-    def save(self, *args, **kwargs):
-        # 如果 quantity_init 还没设置，默认等于 quantity
-        if self.quantity_init is None:
-            self.quantity_init = self.quantity
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.product.name} - {self.quantity}"  # 返回产品
 
 class ClockRecord(models.Model):
     WEEKDAY_CHOICES = [
@@ -196,7 +180,7 @@ class ClockRecord(models.Model):
 
         super().save(*args, **kwargs)
 
-class LogisticsCompany(models.Model):
+class LogisticsCompany(models.Model): 
     name = models.CharField(max_length=255, unique=True)  # 物流公司名称，唯一
 
     def __str__(self):
@@ -238,6 +222,7 @@ class Manufacturer(models.Model):
 def get_default_inbound_category():
     first = InboundCategory.objects.first()
     return first.id if first else None  # 避免为空时报错
+
 def get_default_railstation_category():
     first = RailwayStation.objects.first()
     return first.id if first else None  # 避免为空时报错
@@ -352,6 +337,7 @@ class ContainerStatement(models.Model):
     def __str__(self):
         return f"{self.statement_number} - {self.container_id_str}"
 
+# Invoice
 class InvoicePaidCustomer(models.Model):
     name = models.CharField(max_length=255, default='')
 

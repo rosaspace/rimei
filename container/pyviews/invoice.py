@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 from django.db.models import Q
 
@@ -31,7 +31,7 @@ from .inventory_count import get_month_pallet_number, get_quality, get_product_q
 from .getPermission import get_user_permissions
 from ..models import InvoicePaidCustomer,Carrier,InvoiceVendor,InvoicePurposeFor,InvoiceAPRecord,InvoiceARRecord
 
-# Invoice
+# print original delivery order
 def print_original_do(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
 
@@ -55,6 +55,7 @@ def print_original_do(request, container_id):
         response['Content-Disposition'] = f'inline; filename="{container.container_pdfname}"'
         return response
 
+# print advance invoice
 def print_original_invoice(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
 
@@ -73,7 +74,8 @@ def print_original_invoice(request, container_id):
         response = HttpResponse(pdf.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{container.invoice_pdfname}"'
         return response
-    
+
+# print invoice to omar
 def print_converted_invoice(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
 
@@ -97,96 +99,127 @@ def print_converted_invoice(request, container_id):
         response['Content-Disposition'] = f'inline; filename="{container.customer_invoice_pdfname}"'
         return response
 
-def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, isClassisSplit = 0):
+# generate invoice for omar
+def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, isClassisSplit = 0, isPrepull = 0):
     print("----------print_customer_invoice----------")
     print("isEmptyContainerRelocate: ", isEmptyContainerRelocate)
     print("isClassisSplit: ", isClassisSplit)
     container = get_object_or_404(Container, container_id=container_id)
 
-    if not container.invoice_pdfname:
-        return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
-
-    # 构建PDF文件路径
-    input_pdf_path  = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, container.invoice_pdfname)    
-    # 检查文件是否存在
-    if not os.path.exists(input_pdf_path ):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开原始 PDF
-    original_doc  = fitz.open(input_pdf_path)
     amount_items = []
     total_original = 0
-    lines = []
-    # 提取所有行文本
-    for page in original_doc:
-        lines += page.get_text().splitlines()
 
-    # 清洗空行
-    lines = [line.strip() for line in lines if line.strip()]
-    
-    i = 0
-    while i < len(lines) - 4:
-        # 特例：Flat rate 前面是有效描述行
-        if lines[i+1].lower() == "flat rate":
-            desc = lines[i]  # 正确描述
-            try:
-                units = float(lines[i+2])
-                rate = float(lines[i+3])
-                amount = float(lines[i+4])
+    # ============================
+    # ✅ NEW CASE: logistics.id == 3
+    # ============================
+    if container.logistics and container.logistics.id == 3:
+        print("✅ logistics.id == 3, using fixed invoice pricing")
 
-                amount_items.append((desc.strip(), units, rate, amount))
-                total_original += amount
+        # 计算天数（包含 delivery_date 和 empty_date）
+        delivery_date = container.delivery_date
+        empty_date = container.empty_date
 
-                print(f"✔✔ {desc} | Units: {units} | Rate: {rate} | Amount: {amount}")
-                i += 5  # 向后跳 5 行
-            except (ValueError, IndexError):
-                i += 1
-        else:
-            desc_line = lines[i].strip()
+        days = (empty_date - delivery_date).days + 1  # ✅ 两头都包括
+        rate = 40.00
+        chassis_total = days * rate
 
-            # ✅ 特例修正：INTERM1 的正确格式
-            if desc_line == "INTERM1":
+        amount_items = [
+            ("Drayage (FSC all included)", 1, 450.00, 450.00),
+            ("Chassis", days, rate, chassis_total),
+        ]
+        total_original = 560.00
+
+    # ============================
+    # ✅ ORIGINAL LOGIC (unchanged)
+    # ============================
+    else:
+
+        if not container.invoice_pdfname:
+            return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
+
+        # 构建PDF文件路径
+        input_pdf_path  = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, container.invoice_pdfname)    
+        # 检查文件是否存在
+        if not os.path.exists(input_pdf_path ):
+            return HttpResponse("PDF文件未找到", status=404)
+        
+        # 打开原始 PDF
+        original_doc  = fitz.open(input_pdf_path)
+        amount_items = []
+        total_original = 0
+        lines = []
+        # 提取所有行文本
+        for page in original_doc:
+            lines += page.get_text().splitlines()
+
+        # 清洗空行
+        lines = [line.strip() for line in lines if line.strip()]
+        
+        i = 0
+        while i < len(lines) - 4:
+            # 特例：Flat rate 前面是有效描述行
+            if lines[i+1].lower() == "flat rate":
+                desc = lines[i]  # 正确描述
                 try:
-                    # 跳过无用的 weight 行
-                    units = 1
-                    rate = float(lines[i + 3])  # 应该跳过几行到金额
-                    amount = float(lines[i + 4])
+                    units = float(lines[i+2])
+                    rate = float(lines[i+3])
+                    amount = float(lines[i+4])
 
-                    amount_items.append((desc_line, units, rate, amount))
+                    amount_items.append((desc.strip(), units, rate, amount))
                     total_original += amount
 
-                    print(f"✔ [FIXED] {desc_line} | Units: {units} | Rate: {rate} | Amount: {amount}")
-                    i += 5
-                    continue
-                except (ValueError, IndexError):
-                    i += 1
-                    continue
-
-            # 通用解析逻辑（小心不要误入）
-            if re.match(r'^[A-Za-z][A-Za-z0-9 \-/]+$', desc_line) and not desc_line.lower().startswith("min"):
-                try:
-                    units = float(lines[i + 1])
-                    rate = float(lines[i + 2])
-                    amount = float(lines[i + 3])
-
-                    amount_items.append((desc_line, int(units), rate, amount))
-                    total_original += amount
-
-                    print(f"✔ {desc_line} | Units: {units} | Rate: {rate} | Amount: {amount}")
-                    i += 4
+                    print(f"✔✔ {desc} | Units: {units} | Rate: {rate} | Amount: {amount}")
+                    i += 5  # 向后跳 5 行
                 except (ValueError, IndexError):
                     i += 1
             else:
-                i += 1
+                desc_line = lines[i].strip()
 
-    print(f"✅ 共抓取 {len(amount_items)} 条价格记录，总金额: {total_original:.2f}")
-    original_doc.close()
+                # ✅ 特例修正：INTERM1 的正确格式
+                if desc_line == "INTERM1" or desc_line == "INTERM2":
+                    try:
+                        # 跳过无用的 weight 行
+                        units = 1
+                        rate = float(lines[i + 3])  # 应该跳过几行到金额
+                        amount = float(lines[i + 4])
 
-    # 构造新的文件路径
+                        amount_items.append((desc_line, units, rate, amount))
+                        total_original += amount
+
+                        print(f"✔ [FIXED] {desc_line} | Units: {units} | Rate: {rate} | Amount: {amount}")
+                        i += 5
+                        continue
+                    except (ValueError, IndexError):
+                        i += 1
+                        continue
+
+                # 通用解析逻辑（小心不要误入）
+                if re.match(r'^[A-Za-z][A-Za-z0-9 \-/]+$', desc_line) and not desc_line.lower().startswith("min"):
+                    try:
+                        units = float(lines[i + 1])
+                        rate = float(lines[i + 2])
+                        amount = float(lines[i + 3])
+
+                        amount_items.append((desc_line, int(units), rate, amount))
+                        total_original += amount
+
+                        print(f"✔* {desc_line} | Units: {units} | Rate: {rate} | Amount: {amount}")
+                        i += 4
+                    except (ValueError, IndexError):
+                        i += 1
+                else:
+                    i += 1
+
+        print(f"✅ 共抓取 {len(amount_items)} 条价格记录，总金额: {total_original:.2f}")
+        original_doc.close()
+
+    # ============================
+    # 生成客户发票 PDF（共用）
+    # ============================
     new_filename = f"{container.container_id}.pdf"
     output_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.CUSTOMER_INVOICE_FOLDER)
     output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
-    converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit)
+    converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull)
     
     # 打开并读取PDF文件
     with open(output_file_path , 'rb') as pdf:
@@ -194,6 +227,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
         response['Content-Disposition'] = f'inline; filename="{new_filename}"'
         return response
 
+# advance statement
 def print_statement_invoice_pdf(request):
     if request.method == "POST":
         selected_ids = request.POST.getlist("selected_ids")
@@ -272,6 +306,7 @@ def print_statement_invoice_pdf(request):
     os.remove(temp_path)
     return response
 
+# omar statement
 def print_statement_customer_invoice_pdf(request):
     if request.method == "POST":
         selected_ids = request.POST.getlist("selected_ids")
@@ -350,12 +385,13 @@ def print_statement_customer_invoice_pdf(request):
     os.remove(temp_path)
     return response
 
+# upload advance invoice
 def edit_invoice_file(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
     invoice_file = request.FILES.get('invoice_file')
 
     if not invoice_file:
-        return JsonResponse({"error": "No file uploaded."}, status=400)
+        return HttpResponse("No file uploaded.", status=404)
 
     try:
         # 保存文件
@@ -383,17 +419,62 @@ def edit_invoice_file(request, container_id):
 
         return render(request, constants_view.template_edit_invoice, {
             'container': container,
+            'container_id': container_id,
         })
     
     except Exception as e:
         return JsonResponse({"error": f"Failed to process invoice: {e}"}, status=500)
 
+# upload ladingcargo invoice
+def edit_ladingcargo_invoice_file(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+
+    # ✅ 文件
+    invoice_file = request.FILES.get('ladingcargo_invoice_file')
+    
+    # ✅ 表单字段（必须用 POST）
+    invoice_id = request.POST.get('ladingcargo_invoice_id')
+    invoice_price = request.POST.get('ladingcargo_invoice_price')
+    invoice_date = request.POST.get('ladingcargo_invoice_date')
+    invoice_duedate = request.POST.get('ladingcargo_invoice_duedate')
+
+    if not invoice_file:
+        return HttpResponse("No file uploaded.", status=404)
+
+    try:
+        # 保存文件
+        container.invoice_pdfname = invoice_file.name
+        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, invoice_file.name)
+        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+        with open(full_path, 'wb+') as destination:
+            for chunk in invoice_file.chunks():
+                destination.write(chunk)
+
+        # 不用解析发票内容，价格为450
+
+        # 更新 container 部分字段（不保存付款相关信息）
+        container.invoice_id = invoice_id
+        container.invoice_date = invoice_date
+        container.due_date = invoice_duedate
+        container.price = Decimal(invoice_price)
+        container.save()
+
+        return render(request, constants_view.template_edit_invoice, {
+            'container': container,
+            'container_id': container_id,
+        })
+    
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to process invoice: {e}"}, status=500)
+
+
+# upload invoice to omar
 def edit_customer_invoice_file(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
     invoice_file = request.FILES.get('invoice_file')
 
     if not invoice_file:
-        return JsonResponse({"error": "No file uploaded."}, status=400)
+        return HttpResponse("No file uploaded.", status=404)
 
     try:        
         container.customer_invoice_pdfname = invoice_file.name
@@ -428,6 +509,7 @@ def edit_customer_invoice_file(request, container_id):
     except Exception as e:
         return JsonResponse({"error": f"Failed to process invoice: {e}"}, status=500)
 
+# update advance invoice price
 def edit_invoice(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
 
@@ -435,6 +517,7 @@ def edit_invoice(request, container_id):
         print("date: ",container.customer_payment_date, type(container.customer_payment_date))
         return render(request, constants_view.template_edit_invoice, {
             'container': container,
+            'container_id': container_id,
         })
 
     elif request.method == 'POST':
@@ -453,8 +536,10 @@ def edit_invoice(request, container_id):
 
         return render(request, constants_view.template_edit_invoice, {
             'container': container,
+            'container_id': container_id,
         })
 
+# update omar invoice pay status
 def edit_customer_invoice(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
 
@@ -476,6 +561,7 @@ def edit_customer_invoice(request, container_id):
         'container_id': container_id,
     })
 
+# export pallet and labor invoice monthly
 def export_pallet_invoice(request):
     # 获取请求中的月份和年份
     select_month = request.GET.get('month')
@@ -536,6 +622,7 @@ def export_pallet_invoice(request):
     os.remove(temp_path)
     return response
 
+# Template -- export pallet and labor invoice monthly
 def invoice_template(title,wrapped_container, total_container, total_in_plts,total_out_plts,total_plts,total_pallets,total_price):
     # ✅ 创建临时文件
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
@@ -701,6 +788,7 @@ def invoice_template(title,wrapped_container, total_container, total_in_plts,tot
 
     return temp_path
 
+# Template -- add title with underline
 def add_section_header(title, style, width):
     """使用表格边框生成段落标题和下划线，左侧对齐。"""
     table = Table(
@@ -717,6 +805,7 @@ def add_section_header(title, style, width):
     ]))
     return [table, Spacer(1, 6)]
 
+# add received invoice
 def add_ar_invoice(request):
     paidcustomer = InvoicePaidCustomer.objects.all()
     receivedcompany = Carrier.objects.all()
@@ -728,6 +817,7 @@ def add_ar_invoice(request):
     'receivedcompany':receivedcompany,
     })
 
+# add paidable invoice
 def add_ap_invoice(request):
     vendor = InvoiceVendor.objects.all()
     receivedcompany = Carrier.objects.all()
@@ -740,6 +830,7 @@ def add_ap_invoice(request):
     'receivedcompany':receivedcompany,
     })
 
+# edit paidable invoice
 def edit_ap_invoice(request, invoice_id):
 
     try:
@@ -774,7 +865,7 @@ def edit_ap_invoice(request, invoice_id):
                 ap_record.givetoboss_date = clean_date(request.POST.get('givetoboss_date'))
                 ap_record.payment_date = clean_date(request.POST.get('paid_date'))
                 ap_record.note = request.POST.get('note')
-                ap_record.ar_invoice_pdfname = request.POST.get('note') or None 
+                # ap_record.ar_invoice_pdfname = request.POST.get('note') or None 
 
                 # 处理PDF文件
                 if 'invoice_pdf' in request.FILES:
@@ -782,10 +873,10 @@ def edit_ap_invoice(request, invoice_id):
                     ap_record.ar_invoice_pdfname = uploaded_file.name  # 保存文件名到模型字段（如果需要）
 
                     # 打印 PDF 文件名
-                    print(f"Uploaded PDF file name: {order.order_pdfname}")
+                    print(f"Uploaded PDF file name: {uploaded_file.name}")
 
                     # 构造保存路径
-                    order_dir = os.path.join(settings.MEDIA_ROOT, "invoices", "APInvoice")
+                    order_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_AP)
                     os.makedirs(order_dir, exist_ok=True)  # 确保目录存在
                     file_path = os.path.join(order_dir, uploaded_file.name)
 
@@ -818,7 +909,7 @@ def edit_ap_invoice(request, invoice_id):
         messages.error(request, '订单不存在')
         return redirect('invoice_ap')
 
-
+# Template -- format the data
 def clean_date(value):
     if value in ["", None]:
         return None
@@ -827,4 +918,22 @@ def clean_date(value):
     except ValueError:
         return None
 
+# print Invoice
+def print_original_ap_invoice(request, so_num):
+    order = get_object_or_404(InvoiceAPRecord, invoice_id=so_num)
 
+    if not order.ar_invoice_pdfname:
+        return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_AP, order.ar_invoice_pdfname)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+    
+    # 打开并读取PDF文件
+    with open(pdf_path, 'rb') as pdf:
+        response = HttpResponse(pdf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{order.ar_invoice_pdfname}"'
+        return response

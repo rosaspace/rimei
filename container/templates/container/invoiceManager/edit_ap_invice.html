@@ -2,8 +2,22 @@
 
 {% block content %}
 <div class="container">
+    <h4 class="mb-2">Print AP Invoice</h4>
+    <div class="row" >
+        <div class="d-flex flex-wrap align-items-start">
+            <div class="me-2">
+                <button class="btn btn-primary" id="printInvoice">Original Invoice</button>
+            </div>
+            <div class="ms-auto">
+                <a href="{% url 'invoice_ap' %}" class="btn btn-secondary">Back</a>
+            </div>
+        </div>        
+    </div>
+
+    <hr class="my-3 border-2 opacity-100">
+
     <h4>Edit AP Invoice</h4>
-    <form method="POST" class="needs-validation" action="{% url 'edit_ap_invoice' record.invoice_id %}" novalidate>
+    <form method="POST" class="needs-validation" enctype="multipart/form-data" action="{% url 'edit_ap_invoice' record.invoice_id %}" novalidate>
         {% csrf_token %}
         
         <div class="row mb-2">
@@ -63,6 +77,9 @@
             <div class="col-md-3">
                 <label for="invoice_pdf" class="form-label">Invoice PDF</label>
                 <input type="file" class="form-control" id="invoice_pdf" name="invoice_pdf" accept="application/pdf">
+                {% if record.ar_invoice_pdfname %}
+                    <p class="text-muted mb-0">{{ record.ar_invoice_pdfname }}</p>
+                {% endif %}
             </div>
         </div>
 
@@ -81,7 +98,7 @@
             <div class="col-md-6">
                 <label for="note" class="form-label">Note</label>
                 <input type="text" class="form-control" id="description" name="note" 
-                    value="{{ container.content }}">
+                    value="{{ record.note }}">
             </div>
         </div>
                 
@@ -92,4 +109,18 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const so_num = '{{ record.invoice_id }}';
+    const isOrder = '1';
+    
+    // 打印原始订单
+    document.getElementById('printInvoice').addEventListener('click', function() {
+        window.open(`/print_original_ap_invoice/${so_num}/`, '_blank');
+    });
+});
+</script>
 {% endblock %}

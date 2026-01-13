@@ -15,28 +15,48 @@ import pandas as pd
 from ..models import Container,Employee,ClockRecord,ContainerItem,OrderItem,RMProduct
 from .getPermission import get_user_permissions
 from ..constants import constants_address,constants_view
+from .inventory_count import get_quality, get_product_qty
 
 def statistics_invoice(request):
-    containers = Container.objects.filter(
-        Q(ispay=True, customer_ispay=True)
+    # containers = Container.objects.filter(
+    #     Q(ispay=True, customer_ispay=True)
+    # ).exclude(
+    #     logistics=2
+    # ).annotate(
+    #     # 添加价格差字段
+    #     price_diff=Case(
+    #     When(customer_price__lt=F('price'), then=Value(0)),
+    #     default=ExpressionWrapper(
+    #         F('customer_price') - F('price'),
+    #         output_field=FloatField()
+    #     ),
+    #     output_field=FloatField()
+    #     )
+    # ).order_by('-payment_date')
+
+    containers = Container.objects.exclude(
+        customer=6
     ).exclude(
-        logistics=2
+        empty_date__isnull=True
+    ).exclude(
+        container_id__icontains='pack'   # ✅ 排除名字包含 “pack”
+    ).exclude(
+        container_id__icontains='self'   # 排除 self
     ).annotate(
-        # 添加价格差字段
         price_diff=Case(
-        When(customer_price__lt=F('price'), then=Value(0)),
-        default=ExpressionWrapper(
-            F('customer_price') - F('price'),
+            When(customer_price__lt=F('price'), then=Value(0)),
+            default=ExpressionWrapper(
+                F('customer_price') - F('price'),
+                output_field=FloatField()
+            ),
             output_field=FloatField()
-        ),
-        output_field=FloatField()
         )
-    ).order_by('-payment_date')
+    )
 
     # 获取实际的最早和最晚 due_date（按月截断）
     date_range = containers.aggregate(
-        start=Min('payment_date'),
-        end=Max('payment_date')
+        start=Min('empty_date'),
+        end=Max('empty_date')
     )
 
     if not date_range['start'] or not date_range['end']:
@@ -54,19 +74,28 @@ def statistics_invoice(request):
     current = start_month
 
     # 聚合：每月总的 price_diff
-    monthly_data = containers.annotate(month=TruncMonth('payment_date')) \
+    monthly_data = containers.annotate(month=TruncMonth('empty_date')) \
         .values('month') \
-        .annotate(total_diff=Sum('price_diff')) \
+        .annotate(total_diff=Sum('price_diff'), container_count=Count('id')) \
         .order_by('month')
 
     full_data = []
-    monthly_map = {item['month'].strftime('%Y-%m'): item['total_diff'] for item in monthly_data}
+    monthly_map = {
+        item['month'].strftime('%Y-%m'): {
+            'total_diff': item['total_diff'],
+            'count': item['container_count']
+        }
+        for item in monthly_data
+    }
 
     while current <= end_month:
         month_str = current.strftime('%Y-%m')
+        month_info = monthly_map.get(month_str, {})
+
         full_data.append({
             'month': month_str,
-            'total_diff': round(monthly_map.get(month_str, 0.0), 2)
+            'total_diff': round(month_info.get('total_diff', 0.0) or 0.0, 2),
+            'container_count': month_info.get('count', 0)
         })
 
         # 进入下一个月
@@ -252,158 +281,30 @@ def statistics_outbound(request):
     })
 
 def statistics_warehouse(request):
-    # 限定产品类型
-    init_items = RMProduct.objects.filter(type='Rimei')
+    result = {}
 
-    in_items = ContainerItem.objects.filter(
-        container__delivery_date__isnull=False,
-        product__type='Rimei'
-    ).annotate(month=TruncMonth('container__delivery_date'))
+    for brand in ['Rimei', 'MCD']:
+        init_qty = RMProduct.objects.filter(type=brand).aggregate(
+            total=Sum('quantity_init')
+        )['total'] or 0
 
-    out_items = OrderItem.objects.filter(
-        order__pickup_date__isnull=False,
-        product__type='Rimei'
-    ).annotate(month=TruncMonth('order__pickup_date'))
+        in_items, out_items, inbound, outbound = get_monthly_in_out(brand)
+        months, table, in_map, out_map = build_monthly_table(inbound, outbound, init_qty)
+        kpis = calc_inventory_kpis(brand, in_items, out_items)
+        dead = get_dead_products(brand)
 
-    inbound_by_month = in_items.values('month').annotate(total_qty=Sum('quantity')).order_by('month')
-    outbound_by_month = out_items.values('month').annotate(total_qty=Sum('quantity')).order_by('month')
+        result[brand] = {
+            'months': months,
+            'table_data': table,
+            'inbound_data': [in_map.get(m, 0) for m in months],
+            'outbound_data': [out_map.get(m, 0) for m in months],
+            'dead_products': dead,
+            **kpis
+        }
 
-    # 构造数据映射
-    month_set = set()
-    inbound_map = {}
-    outbound_map = {}
-
-    for row in inbound_by_month:
-        m = row['month'].strftime('%Y-%m')
-        inbound_map[m] = row['total_qty']
-        month_set.add(m)
-
-    for row in outbound_by_month:
-        m = row['month'].strftime('%Y-%m')
-        outbound_map[m] = row['total_qty']
-        month_set.add(m)
-
-    sorted_months = sorted(month_set)
-
-    # 初始库存：放在最早的月份
-    if sorted_months:
-        first_month = sorted_months[0]
-    else:
-        first_month = datetime.today().strftime('%Y-%m')
-        sorted_months = [first_month]
-
-    total_init_qty = sum(p.get('quantity_init') or 0 for p in init_items.values('quantity_init'))
-    initbound_map = {first_month: total_init_qty}
-
-    initbound_data = [initbound_map.get(m, 0) for m in sorted_months]
-    inbound_data = [inbound_map.get(m, 0) for m in sorted_months]
-    outbound_data = [outbound_map.get(m, 0) for m in sorted_months]
-
-    table_data = []
-    for i, month in enumerate(sorted_months):
-        table_data.append({
-            'month': month,
-            'initItems': initbound_data[i],
-            'inbound': inbound_data[i],
-            'outbound': outbound_data[i]
-        })
-
-    # 库存周转率
-    total_in = sum(inbound_data)
-    total_out = sum(outbound_data)
-    average_inventory = (total_in + total_out) / 2 if (total_in + total_out) > 0 else 1
-    inventory_turnover = total_out / average_inventory
-
-    # 滞销库存：过去90天无出库
-    reference_date = date.today()
-    threshold_date = reference_date - timedelta(days=90)
-
-    # 所有产品名称和库存数量
-    all_products_qs = list(RMProduct.objects.filter(type='Rimei').values('name', 'quantity_init', 'quantity_diff'))
-    product_quantity_map = {}
-    for p in all_products_qs:
-        name = p.get('name')
-        init_qty = p.get('quantity_init') or 0
-        diff_qty = p.get('quantity_diff') or 0
-        product_quantity_map[name] = init_qty + diff_qty
-
-    # 累加产品入库数量
-    inbound_by_product = in_items.values('product__name').annotate(total_qty=Sum('quantity'))
-    for row in inbound_by_product:
-        name = row['product__name']
-        qty = row['total_qty'] or 0
-        product_quantity_map[name] = product_quantity_map.get(name, 0) + qty
-
-    # 获取每个产品最近出库时间
-    last_outbound = out_items.values('product__name').annotate(
-        last_date=Max('order__outbound_date')
-    )
-    last_outbound_map = {r['product__name']: r['last_date'] for r in last_outbound}
-
-    # 识别滞销产品及其库存
-    dead_products = []
-    for name, qty in product_quantity_map.items():
-        last_date = last_outbound_map.get(name)
-        if last_date is None or last_date < threshold_date:
-            dead_products.append({'name': name, 'quantity': qty})
-
-    # ---- 计算库存准确率 ----
-    products = RMProduct.objects.filter(type='Rimei')
-    total_products = products.count()
-    inaccurate_count = products.filter(quantity_diff__gt=0).count()
-    inventory_accuracy = 100 * (total_products - inaccurate_count) / total_products if total_products > 0 else 100
-    print(inaccurate_count,total_products)
-
-    # ---- 平均库存水平 ----
-    # 库存 = 初始库存 + 入库总量 - 出库总量
-    total_init_stock = products.aggregate(total=Sum('quantity_init'))['total'] or 0
-    total_inbound = in_items.aggregate(total=Sum('quantity'))['total'] or 0
-    total_outbound = out_items.aggregate(total=Sum('quantity'))['total'] or 0
-    avg_inventory = total_init_stock + total_inbound - total_outbound
-    print(total_init_stock,total_inbound,total_outbound)
-
-    # ---- 缺货率 ----
-    # 这里用Q模拟，实际字段需替换
-    out_of_stock_orders = OrderItem.objects.filter(
-        Q(quantity__gt=F('product__quantity_init') + F('product__quantity_diff'))  # 模拟缺货
-    ).count()
-    total_orders = OrderItem.objects.count()
-    stockout_rate = 100 * out_of_stock_orders / total_orders if total_orders > 0 else 0
-
-    # ---- 高周转库存比例 ----
-    # 统计过去90天内有出库的产品数 / 总产品数
-    active_products = out_items.filter(order__outbound_date__gte=threshold_date).values('product').distinct().count()
-    total_products_count = products.count()
-    fast_moving_ratio = 100 * active_products / total_products_count if total_products_count > 0 else 0
-
-    # ---- 呆滞库存占比 ----
-    # 过去90天无出库的产品库存占比
-    last_outbound = out_items.values('product__name').annotate(last_date=Max('order__outbound_date'))
-    last_outbound_map = {r['product__name']: r['last_date'] for r in last_outbound}
-    dead_stock_qty = 0
-    total_stock_qty = 0
-    for p in products:
-        qty = (p.quantity_init or 0) + (p.quantity_diff or 0)
-        total_stock_qty += qty
-        last_date = last_outbound_map.get(p.name)
-        if last_date is None or last_date < threshold_date:
-            dead_stock_qty += qty
-    obsolete_inventory_ratio = 100 * dead_stock_qty / total_stock_qty if total_stock_qty > 0 else 0
-
-    user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_statistics_warehouse, {
-        'months': sorted_months,
-        'table_data':table_data,
-        'inbound_data': inbound_data,
-        'outbound_data': outbound_data,
-        'inventory_turnover': round(inventory_turnover, 2),
-        'inventory_accuracy': round(inventory_accuracy, 2),
-        'avg_inventory': round(avg_inventory, 2),
-        'stockout_rate':round(stockout_rate, 2),
-        'fast_moving_ratio':round(fast_moving_ratio, 2),
-        'obsolete_inventory_ratio':round(obsolete_inventory_ratio, 2),
-        'dead_products': dead_products,
-        'user_permissions': user_permissions
+        'data': result,
+        'user_permissions': get_user_permissions(request.user)
     })
 
 def month_workdays(dt) -> int:
@@ -509,3 +410,136 @@ def statistics_mcd_trend(request):
         'result': result,
         'user_permissions': user_permissions
     })
+
+# sub function - 每月入 / 出库统计（通用方法）
+def get_monthly_in_out(type_name):
+    in_items = ContainerItem.objects.filter(
+        container__delivery_date__isnull=False,
+        product__type=type_name
+    ).annotate(month=TruncMonth('container__delivery_date'))
+
+    out_items = OrderItem.objects.filter(
+        order__pickup_date__isnull=False,
+        product__type=type_name
+    ).annotate(month=TruncMonth('order__pickup_date'))
+
+    inbound = in_items.values('month').annotate(
+        total_qty=Sum('quantity')
+    ).order_by('month')
+
+    outbound = out_items.values('month').annotate(
+        total_qty=Sum('quantity')
+    ).order_by('month')
+
+    return in_items, out_items, inbound, outbound
+
+# sun function - 构建月份表格数据（通用）
+def build_monthly_table(inbound, outbound, init_qty):
+    month_set = set()
+    inbound_map, outbound_map = {}, {}
+
+    for r in inbound:
+        m = r['month'].strftime('%Y-%m')
+        inbound_map[m] = r['total_qty']
+        month_set.add(m)
+
+    for r in outbound:
+        m = r['month'].strftime('%Y-%m')
+        outbound_map[m] = r['total_qty']
+        month_set.add(m)
+
+    months = sorted(month_set)
+    if not months:
+        months = [datetime.today().strftime('%Y-%m')]
+
+    init_map = {months[0]: init_qty}
+
+    table = []
+    for m in months:
+        table.append({
+            'month': m,
+            'initItems': init_map.get(m, 0),
+            'inbound': inbound_map.get(m, 0),
+            'outbound': outbound_map.get(m, 0)
+        })
+
+    return months, table, inbound_map, outbound_map
+
+# sub function - KPI 统计（库存周转 / 准确率 / 缺货等）
+def calc_inventory_kpis(type_name, in_items, out_items, days_obsolete=90):
+    from datetime import date, timedelta
+    products = RMProduct.objects.filter(type=type_name)
+
+    # 1️⃣ 基础库存指标
+    total_in = in_items.aggregate(total=Sum('quantity'))['total'] or 0
+    total_out = out_items.aggregate(total=Sum('quantity'))['total'] or 0
+    avg_inventory = (total_in + total_out) / 2 if (total_in + total_out) else 1
+    inventory_turnover = total_out / avg_inventory
+
+    total_products = products.count()
+    inaccurate = products.filter(quantity_diff__gt=0).count()
+    inventory_accuracy = 100 * (total_products - inaccurate) / total_products if total_products else 100
+
+    total_init = products.aggregate(total=Sum('quantity_init'))['total'] or 0
+    avg_inventory_level = total_init + total_in - total_out
+
+    out_of_stock_orders = OrderItem.objects.filter(
+        quantity__gt=F('product__quantity_init') + F('product__quantity_diff'),
+        product__type=type_name
+    ).count()
+    total_orders = OrderItem.objects.filter(product__type=type_name).count()
+    stockout_rate = 100 * out_of_stock_orders / total_orders if total_orders else 0
+
+    # 2️⃣ Fast-Moving Inventory Ratio
+    threshold_date = date.today() - timedelta(days=days_obsolete)
+    active_products_count = out_items.filter(order__outbound_date__gte=threshold_date).values('product').distinct().count()
+    fast_moving_ratio = 100 * active_products_count / total_products if total_products else 0
+
+    # 3️⃣ Obsolete Inventory Ratio
+    last_outbound = out_items.values('product__name').annotate(last_date=Max('order__outbound_date'))
+    last_outbound_map = {r['product__name']: r['last_date'] for r in last_outbound}
+    dead_stock_qty = 0
+    total_stock_qty = 0
+    for p in products:
+        qty = (p.quantity_init or 0) + (p.quantity_diff or 0)
+        total_stock_qty += qty
+        last_date = last_outbound_map.get(p.name)
+        if last_date is None or last_date < threshold_date:
+            dead_stock_qty += qty
+    obsolete_inventory_ratio = 100 * dead_stock_qty / total_stock_qty if total_stock_qty > 0 else 0
+
+    return {
+        'inventory_turnover': round(inventory_turnover, 2),
+        'inventory_accuracy': round(inventory_accuracy, 2),
+        'avg_inventory': round(avg_inventory_level, 2),
+        'stockout_rate': round(stockout_rate, 2),
+        'fast_moving_ratio': round(fast_moving_ratio, 2),
+        'obsolete_inventory_ratio': round(obsolete_inventory_ratio, 2)
+    }
+
+# sub function - 滞销库存分析（180 天无出库）
+def get_dead_products(type_name, days=180):
+    threshold = date.today() - timedelta(days=days)
+    products = RMProduct.objects.filter(type=type_name)
+
+    product_qty = {}
+    for p in products:
+        inbound, outbound, oa, os, ia = get_quality(p)
+        pt = get_product_qty(p, inbound, outbound, oa, os, ia)
+        if pt.quantity > 0:
+            product_qty[pt.name] = pt.quantity
+
+    last_outbound = OrderItem.objects.filter(
+        product__type=type_name
+    ).values('product__name').annotate(
+        last_date=Max('order__outbound_date')
+    )
+    last_map = {r['product__name']: r['last_date'] for r in last_outbound}
+
+    dead = []
+    for name, qty in product_qty.items():
+        last = last_map.get(name)
+        if last is None or last < threshold:
+            dead.append({'name': name, 'quantity': qty})
+
+    return sorted(dead, key=lambda x: x['name'].lower())

@@ -247,9 +247,14 @@ def get_product_qty_with_inventory_from_order(order_items):
         inventory = RMProduct.objects.filter(name=item.product).first()
         product = inventory_count.get_product_qty(inventory, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
+        item.so_num = product.name
+        item.description = product.description
         item.inventory_qty = product.quantity
         item.pallet_qty = 0 if product.Pallet == 0 else item.quantity //product.Pallet
         item.case_qty = 0 if product.Pallet == 0 else item.quantity % product.Pallet
+        item.price = product.price
+        item.totalprice = product.price * item.quantity
+        item.shortage = item.inventory_qty - item.case_qty
 
         if(product.shortname == "20HBC"):
             item.weight = item.quantity * 17.5
