@@ -184,6 +184,23 @@ def edit_order(request, so_num):
                     with open(file_path, 'wb+') as destination:
                         for chunk in uploaded_file.chunks():
                             destination.write(chunk)
+                
+                if 'invoice_pdf' in request.FILES:
+                    uploaded_file = request.FILES['invoice_pdf']
+                    order.invoice_pdfname = uploaded_file.name  # 保存文件名到模型字段（如果需要）
+
+                    # 打印 PDF 文件名
+                    print(f"Uploaded Invoice PDF file name: {order.invoice_pdfname}")
+
+                    # 构造保存路径
+                    order_dir = os.path.join(settings.MEDIA_ROOT, "orders", "INVOICE")
+                    os.makedirs(order_dir, exist_ok=True)  # 确保目录存在
+                    file_path = os.path.join(order_dir, uploaded_file.name)
+
+                    # 保存文件
+                    with open(file_path, 'wb+') as destination:
+                        for chunk in uploaded_file.chunks():
+                            destination.write(chunk)
 
                 order.save()
 
@@ -332,9 +349,11 @@ def edit_order_simple(request, so_num):
         messages.error(request, '订单不存在')
         return redirect('rimeiorder')
 
-def print_metal_invoice(request, order_id, isOrder=0 ):
+def print_metal_invoice(request, order_id, isInvoice=0, discount_percent=20):
     print("----------print_metal_invoice----------")
-    print("isOrder: ", isOrder)
+    print("isInvoice: ", isInvoice)
+
+    discount_percent = int(request.GET.get("discount", 0))
     
     order = get_object_or_404(RMOrder, so_num=order_id)
     order_items = OrderItem.objects.filter(order=order)
@@ -345,7 +364,7 @@ def print_metal_invoice(request, order_id, isOrder=0 ):
     for obj in orderitems_new:
         item = obj.so_num  # 保留原始 item 对象（不是字符串）
 
-        desc = getattr(obj, "description", "").strip()
+        desc = (getattr(obj, "description", "") or "").strip()
         units = Decimal(str(getattr(obj, "quantity", 0) or 0))
         rate = Decimal(str(getattr(obj, "price", 0) or 0))
 
@@ -363,7 +382,7 @@ def print_metal_invoice(request, order_id, isOrder=0 ):
     new_filename = f"{order.so_num}.pdf"
     output_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_METAL_ORDER)
     output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
-    converter_metal_invoice(order, amount_items, output_dir, new_filename, isOrder)
+    converter_metal_invoice(order, amount_items, output_dir, new_filename, isInvoice, discount_percent)
     
     # 打开并读取PDF文件
     with open(output_file_path , 'rb') as pdf:

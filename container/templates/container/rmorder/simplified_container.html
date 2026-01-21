@@ -1,6 +1,15 @@
 {% extends "container/base.html" %}
 {% block content %}
-   
+
+<div class="d-flex flex-wrap align-items-center w-100  mb-2" >
+    <!-- 右侧按钮组 -->
+    <div class="d-flex flex-wrap gap-2 ms-auto">
+        <div>
+            <a href="{% url 'droplist_week' %}" class="btn btn-primary">DROP LIST</a>
+        </div>
+    </div> 
+</div>
+
 <div class="table-container">
     <table class="table table-striped table-bordered table-hover">
         <thead>
@@ -20,7 +29,11 @@
         </thead>
         <tbody>
             {% for container in containers %}
-            <tr>
+            <tr {% if container.delivery_date and container.delivery_date < today %}
+                class="table-secondary"
+                {% elif container.delivery_date and container.delivery_date >= start_of_week and container.delivery_date <= end_of_week %}
+                class="table-warning"
+                {% endif %}>
                 <!-- <td>{{ container.id }}</td> -->
                 <td>
                     <a href="{% url 'edit_container_simple' container.container_id %}">{{ container.container_id }}</a>

@@ -16,11 +16,11 @@
 
     <hr class="my-3 border-2 opacity-100">
 
-    <h4>Edit AP Invoice</h4>
+    <h4>Edit Payable Invoice</h4>
     <form method="POST" class="needs-validation" enctype="multipart/form-data" action="{% url 'edit_ap_invoice' record.invoice_id %}" novalidate>
         {% csrf_token %}
         
-        <div class="row mb-2">
+        <div class="row mb-3">
             <div class="col-md-3">
                 <label for="vendor_name" class="form-label required-label">Vendor</label>
                 <select class="form-select" id="customer_name" name="vendor_name" required>
@@ -55,7 +55,7 @@
             </div>
         </div>
 
-        <div class="row mb-2">
+        <div class="row mb-3">
             <div class="col-md-3">
                 <label for="due_date" class="form-label  required-label">Due Date</label>
                 <input type="date" class="form-control" id="due_date" name="due_date" required
@@ -83,7 +83,7 @@
             </div>
         </div>
 
-        <div class="row mb-2">
+        <div class="row mb-3">
             <div class="col-md-6">
                 <label for="purpose_for" class="form-label required-label">Purpose For</label>
                 <select class="form-select" id="customer_name" name="purpose_for" required>
@@ -102,7 +102,7 @@
             </div>
         </div>
                 
-        <div class="mt-2">            
+        <div class="mt-3">            
             <button type="submit" class="btn btn-primary" id="saveOrder">
                 Save AP Invoice
             </button>

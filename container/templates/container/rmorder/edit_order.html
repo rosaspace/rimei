@@ -27,6 +27,12 @@
             <div class="me-2">
                 <button class="btn btn-success" id="printMetalInvoice">Metal Invoice</button>
             </div>
+            <div class="me-2">
+                <input type="number" id="discount" name="discount" class="form-control" placeholder="Discount %" min="0" max="100" step="1" style="width: 120px;">
+            </div>
+            <div class="me-2">
+                <button class="btn btn-success" id="printStoredFile">StoredFile</button>
+            </div>
             <!-- Push this button to the right -->
             <div class="ms-auto">
                 <a href="{% url 'order_email' order.so_num %}?type=shippeout" class="btn btn-primary">
@@ -98,19 +104,19 @@
         </div>
 
         <div class="row mb-2" >
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="order_date" class="form-label  required-label">Order Date</label>
                 <input type="date" class="form-control" id="order_date" name="order_date" required
                        value="{{ order.order_date|date:'Y-m-d' }}">
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="pickup_date" class="form-label required-label">Pickup Date</label>
                 <input type="date" class="form-control" id="pickup_date" name="pickup_date" required
                        value="{{ order.pickup_date|date:'Y-m-d' }}">                
             </div>
             
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="outbound_date" class="form-label">Outbound Date</label>
                 <input type="date" class="form-control" id="outbound_date" name="outbound_date"
                     value="{{ order.outbound_date|date:'Y-m-d' }}">
@@ -121,6 +127,14 @@
                 <input type="file" class="form-control" id="order_pdf" name="order_pdf" accept="application/pdf">
                 {% if order.order_pdfname %}
                     <p class="text-muted mb-0">{{ order.order_pdfname }}</p>
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <label for="order_pdf" class="form-label">Stored PDF</label>
+                <input type="file" class="form-control" id="invoice_pdf" name="invoice_pdf" accept="application/pdf">
+                {% if order.invoice_pdfname %}
+                    <p class="text-muted mb-0">{{ order.invoice_pdfname }}</p>
                 {% endif %}
             </div>
         </div>
@@ -262,7 +276,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const soNum = '{{ order.so_num }}';
-    const isOrder = '1';
+    const isInvoice = '1';
+    const isOrder = '0';
     
     // 打印原始订单
     document.getElementById('printOrder').addEventListener('click', function() {
@@ -289,9 +304,28 @@ document.addEventListener('DOMContentLoaded', function() {
         window.open(`/print_order_mcd/${soNum}/`, '_blank');
     });
 
+    // 打印Metal Order
+    document.getElementById('printMetalOrder').addEventListener('click', function() {
+        window.open(`/print_metal_invoice/${soNum}/${isOrder}`, '_blank');
+    });
+
+    // 打印StoredFile
+    document.getElementById('printStoredFile').addEventListener('click', function() {
+        window.open(`/print_stored_file/${soNum}/`, '_blank');
+    });
+
     // 打印Metal Invoice
     document.getElementById('printMetalInvoice').addEventListener('click', function() {
-        window.open(`/print_metal_invoice/${soNum}/${isOrder}`, '_blank');
+        const discountInput = document.getElementById('discount');
+        let discount = discountInput ? discountInput.value : '';
+
+        // 防止空值或非法输入
+        if (discount === '' || isNaN(discount)) {
+            discount = 0;
+        }
+
+        const url = `/print_metal_invoice/${soNum}/${isInvoice}?discount=${encodeURIComponent(discount)}`;
+        window.open(url, '_blank');
     });
 
     // 编辑订单条目

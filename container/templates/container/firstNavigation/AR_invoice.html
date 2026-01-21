@@ -2,11 +2,41 @@
 
 {% block content %}
 <div class="d-flex flex-wrap align-items-center w-100  mb-2">
-    <div class="me-2">
+    <!-- 左侧：新增按钮 -->
+    <div class="me-auto">
         <a href="{% url 'add_ar_invoice' %}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Add Receivable Invoice
         </a>
     </div>
+
+    <!-- 右侧：Customer / Company 下拉框 -->
+    <form method="get" class="d-flex align-items-center">
+        <!-- Customer -->
+        <select name="customer" class="form-select me-2"
+                onchange="this.form.submit()"
+                style="width: 200px;">
+            <option value="">All Customers</option>
+            {% for c in customers %}
+                <option value="{{ c.id }}"
+                    {% if request.GET.customer == c.id|stringformat:"s" %}selected{% endif %}>
+                    {{ c.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <!-- Company -->
+        <select name="company" class="form-select"
+                onchange="this.form.submit()"
+                style="width: 150px;">
+            <option value="">All Companies</option>
+            {% for c in companies %}
+                <option value="{{ c.id }}"
+                    {% if request.GET.company == c.id|stringformat:"s" %}selected{% endif %}>
+                    {{ c.shortname }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
 </div>
 <div class="table-container">
     <table class="table table-striped table-bordered table-hover">
@@ -20,12 +50,19 @@
                 <th>BossDate</th>
                 <th>ReceivedDate</th>
                 <th>Note</th>
+                <th>PDF</th>
+                <th>Delete</th>
             </tr>
         </thead>
         <tbody>
             {% for item in arRecord %}
             <tr>
-                <td>{{ item.customer.name }}</td>
+                <!-- <td>{{ item.customer.name }}</td> -->
+                <td>
+                    <a href="{% url 'edit_ar_invoice' item.id %}" class="text-primary text-decoration-underline">
+                        {{ item.customer.name }}
+                    </a>
+                </td>
                 <td>{{ item.invoice_id }}</td>
                 <td>$ {{ item.invoice_price }}</td>
                 <td>{{ item.company.shortname }}</td>
@@ -33,6 +70,9 @@
                 <td>{{ item.givetoboss_date |date:"m/d/Y"}}</td>
                 <td>{{ item.payment_date |date:"m/d/Y"}}</td>
                 <td>{{ item.note }}</td>
+                <!-- <td>{{ item.ar_invoice_pdfname }}</td>  -->
+                <td><a href="{% url 'print_original_ar_invoice' item.id %}">{{ item.ar_invoice_pdfname |default:""}}</a></td>
+                <td><a href="{% url 'delete_ar_invoice' item.invoice_id %}" class="text-danger text-decoration-underline">Delete</a></td>
             </tr>
             {% endfor %}
         </tbody>

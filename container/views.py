@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q, F
 from django.template.loader import get_template
 from django.http import HttpResponse
+from django.db import transaction
 
 from weasyprint import HTML
 from datetime import datetime, date, timedelta
@@ -18,6 +19,7 @@ from .models import Container, RMOrder,RMCustomer,AlineOrderRecord,ContainerStat
 from .models import RMProduct, InvoicePaidCustomer,Carrier,InvoiceAPRecord,InvoiceARRecord
 from .pyviews.getPermission import get_user_permissions
 from .constants import constants_view
+from .models import InvoiceVendor, Carrier, InvoiceCustomer, LogisticsCompany
 
 # home
 @login_required
@@ -33,19 +35,47 @@ def index(request):
 # invoice
 @login_required(login_url='/login/')
 def invoice_view(request):
-    containers = Container.objects.all().exclude(
+    containers = Container.objects.select_related(
+        'customer', 'logistics'
+    ).all().exclude(
         logistics=2
     ).order_by('-delivery_date')
+
+    # GET 参数
+    customer_id = request.GET.get('customer')
+    logistics_id = request.GET.get('logistics')
+    ispay = request.GET.get('ispay')
+    customer_ispay = request.GET.get('customer_ispay')
+
+    if customer_id:
+        containers = containers.filter(customer_id=customer_id)
+
+    if logistics_id:
+        containers = containers.filter(logistics_id=logistics_id)
+
+    if ispay == 'false':
+        containers = containers.filter(Q(ispay=False, invoice_id__isnull=False))
+
+    if customer_ispay == 'false':
+        containers = containers.filter(Q(customer_ispay=False, customer_invoiceId__isnull=False))
     
+    customers = InvoiceCustomer.objects.all().order_by('name')
+    logistics_list = LogisticsCompany.objects.all().order_by('name')
     user_permissions = get_user_permissions(request.user)
-    return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_invoice, {
+        'containers': containers,'user_permissions': user_permissions,
+        'customers': customers,
+        'logistics_list': logistics_list,
+        })
 
 @login_required(login_url='/login/')
 def invoice_unpaid_customer(request):
     containers = Container.objects.filter(
-        Q(ispay=False, customer_ispay=False) & ~Q(price=0) & (~Q(customer = 3) & ~Q(customer = 12) )
+        Q(customer_ispay=False, customer_invoiceId__isnull=False)
     ).exclude(
-        logistics=2
+        Q(logistics = 2) |
+        Q(customer = 3) |
+        Q(customer = 12)
     ).order_by('-due_date')
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
@@ -53,9 +83,9 @@ def invoice_unpaid_customer(request):
 @login_required(login_url='/login/')
 def invoice_unpaid(request):
     containers = Container.objects.filter(
-        Q(ispay=False, customer_ispay=True) |
-        Q(customer = 3, ispay=False, invoice_id__isnull=False) |
-        Q(customer = 12, ispay=False, invoice_id__isnull=False)
+        Q(ispay=False, invoice_id__isnull=False)
+    ).exclude(
+        Q(logistics=2)
     ).order_by('-due_date')
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_invoice, {'containers': containers,'user_permissions': user_permissions})
@@ -100,54 +130,41 @@ def statement_selected_invoices(request):
                 "statement_number": statement_number,
             }
         )
-
-    # ==================================================
-    # POST：新建 Statement
-    # ==================================================
-    if request.method == "POST":
-        is_select_all = request.POST.get('isselectall') == 'true'
-        search_keyword = request.GET.get("q", "")
-        print("---search word:", search_keyword)
-
-        selected_ids = request.POST.getlist('selected_ids')
-        page_container_ids = request.POST.getlist("page_container_ids")  # 搜索结果
-        search_ids = request.POST.getlist('search_container_ids')
         
-        if is_select_all:
-            if not page_container_ids:
-                return redirect("invoice_unpaid")
-            containers = Container.objects.filter(container_id__in=page_container_ids)
-            print("---all: ", len(page_container_ids))
-        elif search_keyword:
-            containers = Container.objects.filter(container_id__icontains=search_keyword)
-            print("---search: ", len(search_ids))
-        else:
-            if not selected_ids:
-                return redirect("invoice_unpaid")
-            containers = Container.objects.filter(container_id__in=selected_ids)
-            print("---select: ", len(selected_ids))
-        
-        total_price = sum([c.price for c in containers if c.price])
-        statement_number = "STM" + datetime.now().strftime("%Y%m%d")
+    return redirect("invoice_unpaid")
 
+def statement_by_filter(request):
+    containers = filter_containers(request)
+
+    if not containers.exists():
+        return HttpResponse("No data for statement")
+    
+    total_price = sum(
+        (c.price or Decimal("0.00")) for c in containers
+    )
+    statement_number = "STM" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+    # ✅ 用事务，防止部分写入
+    with transaction.atomic():
         for container in containers:
             ContainerStatement.objects.get_or_create(
                 container=container,
                 statement_number=statement_number,
                 defaults={
-                    "statement_date": datetime.now().date(),
+                    "statement_date": timezone.now().date(),
                     "created_at": timezone.now(),
-                    "created_user": request.user,
+                    "created_user": request.user.username
+                    if hasattr(request.user, "username")
+                    else str(request.user),
                 }
             )
 
-        return render(request, constants_view.template_statement_invoice_preview, {
-            "containers": containers, 
-            "total_price": total_price,
-            "current_date": datetime.now(),
-            "statement_number" : statement_number,
-            },)
-    return redirect("invoice_unpaid")
+    return render(request, constants_view.template_statement_invoice_preview, {
+        "containers": containers, 
+        "total_price": total_price,
+        "current_date": datetime.now(),
+        "statement_number" : statement_number,
+        },)
 
 @login_required(login_url='/login/')
 def delete_statement(request):
@@ -158,6 +175,35 @@ def delete_statement(request):
         ContainerStatement.objects.filter(statement_number=statement_number).delete()
         return redirect("invoice_statement")
     return JsonResponse({"success": False, "error": "No statement number provided"})
+
+# sub function
+def filter_containers(request):
+    qs = Container.objects.select_related('customer', 'logistics')
+
+    customer_id = request.GET.get('customer')
+    logistics_id = request.GET.get('logistics')
+    ispay = request.GET.get('ispay')
+    customer_ispay = request.GET.get('customer_ispay')
+
+    if customer_id:
+        qs = qs.filter(customer_id=customer_id)
+
+    if logistics_id:
+        qs = qs.filter(logistics_id=logistics_id)
+
+    if ispay == 'false':
+        qs = qs.filter(
+            ispay=False,
+            invoice_id__isnull=False
+        ).exclude(invoice_id='')
+
+    if customer_ispay == 'false':
+        qs = qs.filter(
+            customer_ispay=False,
+            customer_invoiceId__isnull=False
+        ).exclude(customer_invoiceId='')
+
+    return qs
 
 @login_required(login_url='/login/')
 def paid_invoice_advance(request):
@@ -202,7 +248,7 @@ def paid_invoice_customer(request):
 
 @login_required(login_url='/login/')
 def invoice_statement(request):
-    statements = ContainerStatement.objects.all().order_by('statement_date')
+    statements = ContainerStatement.objects.all().order_by('-statement_date', '-id')
     container_ids = [stmt.container_id_str for stmt in statements if stmt.container_id_str]
     containers_map = {
         c.container_id: c for c in Container.objects.filter(container_id__in=container_ids)
@@ -242,7 +288,10 @@ def invoice_statement(request):
         merged_statements.append(merged_entry)
 
     # 按日期排序（可选，因 defaultdict 顺序可能不是稳定的）
-    merged_statements.sort(key=lambda x: x["statement_date"])
+    merged_statements.sort(
+        key=lambda x: (x["statement_date"], x["statement_number"]),
+        reverse=True
+    )
 
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_statement, {"statements":merged_statements,'user_permissions': user_permissions})
@@ -255,34 +304,86 @@ def aline_payment_view(request):
 
 def invoice_ap_view(request):
 
-    apRecord = InvoiceAPRecord.objects.all()    
+    apRecord = InvoiceAPRecord.objects.select_related(
+        'vendor', 'company', 'purposefor'
+    ).all().order_by('-due_date')
+
+    vendor_id = request.GET.get('vendor')
+    company_id = request.GET.get('company')
+
+    if vendor_id:
+        apRecord = apRecord.filter(vendor_id=vendor_id)
+
+    if company_id:
+        apRecord = apRecord.filter(company_id=company_id)
+
+    vendors = InvoiceVendor.objects.all()
+    companies = Carrier.objects.all()
     user_permissions = get_user_permissions(request.user)    
 
     return render(request, constants_view.template_ap_invoice,{'user_permissions': user_permissions,
-    'apRecord':apRecord
+        'apRecord':apRecord,
+        "vendors":vendors,
+        "companies":companies,
     })
 
 def invoice_ar_view(request):
     
-    arRecord = InvoiceARRecord.objects.all()
+    arRecord = InvoiceARRecord.objects.select_related(
+        'customer', 'company'
+    ).all()
+
+    customer_id = request.GET.get('customer')
+    company_id = request.GET.get('company')
+
+    if customer_id:
+        arRecord = arRecord.filter(customer_id=customer_id)
+
+    if company_id:
+        arRecord = arRecord.filter(company_id=company_id)
+
+    customers = InvoicePaidCustomer.objects.all().order_by('name')
+    companies = Carrier.objects.all().order_by('shortname')
     user_permissions = get_user_permissions(request.user)  
 
     return render(request, constants_view.template_ar_invoice,{'user_permissions': user_permissions,
-    'arRecord':arRecord
+        'arRecord': arRecord,
+        'customers': customers,
+        'companies': companies,
     })
 
 # container
 @login_required(login_url='/login/')
 def container_advance77(request):
     containers = Container.objects.filter(Q(logistics = 1) | Q(logistics = 3)).order_by('-delivery_date') # logistics: 非Customer
+
+    # 今天，计算本周的周一和周日
+    today = date.today()    
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+
     user_permissions = get_user_permissions(request.user) 
-    return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_container, {
+        'containers': containers,'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,})
 
 @login_required(login_url='/login/')
 def container_omar(request):
     containers = Container.objects.filter(Q(logistics = 2)).exclude(Q(customer = 3) | Q(customer = 12)).order_by('-delivery_date') # logistics: Customer, 排除Mcdonalds和Metal
+
+    # 今天，计算本周的周一和周日
+    today = date.today()    
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+
     user_permissions = get_user_permissions(request.user) 
-    return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_container, {
+        'containers': containers,'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,})
 
 @login_required(login_url='/login/')
 def container_mcd(request):
@@ -299,8 +400,18 @@ def container_metal(request):
 @login_required(login_url='/login/')
 def simplified_container_view(request):
     containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
+
+    # 今天，计算本周的周一和周日
+    today = date.today()    
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+
     user_permissions = get_user_permissions(request.user) 
-    return render(request, constants_view.template_simplified_container, {'containers': containers,'user_permissions': user_permissions})
+    return render(request, constants_view.template_simplified_container, {
+        'containers': containers,'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,})
 
 # order
 @login_required(login_url='/login/')

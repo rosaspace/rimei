@@ -20,6 +20,7 @@
                 <th>BlongTo</th>
                 <th>Shelf</th>
                 <!-- <th>Type</th> -->
+                <th>Price</th>
                 <th>His</th>
             </tr>
         </thead>
@@ -42,6 +43,7 @@
                 <td>{{ item.blongTo.name }}</td>
                 <td>{{ item.ShelfRecord }}</td>
                 <!-- <td>{{ item.type }}</td> -->
+                <td>{{ item.price }}</td>
                 <td style="height: 23px;">
                     <a href="{% url 'order_history' item.id %}" class="text-primary text-decoration-underline">
                         View

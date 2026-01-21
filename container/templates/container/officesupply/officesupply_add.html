@@ -1,0 +1,69 @@
+{% extends 'container/base.html' %}
+{% block content %}
+
+<h4>Add Office Supply</h4>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="row mb-2">
+        <div class="col-md-3">
+            <label class="form-label">Item</label>
+            <select name="supply_item" class="form-select" required>
+                {% for i in items %}
+                    <option value="{{ i.id }}">{{ i.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Purpose</label>
+            <select name="purpose" class="form-select" required>
+                {% for p in purposes %}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Platform</label>
+            <select name="platform" class="form-select" required>
+                {% for p in platforms %}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="row mb-2">
+        <div class="col-md-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" min="0" step="0.01" placeholder="0.00" required>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Price</label>
+            <input type="number" name="price" class="form-control" min="0" step="0.01" placeholder="0.00" required>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Purchase Date</label>
+            <input type="date" name="purchase_date" class="form-control" required>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Delivered Date</label>
+            <input type="date" name="delivered_date" class="form-control">
+        </div>        
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" rows="3"></textarea>
+    </div>
+
+    <button class="btn btn-primary">Save</button>
+    <a href="{% url 'office_supply_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "container/base.html" %}
+
+{% block content %}
+<div class="container">
+    <h4 class="mb-2">Print AR Invoice</h4>
+    <div class="row" >
+        <div class="d-flex flex-wrap align-items-start">
+            <div class="me-2">
+                <button class="btn btn-primary" id="printInvoice">Original Invoice</button>
+            </div>
+            <div class="ms-auto">
+                <a href="{% url 'invoice_ar' %}" class="btn btn-secondary">Back</a>
+            </div>
+        </div>        
+    </div>
+
+    <hr class="my-3 border-2 opacity-100">
+
+    <h4>Edit Receivable Invoice</h4>
+    <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <div class="row mb-3">
+            <!-- Customer -->
+            <div class="col-md-3">
+                <label class="form-label required-label">Customer</label>
+                <select class="form-select" name="customer_name" required>
+                    <option value="">Select Customer...</option>
+                    {% for c in paidcustomer %}
+                        <option value="{{ c.id }}"
+                            {% if c.id == ar_invoice.customer.id %}selected{% endif %}>
+                            {{ c.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Invoice No -->
+            <div class="col-md-3">
+                <label class="form-label required-label">Invoice #</label>
+                <input type="text"
+                       name="invoice_id"
+                       class="form-control"
+                       value="{{ ar_invoice.invoice_id }}"
+                       required>
+            </div>
+
+            <!-- Amount -->
+            <div class="col-md-3">
+                <label class="form-label required-label">Amount</label>
+                <input type="number"
+                       step="0.01"
+                       name="invoice_price"
+                       class="form-control"
+                       value="{{ ar_invoice.invoice_price }}"
+                       required>
+            </div>
+
+            <!-- Company -->
+            <div class="col-md-3">
+                <label class="form-label required-label">Company</label>
+                <select class="form-select" name="company_name" required>
+                    <option value="">Select Company...</option>
+                    {% for c in receivedcompany %}
+                        <option value="{{ c.id }}"
+                            {% if c.id == ar_invoice.company.id %}selected{% endif %}>
+                            {{ c.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <!-- Due Date -->
+            <div class="col-md-3">
+                <label class="form-label">Due Date</label>
+                <input type="date"
+                       name="due_date"
+                       class="form-control"
+                       value="{{ ar_invoice.due_date|date:'Y-m-d' }}">
+            </div>
+
+            <!-- Give To Boss Date -->
+            <div class="col-md-3">
+                <label class="form-label">Give To Boss Date</label>
+                <input type="date"
+                       name="givetoboss_date"
+                       class="form-control"
+                       value="{{ ar_invoice.givetoboss_date|date:'Y-m-d' }}">
+            </div>
+
+            <!-- Payment Date -->
+            <div class="col-md-3">
+                <label class="form-label">Received Date</label>
+                <input type="date"
+                       name="payment_date"
+                       class="form-control"
+                       value="{{ ar_invoice.payment_date|date:'Y-m-d' }}">
+            </div>
+
+            <!-- PDF -->
+            <div class="col-md-3">
+                <label class="form-label">Invoice PDF</label>
+                <input type="file"
+                       name="invoice_pdf"
+                       class="form-control"
+                       accept="application/pdf">
+
+                {% if ar_invoice.ar_invoice_pdfname %}
+                    <small class="text-muted d-block mt-1">
+                        Current: {{ ar_invoice.ar_invoice_pdfname }}
+                    </small>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <!-- Note -->
+            <div class="col-md-12">
+                <label class="form-label">Note</label>
+                <input type="text"
+                       name="note"
+                       class="form-control"
+                       value="{{ ar_invoice.note }}">
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-primary">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const so_num = '{{ ar_invoice.id }}';
+    const isOrder = '1';
+    
+    // 打印原始订单
+    document.getElementById('printInvoice').addEventListener('click', function() {
+        window.open(`/print_original_ar_invoice/${so_num}/`, '_blank');
+    });
+});
+</script>
+{% endblock %}

@@ -8,6 +8,7 @@ from .models import InvoiceCustomer,RMProduct
 from .models import Employee, LogisticsCompany,OrderItem,ClockRecord,ContainerItem
 from .models import AlineOrderRecord,Carrier,InboundCategory,RailwayStation,ContainerStatement,Manufacturer
 from .models import InvoicePurposeFor,InvoicePaidCustomer,InvoiceVendor,InvoiceARRecord,InvoiceAPRecord
+from .models import OfficeSupplyItem,OfficeSupplyPurpose,OfficeSupplyPlatform,OfficeSupplyRecord
 
 class ContainerAdmin(admin.ModelAdmin):
     list_display = ('container_id', 'plts','railway_date', 'pickup_date', 'delivery_date','empty_date',
@@ -48,6 +49,29 @@ class InvoiceARRecordAdmin(admin.ModelAdmin):
 
 class InvoiceAPRecordAdmin(admin.ModelAdmin):
     list_display = ('vendor', 'invoice_id','invoice_price','company','due_date','givetoboss_date','givetoboss_date','purposefor','note')
+
+@admin.register(OfficeSupplyItem)
+class OfficeSupplyItemAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+    list_display = ("name", "category")
+
+
+@admin.register(OfficeSupplyPurpose)
+class OfficeSupplyPurposeAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+
+
+@admin.register(OfficeSupplyPlatform)
+class OfficeSupplyPlatformAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+
+
+@admin.register(OfficeSupplyRecord)
+class OfficeSupplyRecordAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "supply_item", "purpose", "platform",
+        "quantity", "purchase_date", "delivered_date"
+    )
 
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)

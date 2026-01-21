@@ -1,0 +1,126 @@
+{% extends "container/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h4 class="mb-3">Edit Office Supply</h4>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Item -->
+        <div class="mb-3">
+            <label class="form-label">Item</label>
+            <select name="supply_item" class="form-select" required>
+                {% for item in items %}
+                    <option value="{{ item.id }}"
+                        {% if item.id == record.supply_item_id %}selected{% endif %}>
+                        {{ item.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Purpose -->
+        <div class="mb-3">
+            <label class="form-label">Purpose</label>
+            <select name="purpose" class="form-select" required>
+                {% for p in purposes %}
+                    <option value="{{ p.id }}"
+                        {% if p.id == record.purpose_id %}selected{% endif %}>
+                        {{ p.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Platform -->
+        <div class="mb-3">
+            <label class="form-label">Platform</label>
+            <select name="platform" class="form-select" required>
+                {% for p in platforms %}
+                    <option value="{{ p.id }}"
+                        {% if p.id == record.platform_id %}selected{% endif %}>
+                        {{ p.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Quantity -->
+        <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input
+                type="number"
+                name="quantity"
+                class="form-control"
+                value="{{ record.quantity }}"
+                required
+            >
+        </div>
+
+        <!-- Price -->
+        <div class="mb-3">
+            <label class="form-label">Price</label>
+            <input
+                type="number"
+                name="price"
+                class="form-control"
+                min="0" step="0.01" placeholder="0.00"
+                value="{{ record.unit_price }}"
+                required
+            >
+        </div>
+
+        <!-- Purchase Date -->
+        <div class="mb-3">
+            <label class="form-label">Purchase Date</label>
+            <input
+                type="date"
+                name="purchase_date"
+                class="form-control"
+                value="{{ record.purchase_date|date:'Y-m-d' }}"
+                required
+            >
+        </div>
+
+        <!-- Delivered Date -->
+        <div class="mb-3">
+            <label class="form-label">Delivered Date</label>
+            <input
+                type="date"
+                name="delivered_date"
+                class="form-control"
+                value="{{ record.delivered_date|date:'Y-m-d' }}"
+            >
+        </div>
+
+        <div class="mb-3">
+            <label for="storage_pdf" class="form-label">Storage PDF</label>
+            <input type="file" class="form-control" id="storage_pdf" name="storage_pdf" accept="application/pdf">
+            {% if record.storage_pdf %}
+                <p class="text-muted mb-0">{{ record.storage_pdf }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea
+                name="description"
+                class="form-control"
+                rows="3"
+            >{{ record.description|default:'' }}</textarea>
+        </div>        
+
+        <!-- Buttons -->
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                Save Changes
+            </button>
+            <a href="{% url 'office_supply_list' %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

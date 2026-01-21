@@ -41,7 +41,7 @@ template_edit_aline = 'container/invoiceManager/edit_aline.html'
 template_statement_invoice_preview = "container/invoiceManager/statement_invoice_preview.html"
 template_add_ar_invoice = 'container/invoiceManager/add_ar_invice.html'
 template_add_ap_invoice = 'container/invoiceManager/add_ap_invice.html'
-template_edit_ar_invoice = 'container/invoiceManager/edit_ar_invice.html'
+template_edit_ar_invoice = 'container/invoiceManager/edit_ar_invoice.html'
 template_edit_ap_invoice = 'container/invoiceManager/edit_ap_invice.html'
 
 # inventory
@@ -55,3 +55,9 @@ template_statistics_inbound = 'container/statistics/inbound_Statistics.html'
 template_statistics_outbound = 'container/statistics/outbound_Statistics.html'
 template_statistics_warehouse = 'container/statistics/statistics_warehouse.html'
 template_statistics_mcdTrend = 'container/statistics/mcd_order_trend.html'
+template_statistics_outbound_metal = 'container/statistics/outbound_Statistics_metal.html'
+
+# office supply
+template_officesupply_list = 'container/officesupply/officesupply_list.html'
+template_officesupply_add = 'container/officesupply/officesupply_add.html'
+template_officesupply_edit = 'container/officesupply/officesupply_edit.html'

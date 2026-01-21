@@ -159,17 +159,23 @@
       
             {% if 'Invoice' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_unpaid_customer invoice_unpaid invoice_all invoice_pallet_labor invoice_ar invoice_ap' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'invoice_statement invoice_all invoice_pallet_labor invoice_ar invoice_ap' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Invoice
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'invoice_ar' %}">AR / Accounts Receivable</a></li>
                 <li><a class="dropdown-item" href="{% url 'invoice_ap' %}">AP / Accounts Payable</a></li>      
                 <li><a class="dropdown-item" href="{% url 'invoice_all' %}">All Container Invoice</a></li>
-                <li><a class="dropdown-item" href="{% url 'invoice_unpaid_customer' %}">Unpaid Customer</a></li>
-                <li><a class="dropdown-item" href="{% url 'invoice_unpaid' %}">Unpaid Advance77</a></li>
                 <li><a class="dropdown-item" href="{% url 'invoice_statement' %}">Statement</a></li>
                 <li><a class="dropdown-item" href="{% url 'invoice_pallet_labor' %}">Pallet Labor Fee</a></li>
+              </ul>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'office_supply_list' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Office Supply
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'office_supply_list' %}">Office Supply List</a></li>
               </ul>
             </li>
             {% endif %}
@@ -243,7 +249,7 @@
 
             {% if 'Statistics' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'statistics_invoice statistics_weekreord statistics_inbound statistics_outbound statistics_warehouse statistics_mcd_trend' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'statistics_invoice statistics_weekreord statistics_inbound statistics_outbound statistics_warehouse statistics_mcd_trend statistics_outbound_metal' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Statistics
               </a>
               <ul class="dropdown-menu">
@@ -253,6 +259,7 @@
                 <li><a class="dropdown-item" href="{% url 'statistics_outbound' %}">Outbound Statistics</a></li>
                 <li><a class="dropdown-item" href="{% url 'statistics_warehouse' %}">Warehouse Statistics</a></li>
                 <li><a class="dropdown-item" href="{% url 'statistics_mcd_trend' %}">Warehouse Mcd Trend</a></li>
+                <li><a class="dropdown-item" href="{% url 'statistics_outbound_metal' %}">Outbound Statistics Metal</a></li>
               </ul>
             </li>
             {% endif %}

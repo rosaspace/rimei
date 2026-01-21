@@ -118,7 +118,84 @@ def print_label_containerid_lot(request):
         response = HttpResponse(pdf_file.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
         return response
-  
+
+def print_mcd_label(request):
+    print("----------print_mcd_label----------")
+
+    lotnum = request.POST.get("lot_number", "").strip()
+    startdate = request.POST.get("start_date", "").strip()
+    expireddate = request.POST.get("expired_date", "").strip()
+
+    if not lotnum:
+        return HttpResponse("LOT number is required", status=400)
+
+    # === PDF 路径 ===
+    pdf_dir = os.path.join(
+        settings.MEDIA_ROOT,
+        constants_address.UPLOAD_DIR_temp,
+        "lot_labels"
+    )
+    os.makedirs(pdf_dir, exist_ok=True)
+
+    filename = os.path.join(pdf_dir, f"LOT_{lotnum}.pdf")
+
+    # === 页面设置 ===
+    PAGE_WIDTH, PAGE_HEIGHT = letter
+    c = canvas.Canvas(filename, pagesize=letter)
+
+    # === Label 布局 ===
+    COLS = 5
+    ROWS = 10
+    ROW_GAP = 10
+    TOTAL_LABELS = 50
+
+    MARGIN_LEFT = 15
+    MARGIN_TOP = 46
+    MARGIN_RIGHT = 20
+    MARGIN_BOTTOM = 34  
+
+    usable_width = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
+    usable_height = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM - ROW_GAP * (ROWS - 1)
+
+    LABEL_WIDTH = usable_width / COLS
+    LABEL_HEIGHT = usable_height / ROWS
+
+    FONT_SIZE_TITLE = 16
+    FONT_SIZE_TEXT = 14
+    line_gap = 28    
+    
+
+    # === 开始画 labels ===
+    for i in range(50):
+        row = i // COLS
+        col = i % COLS
+
+        x = MARGIN_LEFT + col * LABEL_WIDTH
+        y = PAGE_HEIGHT - MARGIN_TOP - row * (LABEL_HEIGHT + ROW_GAP)
+
+        # ===== Label center =====
+        center_x = x + LABEL_WIDTH / 2
+        label_center_y = y - LABEL_HEIGHT / 2
+
+        # ===== Text block center =====
+        text_block_height = line_gap * 2
+        base_y = label_center_y + text_block_height / 2
+
+        # ===== Draw text =====
+        c.setFont("Helvetica-Bold", FONT_SIZE_TITLE)
+        c.drawCentredString(center_x, base_y,                f"{lotnum}")
+        c.setFont("Helvetica", FONT_SIZE_TEXT)
+        c.drawCentredString(center_x, base_y - line_gap,     f"{startdate}")
+        c.drawCentredString(center_x, base_y - line_gap * 2, f"{expireddate}")
+
+    c.save()
+
+    # === 返回 PDF ===
+    with open(filename, "rb") as f:
+        response = HttpResponse(f.read(), content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="{os.path.basename(filename)}"'
+        return response
+
 def import_inventory(request):
     if request.method == "POST" and request.FILES.get("excel_file"):
         excel_file = request.FILES["excel_file"]

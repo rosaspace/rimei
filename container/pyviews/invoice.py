@@ -23,12 +23,13 @@ import fitz  # PyMuPDF 解析 PDF
 from datetime import datetime
 from decimal import Decimal
 
-from ..models import Container,RMProduct
 from .pdfextract import extract_invoice_data, extract_customer_invoice_data
-from ..constants import constants_address, constants_view
 from .pdfgenerate import extract_text_from_pdf, converter_customer_invoice
 from .inventory_count import get_month_pallet_number, get_quality, get_product_qty
 from .getPermission import get_user_permissions
+
+from ..constants import constants_address, constants_view
+from ..models import Container,RMProduct
 from ..models import InvoicePaidCustomer,Carrier,InvoiceVendor,InvoicePurposeFor,InvoiceAPRecord,InvoiceARRecord
 
 # print original delivery order
@@ -427,7 +428,7 @@ def edit_invoice_file(request, container_id):
 
 # upload ladingcargo invoice
 def edit_ladingcargo_invoice_file(request, container_id):
-    container = get_object_or_404(Container, container_id=container_id)
+    container = get_object_or_404(Container, container_id=container_id) 
 
     # ✅ 文件
     invoice_file = request.FILES.get('ladingcargo_invoice_file')
@@ -437,6 +438,16 @@ def edit_ladingcargo_invoice_file(request, container_id):
     invoice_price = request.POST.get('ladingcargo_invoice_price')
     invoice_date = request.POST.get('ladingcargo_invoice_date')
     invoice_duedate = request.POST.get('ladingcargo_invoice_duedate')
+
+    # ✅ 日期安全处理
+    invoice_date = invoice_date or None
+    invoice_duedate = invoice_duedate or None
+
+    if invoice_date:
+        invoice_date = datetime.strptime(invoice_date, "%Y-%m-%d").date()
+
+    if invoice_duedate:
+        invoice_duedate = datetime.strptime(invoice_duedate, "%Y-%m-%d").date()
 
     if not invoice_file:
         return HttpResponse("No file uploaded.", status=404)
@@ -810,12 +821,175 @@ def add_ar_invoice(request):
     paidcustomer = InvoicePaidCustomer.objects.all()
     receivedcompany = Carrier.objects.all()
     user_permissions = get_user_permissions(request.user)  
-    
-    user_permissions = get_user_permissions(request.user)  
+    print("I am ok now")
+    if request.method == "POST":
+        try:
+            print("I am ok now")
+            # 先获取 POST 值
+            invoice_id = request.POST.get("invoice_id") or ""
+            invoice_price = request.POST.get("invoice_price") or "0"
+
+            customer_id = request.POST.get("customer_name")
+            customer_id = int(customer_id) if customer_id else None
+
+            company_id = request.POST.get("company_name")
+            company_id = int(company_id) if company_id else None
+
+            print("customer_id:", customer_id,",company_id:",company_id)
+
+            # 日期字段，空字符串转换为 None
+            due_date = parse_date(request.POST.get("due_date"))
+            givetoboss_date = parse_date(request.POST.get("givetoboss_date"))
+            payment_date = parse_date(request.POST.get("payment_date"))
+
+            note = request.POST.get("note") or ""
+
+            try:
+                invoice_price = Decimal(invoice_price)
+            except InvalidOperation:
+                invoice_price = Decimal("0")
+            print("I am ok now 3")
+            # 创建记录
+            # 先实例化，不直接 create
+            ar_invoice = InvoiceARRecord(
+                customer_id=customer_id,
+                invoice_id=invoice_id,
+                invoice_price=invoice_price,
+                company_id=company_id,
+                due_date=due_date,
+                givetoboss_date=givetoboss_date,
+                payment_date=payment_date,
+                note=note
+            )
+            print("I am ok now 4")
+            pdf_file = request.FILES.get("invoice_pdf")
+            if pdf_file:
+                ar_invoice.ar_invoice_pdfname = pdf_file.name
+
+            # 尝试保存，并捕获 ValidationError
+            try:
+                print("I am ok now 5")
+                ar_invoice.full_clean()  # 🔑 先校验字段
+                print("I am ok now 6")
+                ar_invoice.save()
+                print("I am ok now 7")
+                messages.success(request, "AR Invoice added successfully")
+                return redirect("invoice_ar")
+            except ValidationError as ve:
+                print("VALIDATION ERROR:", ve.message_dict)
+                messages.error(request, f"Validation failed: {ve.message_dict}")
+            except Exception as e:
+                messages.error(request, f"Add AR Invoice failed: {e}")
+
+            # POST 出错，返回表单数据
+            return render(request, constants_view.template_add_ar_invoice, {
+                'user_permissions': user_permissions,
+                'paidcustomer': paidcustomer,
+                'receivedcompany': receivedcompany,
+                'form_data': request.POST
+            })
+        except Exception as e:
+            messages.error(request, f"Add AR Invoice failed: {e}")
+            return render(request, constants_view.template_add_ar_invoice, {
+                'user_permissions': user_permissions,
+                'paidcustomer': paidcustomer,
+                'receivedcompany': receivedcompany,
+                'form_data': request.POST
+            })
+
     return render(request, constants_view.template_add_ar_invoice,{'user_permissions': user_permissions,
     'paidcustomer':paidcustomer,
     'receivedcompany':receivedcompany,
+    'form_data': {}  # 空表单
     })
+
+# edit receivable invoice
+def edit_ar_invoice(request, id):
+    ar_invoice = get_object_or_404(InvoiceARRecord, id=id)
+    paidcustomer = InvoicePaidCustomer.objects.all()
+    receivedcompany = Carrier.objects.all()
+    user_permissions = get_user_permissions(request.user)
+
+    if request.method == "POST":
+        try:
+            # ===== 外键 =====
+            ar_invoice.customer = InvoicePaidCustomer.objects.get(id=request.POST.get("customer_name"))
+            ar_invoice.company = Carrier.objects.get(id=request.POST.get("company_name"))
+
+            # ===== 基本字段 =====
+            ar_invoice.invoice_id = request.POST.get("invoice_id")
+            ar_invoice.invoice_price = Decimal(request.POST.get("invoice_price") or "0")            
+
+            # ===== 日期字段 =====
+            ar_invoice.due_date = parse_date(request.POST.get("due_date"))
+            ar_invoice.givetoboss_date = parse_date(request.POST.get("givetoboss_date"))
+            ar_invoice.payment_date = parse_date(request.POST.get("payment_date"))
+
+            ar_invoice.note = request.POST.get("note") or ""
+
+            # ===== PDF 文件处理（和 AP 完全一致）=====
+            if "invoice_pdf" in request.FILES:
+                uploaded_file = request.FILES["invoice_pdf"]
+                ar_invoice.ar_invoice_pdfname = uploaded_file.name
+
+                save_dir = os.path.join(
+                    settings.MEDIA_ROOT,
+                    constants_address.UPLOAD_DIR_invoice,
+                    constants_address.INVOICE_AR
+                )
+                os.makedirs(save_dir, exist_ok=True)
+
+                file_path = os.path.join(save_dir, uploaded_file.name)
+                with open(file_path, "wb+") as destination:
+                    for chunk in uploaded_file.chunks():
+                        destination.write(chunk)
+
+            ar_invoice.full_clean()
+            ar_invoice.save()
+
+            messages.success(request, "AR Invoice updated successfully")
+            return redirect("invoice_ar")
+
+        except Exception as e:
+            messages.error(request, f"Update failed: {e}")
+
+    return render(
+        request,
+        constants_view.template_edit_ar_invoice,
+        {
+            "ar_invoice": ar_invoice,
+            "paidcustomer": paidcustomer,
+            "receivedcompany": receivedcompany,
+            "user_permissions": user_permissions,
+        }
+    )
+
+# delete received invoice
+def delete_ar_invoice(request, invoice_id):
+    ar_record = InvoiceARRecord.objects.get(invoice_id=invoice_id)
+    ar_record.delete()
+    messages.success(request, "AR Invoice deleted successfully")
+    return redirect("invoice_ar")
+
+# print Invoice
+def print_original_ar_invoice(request, so_num):
+    order = get_object_or_404(InvoiceARRecord, id=so_num)
+
+    if not order.ar_invoice_pdfname:
+        return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_AR, order.ar_invoice_pdfname)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+    
+    # 打开并读取PDF文件
+    with open(pdf_path, 'rb') as pdf:
+        response = HttpResponse(pdf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{order.ar_invoice_pdfname}"'
+        return response
 
 # add paidable invoice
 def add_ap_invoice(request):
@@ -824,99 +998,122 @@ def add_ap_invoice(request):
     purposefor = InvoicePurposeFor.objects.all()
     user_permissions = get_user_permissions(request.user) 
 
-    return render(request, constants_view.template_add_ap_invoice,{'user_permissions': user_permissions,
-    'vendor':vendor,
-    'purposefor':purposefor,
-    'receivedcompany':receivedcompany,
-    })
+    if request.method == "POST":
+        try:
+            vendor_id = request.POST.get("vendor")
+            invoice_id = request.POST.get("invoice_id")
+            invoice_price = request.POST.get("invoice_price")
+            company_id = request.POST.get("company")
+            due_date = request.POST.get("due_date")
+            givetoboss_date = request.POST.get("givetoboss_date")
+            payment_date = request.POST.get("payment_date")
+            purposefor_id = request.POST.get("purposefor")
+            note = request.POST.get("note")
+
+            pdf_file = request.FILES.get("invoice_pdf")
+
+            ap_invoice = InvoiceAPRecord.objects.create(
+                vendor_id=vendor_id,
+                invoice_id=invoice_id,
+                invoice_price=invoice_price,
+                company_id=company_id,
+                due_date=due_date,
+                givetoboss_date=givetoboss_date,
+                payment_date=payment_date if payment_date else None,
+                purposefor_id=purposefor_id,
+                note=note or ""
+            )
+
+            # ⚠️ 保留 CharField：只存文件名
+            if pdf_file:
+                ap_invoice.ar_invoice_pdfname = pdf_file.name
+                ap_invoice.save()
+                # 如果你实际有保存文件的逻辑（如 MEDIA_ROOT），可以在这里处理
+
+            messages.success(request, "AP Invoice added successfully")
+            return redirect('invoice_ap')
+
+        except Exception as e:
+            messages.error(request, f"Add AP Invoice failed: {e}")
+
+    # GET 或 POST 失败都走这里
+    return render(
+        request,
+        constants_view.template_add_ap_invoice,
+        {
+            'user_permissions': user_permissions,
+            'vendors': vendor,
+            'companies': receivedcompany,
+            'purposefors': purposefor,
+        }
+    )
 
 # edit paidable invoice
 def edit_ap_invoice(request, invoice_id):
 
-    try:
-        if request.method == "GET":
-            ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
-            vendor = InvoiceVendor.objects.all()
-            receivedcompany = Carrier.objects.all()
-            purposefor = InvoicePurposeFor.objects.all()
-            user_permissions = get_user_permissions(request.user) 
+    ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
+    vendor = InvoiceVendor.objects.all()
+    receivedcompany = Carrier.objects.all()
+    purposefor = InvoicePurposeFor.objects.all()
+    user_permissions = get_user_permissions(request.user)                         
+            
+    if request.method == "POST":
+        try:
+            # ===== 外键 =====
+            ap_record.vendor = InvoiceVendor.objects.get(id=request.POST.get('vendor_name'))
+            ap_record.company = Carrier.objects.get(id=request.POST.get('company_name'))
+            ap_record.purposefor = InvoicePurposeFor.objects.get(id=request.POST.get('purpose_for'))
+
+            # ===== 基本字段 =====
+            ap_record.invoice_id = request.POST.get('invoice_id')
+            ap_record.invoice_price = request.POST.get('invoice_price')
+
+             # ===== 日期 =====
+            ap_record.due_date = clean_date(request.POST.get('due_date'))
+            ap_record.givetoboss_date = clean_date(request.POST.get('givetoboss_date'))
+            ap_record.payment_date = clean_date(request.POST.get('paid_date'))
+            ap_record.note = request.POST.get('note')
+
+            # 处理PDF文件
+            if 'invoice_pdf' in request.FILES:
+                uploaded_file = request.FILES['invoice_pdf']
+                ap_record.ar_invoice_pdfname = uploaded_file.name  # 保存文件名到模型字段（如果需要）
+
+                # 打印 PDF 文件名
+                print(f"Uploaded PDF file name: {uploaded_file.name}")
+
+                # 构造保存路径
+                order_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_AP)
+                os.makedirs(order_dir, exist_ok=True)  # 确保目录存在                
+
+                # 保存文件
+                file_path = os.path.join(order_dir, uploaded_file.name)
+                with open(file_path, 'wb+') as destination:
+                    for chunk in uploaded_file.chunks():
+                        destination.write(chunk)
+
+            ap_record.full_clean()
+            ap_record.save()
+            
+            messages.success(request, "AP Invoice updated successfully")
+            return redirect('invoice_ap')
+        except Exception as e:
+            messages.error(request, f"更新信息失败：{str(e)}")
                         
-            return render(request, constants_view.template_edit_ap_invoice, {
+    return render(request, constants_view.template_edit_ap_invoice, {
                 'record': ap_record,
                 'vendor':vendor,
                 'purposefor':purposefor,
                 'receivedcompany':receivedcompany,
                 'user_permissions': user_permissions,
             })
-        elif request.method == "POST":
-            try:
-                ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
 
-                vendor = InvoiceVendor.objects.get(id=request.POST.get('vendor_name'))
-                receivedcompany = Carrier.objects.get(id=request.POST.get('company_name'))
-                purposefor = InvoicePurposeFor.objects.get(id=request.POST.get('purpose_for'))
-
-                ap_record.vendor = vendor
-                ap_record.company = receivedcompany
-                ap_record.purposefor = purposefor
-                ap_record.invoice_id = request.POST.get('invoice_id')
-                ap_record.invoice_price = request.POST.get('invoice_price')
-                ap_record.due_date = clean_date(request.POST.get('due_date'))
-                ap_record.givetoboss_date = clean_date(request.POST.get('givetoboss_date'))
-                ap_record.payment_date = clean_date(request.POST.get('paid_date'))
-                ap_record.note = request.POST.get('note')
-                # ap_record.ar_invoice_pdfname = request.POST.get('note') or None 
-
-                # 处理PDF文件
-                if 'invoice_pdf' in request.FILES:
-                    uploaded_file = request.FILES['invoice_pdf']
-                    ap_record.ar_invoice_pdfname = uploaded_file.name  # 保存文件名到模型字段（如果需要）
-
-                    # 打印 PDF 文件名
-                    print(f"Uploaded PDF file name: {uploaded_file.name}")
-
-                    # 构造保存路径
-                    order_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_AP)
-                    os.makedirs(order_dir, exist_ok=True)  # 确保目录存在
-                    file_path = os.path.join(order_dir, uploaded_file.name)
-
-                    # 保存文件
-                    with open(file_path, 'wb+') as destination:
-                        for chunk in uploaded_file.chunks():
-                            destination.write(chunk)
-
-                ap_record.save()
-                
-                return redirect('invoice_ap')
-            except Exception as e:
-                messages.error(request, f'更新信息失败：{str(e)}')
-                ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
-                vendor = InvoiceVendor.objects.all()
-                receivedcompany = Carrier.objects.all()
-                purposefor = InvoicePurposeFor.objects.all()
-                user_permissions = get_user_permissions(request.user) 
-                            
-                return render(request, constants_view.template_edit_ap_invoice, {
-                    'record': ap_record,
-                    'vendor':vendor,
-                    'purposefor':purposefor,
-                    'receivedcompany':receivedcompany,
-                    'user_permissions': user_permissions,
-                })
-        
-        
-    except InvoiceAPRecord.DoesNotExist:
-        messages.error(request, '订单不存在')
-        return redirect('invoice_ap')
-
-# Template -- format the data
-def clean_date(value):
-    if value in ["", None]:
-        return None
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").date()
-    except ValueError:
-        return None
+# delete payable invoice
+def delete_ap_invoice(request, invoice_id):
+    ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
+    ap_record.delete()
+    messages.success(request, 'AP Invoice deleted successfully')
+    return redirect('invoice_ap')
 
 # print Invoice
 def print_original_ap_invoice(request, so_num):
@@ -937,3 +1134,18 @@ def print_original_ap_invoice(request, so_num):
         response = HttpResponse(pdf.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{order.ar_invoice_pdfname}"'
         return response
+
+# Template -- format the data
+def clean_date(value):
+    if value in ["", None]:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+# sub function
+def parse_date(value):
+    if not value:
+        return None
+    return datetime.strptime(value, "%Y-%m-%d").date()

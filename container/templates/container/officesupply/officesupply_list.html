@@ -1,0 +1,59 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="d-flex flex-wrap align-items-center w-100  mb-2">
+    <!-- 左侧按钮 --> 
+    <div class="me-2">
+        <a href="{% url 'office_supply_add' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add
+        </a>
+    </div>
+
+    <!-- 右侧按钮组 -->
+    <!-- <div class="d-flex flex-wrap gap-2 ms-auto">
+        <div>
+            <a href="{% url 'pickup_week' %}" class="btn btn-primary">PICKUP LIST Week</a>
+        </div>
+    </div>  -->
+</div>
+
+<h4>Office Supplies</h4>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Purpose</th>
+            <th>Platform</th>
+            <th>Qty</th>
+            <th>Purchase</th>
+            <th>Delivered</th>
+            <th>Description</th>
+            <th>Price</th>
+            <th>storage pdf</th>
+            <th>Delete</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in records %}
+        <tr>
+            <td><a href="{% url 'office_supply_edit' r.id %}">{{ r.supply_item.name }}</a></td>
+            <td>{{ r.purpose.name }}</td>
+            <td>{{ r.platform.name }}</td>
+            <td>{{ r.quantity }}</td>
+            <td>{{ r.purchase_date|date:"m/d/Y" }}</td>
+            <td>{{ r.delivered_date|date:"m/d/Y"|default:"-" }}</td>
+            <td>{{ r.description|default:"-" }}</td>
+            <td>${{ r.unit_price }}</td>
+            <td><a href="{% url 'print_original_officesupply_invoice' r.id %}">{{ r.storage_pdf |default:""}}</a></td>
+            <td><a href="{% url 'delete_officesupply_invoice' r.id %}" class="text-danger text-decoration-underline">Delete</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="text-center text-muted">No records</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

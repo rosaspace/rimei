@@ -16,7 +16,7 @@ from datetime import datetime,timedelta
 from io import BytesIO
 
 from ..models import RMOrder,OrderItem
-from .pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page,print_bol_template
+from .pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page,print_bol_template,print_weekly_droplist_on_one_page
 from ..constants import constants_address
 
 # Order
@@ -326,6 +326,107 @@ def print_order_mcd(request, so_num):
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
 
+def print_forklift_bol(request):
+    print("----------print_forklift_bol----------")
+
+    ship_to = request.POST.get("ship_to", "").strip()
+    pick_date_str  = request.POST.get("shipout_date", "").strip()
+    delivery_date_str  = request.POST.get("delivery_date", "").strip()
+    num_trucks = int(request.POST.get("forklift_number", 1))
+
+    # 转换字符串为日期对象
+    pick_date = datetime.fromisoformat(pick_date_str)
+    delivery_date = datetime.fromisoformat(delivery_date_str)
+
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    order_details = []
+    order_details.append({
+        "Size": "N/A",
+        "ShortName": "Forklift",
+        "Name": "Forklift",
+        "Qty": "3",
+        "PLTS": "",
+    })
+
+    # 基本信息模板
+    container_info_template = {
+        "Ship From": constants_address.ssa_address,
+        "Bill To": constants_address.ssa_address,
+        "Ship To": ship_to,
+        "Total LBS": str(num_trucks * 8000),
+    }
+
+    certification_notes = [
+        "NOTE: Liability Limitation for loss or damage in this shipment may be applicable. See 49 U.S.C. - 14706(c)(1)(A) and (B).",
+        "Checker: All pallets are in good condition, with no visible damage.",
+        "Shipper: Materials are properly classified, packaged, and labeled per DOT regulations, and in good condition for transport.",
+        "Carrier: Receipt of goods and placards; emergency info provided or accessible. Goods received in apparent good order unless noted.",
+    ]
+
+    # 输出目录
+    # pdf_dir = os.path.join(settings.MEDIA_ROOT, "forklift_bol")
+    # os.makedirs(pdf_dir, exist_ok=True)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.BOL_FOLDER)
+    os.makedirs(pdf_path, exist_ok=True)  # 如果目录不存在，则创建
+    filename = os.path.join(pdf_path, f"forklift_{pick_date_str}.pdf")
+    print("forklift bol path:", filename)
+
+    # --- 生成前 3 页 Pick Up ---
+    for i in range(1, num_trucks + 1):
+        bol_number = f"{pick_date.strftime('%m%d%Y')}{i:02d}"
+        container_info = container_info_template.copy()
+        container_info["BOL Number"] = bol_number
+        container_info["Ship Date"] = pick_date.strftime("%m/%d/%Y")
+        container_info["Ship Time"] = "9 am"
+
+        # 调用模板生成单页 BOL
+        print_bol_template(
+            title=f"Forklift BOL - {bol_number}",
+            filename=filename,   # filename=None 表示写入当前 canvas
+            contentTitle=f"Bill Of Lading - {bol_number}",
+            container_info=container_info,
+            order_details=order_details,  # 如果没有具体产品，可以传空列表
+            certification_notes=certification_notes,
+            canvas_obj=c  # 传入已有 canvas
+        )
+        c.showPage()  # 新页
+
+    # --- 生成后 3 页 Delivery ---
+    for i in range(1, num_trucks + 1):
+        bol_number = f"{delivery_date.strftime('%m%d%Y')}{i:02d}"
+        container_info = container_info_template.copy()
+
+        # ✅ Ship From / Ship To 对调
+        container_info["Ship From"] = ship_to
+        container_info["Ship To"] = constants_address.ssa_address
+
+        container_info["BOL Number"] = bol_number
+        container_info["Ship Date"] = delivery_date.strftime("%m/%d/%Y")
+        container_info["Ship Time"] = "12 pm"
+
+        print_bol_template(
+            title=f"Forklift BOL - {bol_number} Return",
+            filename=filename,
+            contentTitle=f"Bill Of Lading - {bol_number} Return",
+            container_info=container_info,
+            order_details=order_details,
+            certification_notes=certification_notes,
+            canvas_obj=c
+        )
+        c.showPage()  # 新页
+
+    # 保存 PDF
+    c.save()
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="forklift_bol_{datetime.now().strftime("%Y%m%d%H%M%S")}.pdf"'
+    return response
+
+
 # pick up list
 def pickup_fourth(request):
     target_date = datetime.today()
@@ -357,3 +458,29 @@ def pickup_week(request):
     target_date += timedelta(days=1)
     response = print_weekly_pickuplist_on_one_page(target_date)
     return response
+
+def droplist_week(request):
+    target_date = datetime.today()
+    target_date += timedelta(days=-1)
+    response = print_weekly_droplist_on_one_page(target_date)
+    return response
+
+def print_stored_file(request, order_id):
+    print("----------print_stored_file----------")
+    order = get_object_or_404(RMOrder, so_num=order_id)
+
+    if not order.invoice_pdfname:
+        return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.INVOICE_FOLDER, order.invoice_pdfname)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+    
+    # 打开并读取PDF文件
+    with open(pdf_path, 'rb') as pdf:
+        response = HttpResponse(pdf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{order.order_pdfname}"'
+        return response

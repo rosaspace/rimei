@@ -12,15 +12,6 @@
 
     <!-- 右侧按钮组 -->
     <div class="d-flex flex-wrap gap-2 ms-auto">
-        <!-- <div>
-            <a href="{% url 'pickup_fourth' %}" class="btn btn-primary">PICKUP LIST Fourth</a>
-        </div>
-        <div>
-            <a href="{% url 'pickup_third' %}" class="btn btn-primary">PICKUP LIST Third</a>
-        </div>
-        <div>
-            <a href="{% url 'pickup_tomorrow' %}" class="btn btn-primary">PICKUP LIST Tomorrow</a>
-        </div> -->
         <div>
             <a href="{% url 'pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
         </div>
@@ -51,14 +42,14 @@
         <tbody>
             {% for order in rimeiorders %}
             <tr {% if order.pickup_date and order.pickup_date < today %}
-      class="table-secondary"
-    {% elif order.pickup_date and order.pickup_date >= start_of_week and order.pickup_date <= end_of_week %}
-      class="table-warning"
-    {% elif order.pickup_date and order.pickup_date >= next_start_of_week and order.pickup_date <= next_end_of_week %}
-      class="table-primary"
-    {% elif order.pickup_date and order.pickup_date >= next2_start_of_week and order.pickup_date <= next2_end_of_week %}
-      class="table-warning"
-    {% endif %}>
+                class="table-secondary"
+                {% elif order.pickup_date and order.pickup_date >= start_of_week and order.pickup_date <= end_of_week %}
+                class="table-warning"
+                {% elif order.pickup_date and order.pickup_date >= next_start_of_week and order.pickup_date <= next_end_of_week %}
+                class="table-primary"
+                {% elif order.pickup_date and order.pickup_date >= next2_start_of_week and order.pickup_date <= next2_end_of_week %}
+                class="table-warning"
+                {% endif %}>
                 <!-- <td>{{ order.id }}</td> -->
                 <td>
                     <a href="{% url 'edit_order' order.so_num %}">{{ order.so_num }}</a>
@@ -71,11 +62,6 @@
                 <td>{{ order.pickup_date |date:"m/d/Y" }}</td>
                 <td>{{ order.outbound_date |date:"m/d/Y" }}</td>
                 <td class="text-center">
-                    <!-- {% if order.is_allocated_to_stock %}
-                    <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
-                    {% else %}
-                    <i class="far fa-circle text-muted"></i>
-                    {% endif %} -->
                     <form method="post" action="{% url 'order_is_allocated_to_stock' order.so_num %}?next={{ request.get_full_path }}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm p-0 m-0" title="Toggle Pay" style="all: unset; line-height: 1; display: inline; cursor: pointer;">

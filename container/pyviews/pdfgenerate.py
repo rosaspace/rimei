@@ -1,6 +1,7 @@
 import os
 import fitz  # PyMuPDF 解析 PDF
 import textwrap
+import re
 
 from django.conf import settings
 from django.db.models import Q
@@ -179,6 +180,72 @@ def print_weekly_pickuplist_on_one_page(start_date):
 
     c.save()
     return response
+
+def print_weekly_droplist_on_one_page(start_date):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="weekday_pickup_report.pdf"'
+
+    containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
+
+    c = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+
+    # 配置
+    left_margin = 1 * inch
+    top_margin = height - 1 * inch
+    line_height = 24
+    title_font_size = 24
+    item_font_size = 16
+
+    # 标题
+    c.setFont(font_Helvetica_Bold, title_font_size + 10)
+    c.drawCentredString(width / 2, height - 1 * inch, "WEEKDAY DROP LIST")
+
+    # 当前绘制位置
+    y = top_margin - 0.7 * inch
+
+    # 仅打印周一至周五
+    current_date = start_date
+    printed_days = 0
+    while printed_days < 5:
+        
+        weekday = current_date.weekday()
+        if weekday < 5:  # 周一到周五
+            weekday_str = current_date.strftime('%A')[:3].upper()
+            date_str = current_date.strftime('%m/%d')
+            header_text = f"{weekday_str} {date_str}"
+
+            c.setFont(font_Helvetica_Bold, title_font_size)
+            c.drawString(left_margin, y, header_text)
+            y -= line_height
+
+            pickup_orders = containers.filter(
+                delivery_date=current_date.date()
+            )
+
+            if pickup_orders.exists():
+                pickup_list = [f"{o.container_id} / {o.plts} plts / {o.customer.name} / {o.inboundCategory.Type}" for o in pickup_orders]
+            else:
+                pickup_list = ["N/A"]
+
+            # 编号列表
+            c.setFont("Helvetica", item_font_size)
+            for entry in pickup_list:
+                if y < 1 * inch:
+                    c.showPage()
+                    y = top_margin
+                    c.setFont("Helvetica", item_font_size)
+                c.drawString(left_margin + 10, y, f"- {entry}")
+                y -= line_height
+
+            y -= line_height  # 每天之间多留一行间隔
+            printed_days += 1
+
+        current_date += timedelta(days=1)
+
+    c.save()
+    return response
+
 
 def print_weekly_pickuplist(start_date):
     response = HttpResponse(content_type='application/pdf')
@@ -657,9 +724,17 @@ def print_checklist_template(title,filename, contentTitle, container_info,can_li
     # 保存 PDF
     c.save()
 
-def print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes):
+
+def print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes, canvas_obj=None):
     # 创建 PDF 文件
-    c = canvas.Canvas(filename, pagesize=letter)
+    # 使用传入的 canvas 或创建新的
+    if canvas_obj:
+        c = canvas_obj
+        new_canvas = False
+    else:
+        c = canvas.Canvas(filename, pagesize=letter)
+        new_canvas = True
+
     c.setTitle(title)
     width, height = letter
 
@@ -775,10 +850,12 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
         c.drawString(x_pos, signature_y - 30, "Date:")
         c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
 
-    # 保存 PDF
-    c.save()
+    # 保存 PDF 仅在自己创建 canvas 时
+    if new_canvas:
+        c.save()
 
-def converter_metal_invoice(container, amount_items, output_dir, new_filename, isOrder):
+
+def converter_metal_invoice(container, amount_items, output_dir, new_filename, isInvoice, discount_percent=0):
     # 构建新的PDF文件（使用 reportlab）
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -787,9 +864,18 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
     y = height - 80
     y_offset = 30  # ✅ 向下移动整体内容高度
 
+    isJustTableOrder = False # True, just print order table
+
     # ✅ Logo 和标题
-    if os.path.exists(constants_address.SSA_LOGO_PATH):
-        c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
+    if not isJustTableOrder:
+        if os.path.exists(constants_address.SSA_LOGO_PATH):
+            c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
+
+    # ---- Center Title (Invoice / Order) ----
+    title_text = "Invoice" if isInvoice == 1 else "Order"
+
+    c.setFont("Helvetica-Bold", 20)
+    c.drawCentredString(width / 2, height - 101, title_text)
 
     ADDRESS_MAPPING = {
         "SHIPPER": constants_address.SSA_ADDRESS,
@@ -802,114 +888,190 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
     }.get(container.so_num, "")  # 默认为空字符串
     full_invoice_no = f"{invoice_prefix}{container.so_num}"
 
-    # --- Shipper Info ---
-    draw_address_block(c, "SHIPPER:", ADDRESS_MAPPING["SHIPPER"], 40, height - 130 - y_offset)
+    if not isJustTableOrder:
+        # --- Shipper Info ---
+        draw_address_block(c, "SHIPPER:", ADDRESS_MAPPING["SHIPPER"], 40, height - 130 - y_offset)
 
-    # --- Invoice Box ---
-    invoice_date = datetime.today()
-    due_date = invoice_date + timedelta(days=30)
-    draw_section_header(c, "INVOICE:", 360, height - 130 - y_offset)
-    c.drawString(360, height - 145 - y_offset, f"INVOICE NO.: {full_invoice_no}")
-    c.drawString(360, height - 160 - y_offset, f"INVOICE DATE: {invoice_date.strftime('%m/%d/%Y')}")
-    c.drawString(360, height - 175 - y_offset, f"DUE DATE: {due_date.strftime('%m/%d/%Y')}")
+        # --- Invoice Box ---
+        invoice_date = datetime.today()
+        due_date = invoice_date + timedelta(days=30)
 
-    # --- Bill To ---
-    bill_to_address = container.bill_to
-    draw_address_block2(c, "BILL TO:", container.bill_to, 40, height - 220 - y_offset)
+        invoicenum_x_pos = 390
+        draw_section_header(c, "INVOICE:", invoicenum_x_pos, height - 130 - y_offset)        
+        c.drawString(invoicenum_x_pos, height - 145 - y_offset, f"INVOICE NO.: {full_invoice_no}")
+        c.drawString(invoicenum_x_pos, height - 160 - y_offset, f"INVOICE DATE: {invoice_date.strftime('%m/%d/%Y')}")
+        c.drawString(invoicenum_x_pos, height - 175 - y_offset, f"DUE DATE: {due_date.strftime('%m/%d/%Y')}")
 
-    # --- Consignee ---
-    draw_address_block2(c, "SHIP TO:", container.ship_to, 360, height - 220 - y_offset)
+        # --- Bill To ---
+        bill_to_address = container.bill_to
+        draw_address_block2(c, "BILL TO:", container.bill_to, 40, height - 220 - y_offset)
+
+        # --- Consignee ---
+        draw_address_block2(c, "SHIP TO:", container.ship_to, invoicenum_x_pos, height - 220 - y_offset)
+
+    # 预估地址块高度（每行约 14，高度预留更安全）
+    address_block_height = 100
+    if isJustTableOrder:
+        # ✅ Order：没有地址块，直接靠近标题
+        table_start_y = height - 140
+    else:
+        # Invoice：有地址块，稍微往下
+        table_start_y = height - 160 - y_offset - address_block_height
 
     # --- Table Data ---
     # 初始化总金额
     total = Decimal("0.00")
 
     # --- Table Data (Dynamic Version) ---
-    table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "CHARGES"]]
+    # table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "CHARGES"]]
+    if isInvoice == 1:
+        table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "CHARGES"]]
+    else:
+        table_data = [["ITEM", "DESCRIPTION", "QTY", "Price"]]
     total = Decimal("0.00")
 
     for item, desc, units, rate, charge in amount_items:
         display_item = str(item) if item else ""
         display_desc = desc
-        
-        # 默认显示值
         display_units = f"{units:.0f}" if units else ""
-        display_rate = f"${rate:,.2f}" if rate else ""
-        display_charge = f"${charge:,.2f}" if charge else ""
+        
+        if isInvoice == 1:
+            display_rate = f"${rate:,.2f}" if rate else ""
+            display_charge = f"${charge:,.2f}" if charge else ""
 
-        # 添加一行到 table
-        table_data.append([
-            display_item,
-            display_desc,
-            display_units,
-            display_rate,
-            display_charge
-        ])
+            table_data.append([
+                display_item,
+                display_desc,
+                display_units,
+                display_rate,
+                display_charge
+            ])
+
+            total += Decimal(str(charge or 0))
+        else:
+            # ✅ Order：Price 列存在，但永远空
+            table_data.append([
+                display_item,
+                display_desc,
+                display_units,
+                ""
+            ])
 
         total += Decimal(str(charge))
 
 
     # --- Build Table ---
-    table = Table(table_data, colWidths=[80, 260, 40, 60, 60])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("LEADING", (0, 0), (-1, -1), 14),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BACKGROUND", (-2, -1), (-1, -1), colors.lightgrey),  # Total row color
-    ]))
+    if isInvoice == 1:
+        table = Table(table_data, colWidths=[80, 290, 35, 55, 60])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("FONTSIZE", (0, 0), (-1, -1), 11),
+
+            # ✅ 行高关键
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ]))
+    else:
+        
+        table = Table(table_data, colWidths=[100, 300, 60, 60])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),  # 显示边框
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("FONTSIZE", (0, 0), (-1, -1), 11),
+
+            # ✅ 行高关键
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ]))
 
     table.wrapOn(c, width, height)
-    table.drawOn(c, 40, height - 420 - y_offset)
+
+    TABLE_TOP_GAP = -10 # 值越大，越靠上
+    table_top_y = table_start_y + TABLE_TOP_GAP   # 表头位置固定
+    table_height = table._height  # 表格真实高度
+    table.drawOn(c, 40, table_top_y - table_height)
+    table_bottom_y = table_top_y  - table_height
 
     # Amount summary block
-    summary_x = 360   # 靠右
-    summary_y = height - 440 - y_offset
-    line_height = 16
+    if isInvoice == 1:
+        summary_x = 360   # 靠右
+        line_height = 16
+        
+        summary_y = table_bottom_y - 20
 
-    c.setFont("Helvetica-Bold", 11)
+        c.setFont("Helvetica-Bold", 11)
 
-    # 准备数值
-    tax_amount = (total * constants_address.Tax_rate).quantize(Decimal("0.01"))
-    grand_total = (total + tax_amount).quantize(Decimal("0.01"))
-    credit_total = (grand_total * constants_address.Credit_rate).quantize(Decimal("0.01"))
+        # discount
+        discount_rate = Decimal(discount_percent) / Decimal("100")
+        discount_amount = (total * discount_rate).quantize(Decimal("0.01"))
+        discounted_subtotal = (total - discount_amount).quantize(Decimal("0.01"))
 
-    # Subtotal
-    c.drawRightString(summary_x + 180, summary_y, f"Subtotal:   ${total:,.2f}")
-    summary_y -= line_height
+        # 准备数值
+        tax_amount = (discounted_subtotal  * constants_address.Tax_rate).quantize(Decimal("0.01"))
+        grand_total = (discounted_subtotal  + tax_amount).quantize(Decimal("0.01"))
+        credit_total = (grand_total * constants_address.Credit_rate).quantize(Decimal("0.01"))
 
-    # Tax
-    c.drawRightString(summary_x + 180, summary_y, f"Tax (8.25%):   ${tax_amount:,.2f}")
-    summary_y -= line_height* 1.3
+        # Subtotal
+        subtotal_x_pos = 200
+        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Subtotal:   ${total:,.2f}")
+        summary_y -= line_height
 
-    # Total
-    # c.setFont("Helvetica-Bold", 12)
-    c.drawRightString(summary_x + 180, summary_y, f"Total:   ${grand_total:,.2f}")
-    summary_y -= line_height
+        # Discount（只有有折扣才显示）
+        if discount_percent > 0:
+            c.drawRightString(
+                summary_x + subtotal_x_pos,
+                summary_y,
+                f"Discount ({discount_percent}%):  -${discount_amount:,.2f}"
+            )
+            summary_y -= line_height
 
-    # Credit card total 3%
-    # c.setFont("Helvetica-Bold", 12)
-    c.drawRightString(summary_x + 180, summary_y, f"Credit Card (3%):   ${credit_total:,.2f}")
-    summary_y -= line_height
+            c.drawRightString(
+                summary_x + subtotal_x_pos,
+                summary_y,
+                f"Discounted Subtotal:   ${discounted_subtotal:,.2f}"
+            )
+            summary_y -= line_height * 1.3
+
+        # Tax
+        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Tax (8.25%):   ${tax_amount:,.2f}")
+        summary_y -= line_height* 1.3
+
+        # Total
+        # c.setFont("Helvetica-Bold", 12)
+        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Total:   ${grand_total:,.2f}")
+        summary_y -= line_height
+
+        # Credit card total 3%
+        # c.setFont("Helvetica-Bold", 12)
+        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Credit Card (3%):   ${credit_total:,.2f}")
+        summary_y -= line_height
 
     # --- 在表格之后插入说明文字 ---
-    y_text = 240   # 根据表格位置调整，越大越靠上
+    # y_text = 180   # 根据表格位置调整，越大越靠上
+    # ===== 表格底部基准 =====
+    left_text_y = table_bottom_y - 20
 
-    # 2 行：靠左显示
-    c.setFont("Helvetica", 10)
-    c.drawString(40, y_text, "*Products availability and lead time may change")
-    c.drawString(40, y_text - 15, "*SSA reserve the right to change pricing and terms without notice")
+    if not isJustTableOrder:
+        # 2 行：靠左显示
+        c.setFont("Helvetica", 10)
+        c.drawString(40, left_text_y, "*Products availability and lead time may change")
+        c.drawString(40, left_text_y - 15, "*SSA reserve the right to change pricing and terms without notice")
 
-    # 3 行：居中显示（电话、邮箱、公司名）
-    center_x = width / 2
-    c.drawCentredString(center_x, y_text - 45, "If you have questions concerning this invoice, contact us")
-    c.drawCentredString(center_x, y_text - 60, "Phone: (708) 882-1188")
-    c.drawCentredString(center_x, y_text - 75, "Email: info@securesourceamerica.com")
+        # 3 行：靠左显示（电话、邮箱、公司名）
+        c.drawString(40, left_text_y - 45, "If you have questions concerning this invoice, contact us")
+        c.drawString(40, left_text_y - 60, "Phone: (708) 882-1188")
+        c.drawString(40, left_text_y - 75, "Email: info@securesourceamerica.com")
+
+        # 3 行：居中显示（电话、邮箱、公司名）
+        # center_x = width / 2
+        # c.drawCentredString(center_x, y_text - 45, "If you have questions concerning this invoice, contact us")
+        # c.drawCentredString(center_x, y_text - 60, "Phone: (708) 882-1188")
+        # c.drawCentredString(center_x, y_text - 75, "Email: info@securesourceamerica.com")
 
 
     # 关闭 canvas 并写入 buffer
@@ -948,8 +1110,20 @@ def draw_address_block2(c, title, text, x, y):
     # c.drawString(x, y, title)
     c.setFont("Helvetica", 10)
 
+    # ---- 清洗不可见 / 非法换行字符 ----
+    clean_text = (
+        text
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .replace("\u2028", "\n")
+        .replace("\u2029", "\n")
+    )
+
+    # 移除其他不可打印字符（保留正常文字）
+    clean_text = re.sub(r"[^\x20-\x7E\n]", "", clean_text)
+
     # 处理多行地址
-    lines = text.split("\n")
+    lines = clean_text.split("\n")
 
     offset = 15
     for line in lines:

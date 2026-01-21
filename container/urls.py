@@ -3,7 +3,7 @@ from django.views.generic import TemplateView
 
 from . import views
 from .pyviews import container, invoice, rmorder, pdfprocess,weekrecord,payment
-from .pyviews import user, login, inventory_count,temporary,statistics
+from .pyviews import user, login, inventory_count,temporary,statistics,officesupply
 
 urlpatterns = [
     # login
@@ -27,6 +27,7 @@ urlpatterns = [
     path("invoice_ar/", views.invoice_ar_view, name="invoice_ar"),
 
     path("statement_selected_invoices/", views.statement_selected_invoices, name="statement_selected_invoices"),
+    path("statement_by_filter/", views.statement_by_filter, name="statement_by_filter"),
     path('delete_statement/', views.delete_statement, name='delete_statement'),
     path("paid_invoice_advance/", views.paid_invoice_advance, name="paid_invoice_advance"),
     path("paid_invoice_customer/", views.paid_invoice_customer, name="paid_invoice_customer"),    
@@ -86,10 +87,14 @@ urlpatterns = [
 
     path("export_pallet_invoice/", invoice.export_pallet_invoice, name="export_pallet_invoice"),    
     path("add_ar_invoice/", invoice.add_ar_invoice, name="add_ar_invoice"),
+    path("edit_ar_invoice/<int:id>/", invoice.edit_ar_invoice, name="edit_ar_invoice"),
+    path("delete_ar_invoice/<str:invoice_id>/", invoice.delete_ar_invoice, name="delete_ar_invoice"),
     path("add_ap_invoice/", invoice.add_ap_invoice, name="add_ap_invoice"),
     path("edit_ap_invoice/<str:invoice_id>/", invoice.edit_ap_invoice, name="edit_ap_invoice"),
+    path("delete_ap_invoice/<str:invoice_id>/", invoice.delete_ap_invoice, name="delete_ap_invoice"),
 
     path("print_original_ap_invoice/<str:so_num>/", invoice.print_original_ap_invoice, name="print_original_ap_invoice"),
+    path("print_original_ar_invoice/<str:so_num>/", invoice.print_original_ar_invoice, name="print_original_ar_invoice"),
     
     # Payment
     path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
@@ -106,7 +111,7 @@ urlpatterns = [
     path("upload_orderpdf/", rmorder.upload_orderpdf, name="upload_orderpdf"),
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
-    path('print_metal_invoice/<str:order_id>/<str:isOrder>/',rmorder.print_metal_invoice,name='print_metal_invoice'),
+    path('print_metal_invoice/<str:order_id>/<int:isInvoice>/',rmorder.print_metal_invoice,name='print_metal_invoice'),
     
     # Temporary
     path("import_inventory/", temporary.import_inventory, name="import_inventory"), 
@@ -118,6 +123,7 @@ urlpatterns = [
     path('container_email/<str:container_id>/', temporary.container_email, name='container_email'),     
     path('print_label_only/', temporary.print_label_only, name='print_label_only'),
     path('print_label_containerid_lot/', temporary.print_label_containerid_lot, name='print_label_containerid_lot'),
+    path('print_mcd_label/', temporary.print_mcd_label, name='print_mcd_label'),
     
     # pdf     
     path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),
@@ -125,12 +131,15 @@ urlpatterns = [
     path('print_order_label/<str:so_num>/', pdfprocess.print_order_label, name='print_order_label'),    
     path('print_order_bol/<str:so_num>/', pdfprocess.print_order_bol, name='print_order_bol'),
     path('print_order_mcd/<str:so_num>/', pdfprocess.print_order_mcd, name='print_order_mcd'),
+    path('print_forklift_bol/', pdfprocess.print_forklift_bol, name='print_forklift_bol'),
+    path('print_stored_file/<str:order_id>/', pdfprocess.print_stored_file, name='print_stored_file'),
 
     path('pickup_tomorrow/', pdfprocess.pickup_tomorrow, name='pickup_tomorrow'),
     path('pickup_today/', pdfprocess.pickup_today, name='pickup_today'),
     path('pickup_third/', pdfprocess.pickup_third, name='pickup_third'),   
     path('pickup_fourth/', pdfprocess.pickup_fourth, name='pickup_fourth'),  
     path('pickup_week/', pdfprocess.pickup_week, name='pickup_week'),
+    path('droplist_week/', pdfprocess.droplist_week, name='droplist_week'),
 
     # 打卡记录
     path('week_record/', weekrecord.week_record, name='week_record'),
@@ -145,4 +154,12 @@ urlpatterns = [
     path("statistics_outbound", statistics.statistics_outbound,name="statistics_outbound"),
     path("statistics_warehouse", statistics.statistics_warehouse,name="statistics_warehouse"),
     path("statistics_mcd_trend", statistics.statistics_mcd_trend,name="statistics_mcd_trend"),
+    path("statistics_outbound_metal", statistics.statistics_outbound_metal,name="statistics_outbound_metal"),
+
+    # office supply
+    path("office_supply_add", officesupply.office_supply_add,name="office_supply_add"),
+    path("office_supply_list", officesupply.office_supply_list,name="office_supply_list"),
+    path("office_supply_edit/<int:pk>/", officesupply.office_supply_edit, name="office_supply_edit"),
+    path("print_original_officesupply_invoice/<int:so_num>/", officesupply.print_original_officesupply_invoice, name="print_original_officesupply_invoice"),
+    path("delete_officesupply_invoice/<int:so_num>/", officesupply.delete_officesupply_invoice, name="delete_officesupply_invoice"),
 ]

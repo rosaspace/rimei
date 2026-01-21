@@ -36,37 +36,90 @@
     </div>
 </div>
 
+<hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
+
 <div class="row mb-3">
-    <div class="col-md-3">
-        <h4>Print Label</h2>
+    <div class="col-md-2">
+        <h4>Print Label</h4>
         <form action="/print_label_only/" method="post" enctype="multipart/form-data">
-            <div class="input-group">
-                {% csrf_token %}
+            {% csrf_token %}
+            <div class="mb-2">
                 <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
-                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
-                <button type="submit" class="btn btn-success" id="printLabel">
-                    Print Label
-                </button>
             </div>
+            <div class="mb-2">
+                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
+            </div>
+            <button type="submit" class="btn btn-success" id="printLabel">
+                Print Label
+            </button>
         </form>
     </div>
-    <div class="col-md-6">
-        <h4>Print Label with Lot</h2>
+    <div class="col-md-2">
+        <h4>Print Label with Lot</h4>
         <form action="/print_label_containerid_lot/" method="post" enctype="multipart/form-data">
-            <div class="input-group">
-                {% csrf_token %}
+            {% csrf_token %}
+            <div class="mb-2">
                 <input type="text" name="so_number" id="so_number" class="form-control" placeholder="Enter SO Number" required>
-                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
-                <input type="text" name="containerid" id="containerid" class="form-control" placeholder="ContainerID" required>
-                <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="Lot Number" required>
-                <button type="submit" class="btn btn-success" id="printLabel">
-                    Print Label
-                </button>
             </div>
+            <div class="mb-2">
+                <input type="number" name="quantity" id="quantity" class="form-control" placeholder="Quantity" required>
+            </div>
+            <div class="mb-2">
+                <input type="text" name="containerid" id="containerid" class="form-control" placeholder="ContainerID" required>
+            </div>
+            <div class="mb-2">
+                <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="Lot Number" required>
+            </div>
+            <button type="submit" class="btn btn-success" id="printLabel">
+                Print Label
+            </button>
+        </form>
+    </div>
+
+    <div class="col-md-2">
+        <h4>Print Mcd Label</h4>
+        <form action="/print_mcd_label/" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-2">
+                <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="LOT Number" required>
+            </div>
+            <div class="mb-2">
+                <input type="month" name="start_date" id="start_date" class="form-control" required>
+            </div>
+            <div class="mb-2">
+                <input type="month" name="expired_date" id="expired_date" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-success" id="printMcdLabel">
+                Print Mcd Label
+            </button>
+        </form>
+    </div>
+
+    <div class="col-md-2">
+        <h4>Print forklift BOL</h4>
+        <form action="/print_forklift_bol/" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-2">
+                <textarea class="form-control" id="ship_to" name="ship_to" rows="4" required></textarea>
+            </div>
+            <div class="mb-2">
+                <input type="date" name="shipout_date" id="shipout_date" class="form-control" required>
+            </div>
+            <div class="mb-2">
+                <input type="date" name="delivery_date" id="delivery_date" class="form-control" required>
+            </div>
+            <div class="mb-2">
+                <input type="number" name="forklift_number" id="forklift_number" class="form-control" placeholder="Forklift Number" required>
+            </div>
+            <button type="submit" class="btn btn-success" id="printMcdLabel">
+                Print Forklift BOL
+            </button>
         </form>
     </div>
     
 </div>
+
+<hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
 
 <div class="row">
     <div class="col-md-3">

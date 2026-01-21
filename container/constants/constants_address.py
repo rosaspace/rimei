@@ -10,6 +10,7 @@ Lemont, IL 60439"""
 NEW_TITLE = "Packing Slip" 
 
 rimei_address = 'Rimei INTERNATION INC\n1285 101st St\nLemont, IL 60439'
+ssa_address = 'Secure Source America LLC\n1285 101st St\nLemont, IL 60439'
 
 Only_ADDRESS = [
     "1285 101st St",
@@ -112,6 +113,7 @@ BOL_FOLDER = "BOL/"
 ORDER_FOLDER = "ORDER/"
 ORDER_CONVERTED_FOLDER = "CONVERTED/"
 LABEL_FOLDER = "label"
+INVOICE_FOLDER = "INVOICE/"
 
 # Container中的二级目录
 CHECKLIST_FOLDER = "checklist/"
@@ -123,6 +125,8 @@ INVOICE_FOUDER = "INVOICE"
 CUSTOMER_INVOICE_FOLDER = "CustomerInvoice"
 INVOICE_METAL_ORDER = "metalInvoice"
 INVOICE_AP = "APInvoice"
+INVOICE_AR = "ARInvoice"
+INVOICE_OFFICE_SUPPLY = "office_supply"
 
 # logo
 Rimei_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/remei.jpg')
@@ -142,7 +146,7 @@ Credit_rate = Decimal("1.03")
 
 # Font size
 FONT_SIZE = 60  # Larger font size
-FONT_SIZE_SMALL =  50  # Larger font size
+FONT_SIZE_SMALL =  42  # Larger font size
 # FONT_SIZE = 30  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size

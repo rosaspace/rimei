@@ -307,6 +307,66 @@ def statistics_warehouse(request):
         'user_permissions': get_user_permissions(request.user)
     })
 
+def statistics_outbound_metal(request):
+    order_items = OrderItem.objects.filter(
+        order__outbound_date__isnull=False,
+        product__type='Metal'  # ✅ 仅保留 Rimei 产品
+    )
+
+     # 按产品+月份分组统计数量
+    grouped = order_items.annotate(month=TruncMonth('order__outbound_date')) \
+        .values('product__name', 'month') \
+        .annotate(total_qty=Sum('quantity')) \
+        .order_by('-month')
+
+    # 构造结构化数据：行是产品，列是月份
+    product_set = set()
+    month_set = set()
+    data_map = defaultdict(lambda: defaultdict(int))
+
+    for row in grouped:
+        product = row['product__name']
+        month = row['month'].strftime('%Y-%m')
+        qty = row['total_qty']
+        data_map[product][month] = qty
+        product_set.add(product)
+        month_set.add(month)
+
+    month_list = sorted(list(month_set))
+    product_list = sorted(list(product_set))
+
+    # 构造图表数据结构
+    chart_datasets = []
+    for product in product_list:
+        chart_datasets.append({
+            'label': product,
+            'data': [data_map[product].get(month, 0) for month in month_list],
+        })
+
+    table_data = []
+    chart_data_map = {}
+    for row in grouped:
+        product = row['product__name']
+        month = row['month'].strftime('%Y-%m')
+        qty = row['total_qty']
+        table_data.append({
+            'product': product,
+            'month': month,
+            'quantity': qty
+        })
+        month_set.add(month)
+        if product not in chart_data_map:
+            chart_data_map[product] = {}
+        chart_data_map[product][month] = qty
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_statistics_outbound_metal, {        
+        'table_data': table_data,
+        'month_list': month_list,
+        'chart_datasets': chart_datasets,  # for chart
+        'user_permissions': user_permissions
+    })
+
 def month_workdays(dt) -> int:
     """
     计算指定年月中，周一到周五的工作日数量（不含周末）

@@ -26,6 +26,7 @@ class RMOrder(models.Model):
     plts = models.IntegerField()  # 托盘数量
     customer_name = models.ForeignKey('RMCustomer', on_delete=models.CASCADE)  # 关联客户表
     order_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Order的PDF文件名
+    invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Invoice的PDF文件名
     bol_pdfname = models.CharField(max_length=255, blank=True, null=True)  # BOL的PDF文件名
     bill_to = models.CharField(max_length=255, blank=True, null=True) # 账单地址
     ship_to = models.CharField(max_length=255, blank=True, null=True) # 邮寄地址
@@ -384,3 +385,66 @@ class InvoiceAPRecord(models.Model):
 
     def __str__(self):
         return f"{self.vendor.name}"
+
+# office supply
+class OfficeSupplyItem(models.Model):
+    """
+    办公用品字典表（有哪些东西）
+    """
+    name = models.CharField(max_length=100, unique=True)
+    category = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class OfficeSupplyPurpose(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class OfficeSupplyPlatform(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    website = models.URLField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class OfficeSupplyRecord(models.Model):
+    """
+    办公用品购买 / 使用记录
+    """
+    supply_item = models.ForeignKey(
+        OfficeSupplyItem,
+        on_delete=models.PROTECT,
+        related_name="records"
+    )
+
+    purpose = models.ForeignKey(
+        OfficeSupplyPurpose,
+        on_delete=models.PROTECT
+    )
+
+    platform = models.ForeignKey(
+        OfficeSupplyPlatform,
+        on_delete=models.PROTECT
+    )
+
+    quantity = models.PositiveIntegerField()      # 购买数量
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+
+    purchase_date = models.DateField(auto_now_add=True)
+    delivered_date = models.DateField(blank=True, null=True)
+
+    storage_pdf = models.CharField(max_length=255, blank=True, null=True) 
+
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.supply_item.name} - {self.quantity}"
