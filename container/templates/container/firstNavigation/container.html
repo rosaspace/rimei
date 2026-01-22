@@ -10,6 +10,53 @@
     </div>
     <!-- 右侧按钮组 -->
     <div class="d-flex flex-wrap gap-2 ms-auto">
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-center ms-auto">
+
+            <!-- Customer -->
+            <select name="customer" class="form-select form-select-sm" style="width: 160px;" onchange="this.form.submit()">
+                <option value="">All Customers</option>
+                {% for c in customers %}
+                    <option value="{{ c.id }}"
+                        {% if request.GET.customer == c.id|stringformat:"s" %}selected{% endif %}>
+                        {{ c.name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <!-- Logistics -->
+            <select name="logistics" class="form-select form-select-sm" style="width: 160px;" onchange="this.form.submit()">
+                <option value="">All Logistics</option>
+                {% for l in logistics_list %}
+                    <option value="{{ l.id }}"
+                        {% if request.GET.logistics == l.id|stringformat:"s" %}selected{% endif %}>
+                        {{ l.name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <!-- Carrier -->
+            <select name="carrier" class="form-select form-select-sm" style="width: 160px;" onchange="this.form.submit()">
+                <option value="">All Carriers</option>
+                {% for c in carriers %}
+                    <option value="{{ c.id }}"
+                        {% if request.GET.carrier == c.id|stringformat:"s" %}selected{% endif %}>
+                        {{ c.shortname }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <!-- Container Type -->
+            <select name="category" class="form-select form-select-sm" style="width: 180px;" onchange="this.form.submit()">
+                <option value="">All Types</option>
+                {% for cat in inbound_categories %}
+                    <option value="{{ cat.id }}"
+                        {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                        {{ cat.Type }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+
         <div>
             <a href="{% url 'droplist_week' %}" class="btn btn-primary">DROP LIST</a>
         </div>
@@ -50,9 +97,21 @@
                 <td>{{ container.logistics.name }}</td>
                 <td>{{ container.Carrier.shortname }}</td>
                 <td>{{ container.inboundCategory.Type }}</td>
-                <td>{{ container.pickup_number }}</td>
+                <td>
+                    {% if container.logistics.id == 2 %}
+                        ---
+                    {% else %}
+                        {{ container.pickup_number }}
+                    {% endif %}
+                </td>
                 <td>{{ container.plts }}</td>
-                <td>{{ container.railway_date |date:"m/d/Y" }}</td>
+                <td>
+                    {% if container.logistics.id == 2 %}
+                        ---
+                    {% else %}
+                        {{ container.railway_date|date:"m/d/Y" }}
+                    {% endif %}
+                </td>
                 <!-- <td>{{ container.pickup_date |date:"m/d/Y" }}</td> -->
                 <td>{{ container.delivery_date |date:"m/d/Y" }}</td>
                 <td>{{ container.empty_date |date:"m/d/Y" }}</td>

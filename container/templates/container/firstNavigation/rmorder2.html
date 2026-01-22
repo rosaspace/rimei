@@ -12,6 +12,41 @@
 
     <!-- 右侧按钮组 -->
     <div class="d-flex flex-wrap gap-2 ms-auto">
+        <!-- 右侧过滤（GET 表单，无 JS） -->
+        <form method="get" class="d-flex align-items-center ms-2">
+
+            <!-- Customer -->
+            <select name="customer_name"
+                    class="form-select form-select-sm me-2"
+                    onchange="this.form.submit()"
+                    style="width:180px;">
+                <option value="">All Customers</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}"
+                    {% if request.GET.customer_name == c.id|stringformat:"s" %}selected{% endif %}>
+                    {{ c.name }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <!-- Canceled -->
+            <select name="is_canceled"
+                    class="form-select form-select-sm"
+                    onchange="this.form.submit()"
+                    style="width:160px;">
+                <option value="">Canceled?</option>
+                <option value="false"
+                    {% if request.GET.is_canceled == "false" %}selected{% endif %}>
+                    Active
+                </option>
+                <option value="true"
+                    {% if request.GET.is_canceled == "true" %}selected{% endif %}>
+                    Canceled
+                </option>
+            </select>
+
+        </form>
+
         <div>
             <a href="{% url 'pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
         </div>

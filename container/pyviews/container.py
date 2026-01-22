@@ -97,6 +97,7 @@ def add_container(request):
 
             customer_id = request.POST.get('customer_name')
             customer_name = InvoiceCustomer.objects.get(id=customer_id) if customer_id else DEFAULT_CUSTOMER
+            print("customer_id:",customer_id)
 
             logistics_id = request.POST.get('logistics_name')
             logistics_name = LogisticsCompany.objects.get(id=logistics_id) if logistics_id else DEFAULT_LOGISTICS

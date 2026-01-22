@@ -64,8 +64,6 @@
     <table class="table table-striped table-bordered table-hover">
         <thead>
             <tr>
-                <th></th>
-                <th>ID</th>
                 <th>Container#</th>
                 <th>Customer</th>
                 <th>Logistics</th>
@@ -87,8 +85,6 @@
         <tbody>
             {% for container in containers %}
             <tr data-container-id="{{ container.container_id }}">
-                <td><input type="checkbox" name="selected_ids" value="{{ container.container_id }}"></td>
-                <td>{{ container.id }}</td>
                 <td>
                     {% if container.container_id %}
                         <a href="{% url 'edit_invoice' container.container_id %}">{{ container.container_id }}</a>

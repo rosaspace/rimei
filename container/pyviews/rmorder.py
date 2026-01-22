@@ -119,7 +119,7 @@ def edit_order(request, so_num):
             total_price = total_price.quantize(Decimal('0.00'),rounding=ROUND_HALF_UP)
             total_tax = (total_price * Decimal('0.0825')).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
             total_grand = total_price + total_tax
-            total_credit_price = total_grand + (total_grand * Decimal('0.025')).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+            total_credit_price = (total_grand * constants_address.Credit_rate).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
 
             # products = RMProduct.objects.all().order_by('name')
             if order.customer_name.id != 19:

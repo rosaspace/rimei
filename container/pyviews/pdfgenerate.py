@@ -957,8 +957,6 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
                 ""
             ])
 
-        total += Decimal(str(charge))
-
 
     # --- Build Table ---
     if isInvoice == 1:

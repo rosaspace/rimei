@@ -169,6 +169,7 @@
             formData.append('customer_name', document.getElementById('customer_name').value);
             formData.append('station_name', document.getElementById('station_name').value);
             formData.append('logistics_name', document.getElementById('logistics_name').value);
+            formData.append("carrier_name", document.getElementById("carrier_name").value);
             console.log("inbound_category to send:", document.getElementById("inbound_category").value);
             console.log("----------Save Container1-----------")
             const containerPdf = document.getElementById("container-pdf").files[0];

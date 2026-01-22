@@ -146,15 +146,17 @@ def print_mcd_label(request):
     # === Label 布局 ===
     COLS = 5
     ROWS = 10
-    ROW_GAP = 10
+    ROW_GAP = 20
+    COL_GAP = 10
     TOTAL_LABELS = 50
 
-    MARGIN_LEFT = 15
-    MARGIN_TOP = 46
-    MARGIN_RIGHT = 20
-    MARGIN_BOTTOM = 34  
+    MARGIN_LEFT = 5
+    MARGIN_TOP = 30
+    MARGIN_RIGHT = 5
+    MARGIN_BOTTOM = 20
 
-    usable_width = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
+    usable_width = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT - COL_GAP * (COLS - 1)
+    # usable_width = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
     usable_height = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM - ROW_GAP * (ROWS - 1)
 
     LABEL_WIDTH = usable_width / COLS
@@ -162,7 +164,7 @@ def print_mcd_label(request):
 
     FONT_SIZE_TITLE = 16
     FONT_SIZE_TEXT = 14
-    line_gap = 28    
+    line_gap = 22    
     
 
     # === 开始画 labels ===
@@ -170,7 +172,7 @@ def print_mcd_label(request):
         row = i // COLS
         col = i % COLS
 
-        x = MARGIN_LEFT + col * LABEL_WIDTH
+        x = MARGIN_LEFT + col * (LABEL_WIDTH + COL_GAP)
         y = PAGE_HEIGHT - MARGIN_TOP - row * (LABEL_HEIGHT + ROW_GAP)
 
         # ===== Label center =====

@@ -38,14 +38,10 @@ urlpatterns = [
 
     path("container_advance77/", views.container_advance77, name="container_advance77"), 
     path("container_omar/", views.container_omar, name="container_omar"), 
-    path("container_mcd/", views.container_mcd, name="container_mcd"),     
-    path("container_metal/", views.container_metal, name="container_metal"),
 
     path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
     path("rimeiorder_metal/", views.rimeiorder_metal, name="rimeiorder_metal"),
-    path("rimeiorder_mcdonalds/", views.rimeiorder_mcdonalds, name="rimeiorder_mcdonalds"),
-    path("rimeiorder_officedepot/", views.rimeiorder_officedepot, name="rimeiorder_officedepot"),
-    path("rimeiorder_cancel/", views.rimeiorder_cancel, name="rimeiorder_cancel"),    
+    path("rimeiorder_officedepot/", views.rimeiorder_officedepot, name="rimeiorder_officedepot"), 
 
     # inventory count
     path("inventory/", inventory_count.inventory_view, name="inventory"),

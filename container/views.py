@@ -19,7 +19,7 @@ from .models import Container, RMOrder,RMCustomer,AlineOrderRecord,ContainerStat
 from .models import RMProduct, InvoicePaidCustomer,Carrier,InvoiceAPRecord,InvoiceARRecord
 from .pyviews.getPermission import get_user_permissions
 from .constants import constants_view
-from .models import InvoiceVendor, Carrier, InvoiceCustomer, LogisticsCompany
+from .models import InvoiceVendor, Carrier, InvoiceCustomer, LogisticsCompany, InboundCategory
 
 # home
 @login_required
@@ -355,47 +355,85 @@ def invoice_ar_view(request):
 # container
 @login_required(login_url='/login/')
 def container_advance77(request):
-    containers = Container.objects.filter(Q(logistics = 1) | Q(logistics = 3)).order_by('-delivery_date') # logistics: 非Customer
+    containers = Container.objects.select_related(
+        'customer', 'logistics', 'Carrier', 'inboundCategory'
+    ).order_by('-delivery_date') # logistics: 非Customer
 
     # 今天，计算本周的周一和周日
     today = date.today()    
     start_of_week = today - timedelta(days=today.weekday())   # 本周一
     end_of_week = start_of_week + timedelta(days=6)           # 本周日
 
+    # GET 参数
+    customer_id = request.GET.get('customer')
+    logistics_id = request.GET.get('logistics')
+    carrier_id = request.GET.get('carrier')
+    category_id = request.GET.get('category')
+
+    if customer_id:
+        containers = containers.filter(customer_id=customer_id)
+
+    if logistics_id:
+        containers = containers.filter(logistics_id=logistics_id)
+
+    if carrier_id:
+        containers = containers.filter(Carrier_id=carrier_id)
+
+    if category_id:
+        containers = containers.filter(inboundCategory_id=category_id)
+
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {
         'containers': containers,'user_permissions': user_permissions,
         'today': today,
         'start_of_week': start_of_week,
-        'end_of_week': end_of_week,})
+        'end_of_week': end_of_week,
+        'customers': InvoiceCustomer.objects.all(),
+        'logistics_list': LogisticsCompany.objects.all(),
+        'carriers': Carrier.objects.filter(Q(id = 1) | Q(id=5) ),
+        'inbound_categories': InboundCategory.objects.all(),
+        })
 
 @login_required(login_url='/login/')
 def container_omar(request):
-    containers = Container.objects.filter(Q(logistics = 2)).exclude(Q(customer = 3) | Q(customer = 12)).order_by('-delivery_date') # logistics: Customer, 排除Mcdonalds和Metal
+    containers = Container.objects.select_related(
+        'customer', 'logistics', 'Carrier', 'inboundCategory'
+    ).filter(Q(logistics = 2)).order_by('-delivery_date') # logistics: Customer, 排除Mcdonalds和Metal
 
     # 今天，计算本周的周一和周日
     today = date.today()    
     start_of_week = today - timedelta(days=today.weekday())   # 本周一
     end_of_week = start_of_week + timedelta(days=6)           # 本周日
 
+    # GET 参数
+    customer_id = request.GET.get('customer')
+    logistics_id = request.GET.get('logistics')
+    carrier_id = request.GET.get('carrier')
+    category_id = request.GET.get('category')
+
+    if customer_id:
+        containers = containers.filter(customer_id=customer_id)
+
+    if logistics_id:
+        containers = containers.filter(logistics_id=logistics_id)
+
+    if carrier_id:
+        containers = containers.filter(Carrier_id=carrier_id)
+
+    if category_id:
+        containers = containers.filter(inboundCategory_id=category_id)
+
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_container, {
         'containers': containers,'user_permissions': user_permissions,
         'today': today,
         'start_of_week': start_of_week,
-        'end_of_week': end_of_week,})
-
-@login_required(login_url='/login/')
-def container_mcd(request):
-    containers = Container.objects.filter(Q(customer = 3)).order_by('-delivery_date') # customer: Mcdonalds
-    user_permissions = get_user_permissions(request.user) 
-    return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
-
-@login_required(login_url='/login/')
-def container_metal(request):
-    containers = Container.objects.filter(Q(customer = 12)).order_by('-delivery_date') # customer: Metal
-    user_permissions = get_user_permissions(request.user) 
-    return render(request, constants_view.template_container, {'containers': containers,'user_permissions': user_permissions})
+        'end_of_week': end_of_week,
+        'customers': InvoiceCustomer.objects.exclude(Q(id = 1) | Q(id=2) | Q(id=3)| Q(id=12)),
+        'logistics_list': LogisticsCompany.objects.all(),
+        'carriers': Carrier.objects.filter(Q(id = 1) | Q(id=5) ),
+        'inbound_categories': InboundCategory.objects.all(),
+        })
 
 @login_required(login_url='/login/')
 def simplified_container_view(request):
@@ -417,11 +455,8 @@ def simplified_container_view(request):
 @login_required(login_url='/login/')
 def rimeiorder_view(request):
     orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('-pickup_date')
+    customers = RMCustomer.objects.all().order_by('name')
     user_permissions = get_user_permissions(request.user) 
-    unfinished_orders = orders.filter(
-        is_canceled=False
-    )
-    print("unfinished_orders, ",len(unfinished_orders))
 
     today = date.today()
     # 计算本周的周一和周日
@@ -434,8 +469,19 @@ def rimeiorder_view(request):
     next2_start_of_week = start_of_week + timedelta(days=14)
     next2_end_of_week = next2_start_of_week + timedelta(days=6)
 
+    customer_name = request.GET.get('customer_name')
+    is_canceled = request.GET.get('is_canceled')
+
+    if customer_name:
+        orders = orders.filter(customer_name=customer_name)
+
+    if is_canceled == "true":
+        orders = orders.filter(is_canceled=True)
+    elif is_canceled == "false":
+        orders = orders.filter(is_canceled=False)
+
     return render(request, constants_view.template_rmorder, {
-        'rimeiorders': unfinished_orders,
+        'rimeiorders': orders,
         'user_permissions': user_permissions,
         'today': today,
         'start_of_week': start_of_week,
@@ -443,7 +489,8 @@ def rimeiorder_view(request):
         "next_start_of_week": next_start_of_week,
         "next_end_of_week": next_end_of_week,
         "next2_start_of_week":next2_start_of_week,
-        "next2_end_of_week":next2_end_of_week
+        "next2_end_of_week":next2_end_of_week,
+        'customers': customers,
         })
 
 @login_required(login_url='/login/')
@@ -460,39 +507,10 @@ def rimeiorder_metal(request):
         })
 
 @login_required(login_url='/login/')
-def rimeiorder_mcdonalds(request):
-    orders = RMOrder.objects.filter(customer_name='10').annotate(image_count=Count('images')).order_by('-pickup_date')
-    user_permissions = get_user_permissions(request.user) 
-    unfinished_orders = orders.filter(
-        is_canceled=False
-    )
-    print("unfinished_orders, ",len(unfinished_orders))
-
-    return render(request, constants_view.template_rmorder, {
-        'rimeiorders': unfinished_orders,
-        'user_permissions': user_permissions
-        })
-
-@login_required(login_url='/login/')
 def rimeiorder_officedepot(request):
     orders = RMOrder.objects.filter(customer_name='4').annotate(image_count=Count('images')).order_by('-pickup_date')
     user_permissions = get_user_permissions(request.user) 
     finished_orders = orders.filter(
-        is_canceled=False
-    )
-    print("finished_orders, ",len(finished_orders))
-
-    return render(request, constants_view.template_rmorder, {
-        'rimeiorders': finished_orders,
-        'user_permissions': user_permissions
-        })
-
-@login_required(login_url='/login/')
-def rimeiorder_cancel(request):
-    orders = RMOrder.objects.filter(is_canceled=True).annotate(image_count=Count('images')).order_by('pickup_date')
-    user_permissions = get_user_permissions(request.user) 
-    finished_orders = orders.exclude(
-        is_updateInventory=False, 
         is_canceled=False
     )
     print("finished_orders, ",len(finished_orders))
