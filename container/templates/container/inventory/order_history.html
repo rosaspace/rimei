@@ -5,7 +5,12 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="mb-0">Inventory History : {{ product.name }}</h3>
-        <a href="{% url 'inventory_diff' %}" class="btn btn-secondary">Back</a>
+        
+        {% if product.type == 'Metal' %}
+            <a href="{% url 'inventory_metal' %}" class="btn btn-secondary">Back</a>
+        {% else %}
+            <a href="{% url 'inventory' %}" class="btn btn-secondary">Back</a>
+        {% endif %}
     </div>
 
     <hr>

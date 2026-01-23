@@ -8,9 +8,12 @@
         <div class="d-flex align-items-center">
             <h4 class="mr-3">Edit Product</h4>
         </div>
-        <div class="ml-auto">
+
+        {% if product.type == 'Metal' %}
+            <a href="{% url 'inventory_metal' %}" class="btn btn-secondary">Back</a>
+        {% else %}
             <a href="{% url 'inventory' %}" class="btn btn-secondary">Back</a>
-        </div>
+        {% endif %}
     </div>
 
     <form id="edit-order-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_product' product.id %}" class="needs-validation" novalidate>

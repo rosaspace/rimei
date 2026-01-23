@@ -223,7 +223,10 @@ def edit_order(request, so_num):
                             quantity=int(quantity)
                         )                            
 
-                
+                if customer.id == 19:
+                    return redirect('rimeiorder_metal')
+                elif customer.id == 4:
+                    return redirect('rimeiorder_officedepot')
                 return redirect('rimeiorder')
             except Exception as e:
                 messages.error(request, f'更新订单失败：{str(e)}')

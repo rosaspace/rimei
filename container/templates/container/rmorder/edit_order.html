@@ -50,7 +50,13 @@
             <h4 class="mr-3">Edit Order</h4>
         </div>
         <div class="ml-auto">
-            <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
+            {% if order.customer_name.id == 19 %}
+                <a href="{% url 'rimeiorder_metal' %}" class="btn btn-secondary">Back</a>
+            {% elif order.customer_name.id == 4 %}
+                <a href="{% url 'rimeiorder_officedepot' %}" class="btn btn-secondary">Back</a>
+            {% else %}
+                <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
+            {% endif %}
         </div>
     </div>
 

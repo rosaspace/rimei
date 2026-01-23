@@ -92,7 +92,7 @@ def invoice_unpaid(request):
 
 @login_required(login_url='/login/')
 def invoice_pallet_labor(request):
-    years = [2025]
+    years = [date.today().year]
     months = list(range(1, 13))  # 1 到 12 月
 
     user_permissions = get_user_permissions(request.user) 
@@ -574,6 +574,6 @@ def permission_view(request):
 def temporary_view(request):
     user_permissions = get_user_permissions(request.user)
 
-    years = [2025]
+    years = [date.today().year]
     months = list(range(1, 13))  # 1 到 12 月
     return render(request, constants_view.template_temporary,{'user_permissions': user_permissions,'years':years,'months':months})

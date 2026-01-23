@@ -20,14 +20,11 @@ def inventory_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
     print("----------inventory_view------------",len(inventory_items))
     inventory_items_converty = []
-    total_pallets = 0
-    total_pallets2 = 0
+
     for product in inventory_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
-        total_pallets += productTemp.totalPallet
-        total_pallets2 += product.quantity // product.Pallet
 
         inventory_items_converty.append(productTemp)
         inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
@@ -36,8 +33,6 @@ def inventory_view(request):
     return render(request, constants_view.template_inventory, {
         "inventory_items": inventory_items_converty,
         'user_permissions': user_permissions,
-        'total_pallets' : total_pallets,
-        'total_pallets2' : total_pallets2
     })
 
 def inventory_diff_view(request):
@@ -150,22 +145,47 @@ def order_history(request,product_id):
     })
 
 def inventory_summary(request):
+    
+    # print("----------inventory_summary------------",len(inventory_items))
     inventory_items = RMProduct.objects.all()  # 获取所有库存信息
-    print("----------inventory_summary------------",len(inventory_items))
-    inventory_items_converty = []
-    employee_data = {}
-
+    summary_by_type = {} 
+    
     for product in inventory_items:
+        product_type = product.type or "Unknown"
+
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        # total_pallets += math.ceil(product.quantity / product.Pallet) # 数量，向上取整
 
-        inventory_items_converty.append(productTemp)
+        if product_type not in summary_by_type:
+            summary_by_type[product_type] = {
+                'employee_data': {},
+                'total_pallets': 0,
+            }
 
-        # 统计员工库存
+        # ===== 计算托盘数（向上取整）=====
+        if product.Pallet:
+            summary_by_type[product_type]['total_pallets'] += math.ceil(
+                product.quantity / product.Pallet
+            )
+
+        # ===== 原有逻辑 =====
+        inbound_list, outbound_list, outbound_actual_list, outbound_stock_list, inbound_actual_list = get_quality(product)
+        productTemp = get_product_qty(
+            product,
+            inbound_list,
+            outbound_list,
+            outbound_actual_list,
+            outbound_stock_list,
+            inbound_actual_list
+        )
+
         employee = product.blongTo.name if product.blongTo else "Unknown"
         qty = product.quantity
-        
+
+        employee_data = summary_by_type[product_type]['employee_data']
+
         if employee not in employee_data:
             employee_data[employee] = {
                 'total_qty': 0,
@@ -179,36 +199,43 @@ def inventory_summary(request):
         employee_data[employee]['qty_list'].append(qty)
         employee_data[employee]['product_set'].add(product.id)
 
-    # 总数量
-    total_qty_all = sum(v['total_qty'] for v in employee_data.values())
-    total_qty_diff = sum(v['total_diff'] for v in employee_data.values())
+    # ===== 构造每个 type 的 summary =====
+    final_summary = {}
 
-    # 构造 summary 列表
-    summary = []
-    for employee, qty_list in employee_data.items():
-        percentage = round((qty_list['total_qty'] / total_qty_all) * 100, 2) if total_qty_all else 0
-        summary.append({
-            "employee": employee,
-            "total_qty": qty_list['total_qty'],
-            "total_diff": qty_list['total_diff'],
-            'qty_expression': ' + '.join(str(q) for q in qty_list['qty_list']),
-            'product_count': len(qty_list['product_set']),
-            'percentage': percentage,
+    for product_type, data in summary_by_type.items():
+        employee_data = data['employee_data']
+
+        total_qty_all = sum(v['total_qty'] for v in employee_data.values())
+        total_qty_diff = sum(v['total_diff'] for v in employee_data.values())
+
+        summary = []
+        for employee, v in employee_data.items():
+            percentage = round((v['total_qty'] / total_qty_all) * 100, 2) if total_qty_all else 0
+            summary.append({
+                "employee": employee,
+                "total_qty": v['total_qty'],
+                "total_diff": v['total_diff'],
+                "qty_expression": ' + '.join(str(q) for q in v['qty_list']),
+                "product_count": len(v['product_set']),
+                "percentage": percentage,
             })
 
-    summary = sorted(summary, key=lambda x: x['percentage'], reverse=True)
-    # 汇总总数量
-    total_qty_all = sum(row['total_qty'] for row in summary)
-    total_qty_diff = sum(row['total_diff'] for row in summary)
+        summary = sorted(summary, key=lambda x: x['percentage'], reverse=True)
 
+        final_summary[product_type] = {
+            "summary": summary,
+            "total_qty_all": total_qty_all,
+            "total_qty_diff": total_qty_diff,
+            "total_pallets": data['total_pallets'],
+        }
+    
     user_permissions = get_user_permissions(request.user)
-    years = [2025]
+    years = [date.today().year]
     months = list(range(1, 13))  # 1 到 12 月
     return render(request, constants_view.template_temporary, {
         'user_permissions': user_permissions,
-        'years':years,'months':months,'summary':summary,
-        'total_qty_all': total_qty_all,
-        'total_qty_diff': total_qty_diff,
+        'years':years,'months':months,
+        'final_summary': final_summary, 
     })
 
 def show_pallet_number(request):
@@ -223,7 +250,7 @@ def show_pallet_number(request):
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
-        total_storage_pallets += productTemp.totalPallet
+        total_storage_pallets += math.ceil(product.quantity / product.Pallet) # 数量，向上取整
 
     # ✅ 出入库托盘数
     total_container,total_in_plts,total_out_plts, gloves_in_data,container_in_orders = get_month_pallet_number(select_month, select_year)
@@ -246,7 +273,7 @@ def show_pallet_number(request):
 
     }]    
 
-    years = [2025]
+    years = [date.today().year]
     months = list(range(1, 13))  # 1 到 12 月
     user_permissions = get_user_permissions(request.user) 
     return render(request, constants_view.template_generete_monthLabor, {
@@ -285,6 +312,11 @@ def edit_product(request,product_id):
         product.blongTo = Employee.objects.get(id=request.POST.get('blongTo'))
 
         product.save()
+
+        if product.type == 'Metal':
+            return redirect('inventory_metal')
+        elif product.type == 'Mcdonalds' | product.type == 'MCD':
+            return redirect('inventory_mcd')
         return redirect('inventory')
 
     return render(request, constants_view.template_edit_product, {
@@ -374,7 +406,7 @@ def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,o
     product.case = 0 if product.Pallet == 0 else product.shownumber % product.Pallet
     product.Location = product.Location
     product.ShelfRecord = product.ShelfRecord or '-'
-    product.totalPallet = 0 if product.Pallet == 0 else math.ceil(product.quantity / product.Pallet)
+    # product.totalPallet = 0 if product.Pallet == 0 else math.ceil(product.quantity / product.Pallet)
 
     return product
 
