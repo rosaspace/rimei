@@ -2,30 +2,29 @@ import json
 import os
 import math
 
-from io import BytesIO
 from datetime import datetime, date, timedelta
+from io import BytesIO
 
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
-from django.utils import timezone
-from django.shortcuts import render, redirect
-from django.contrib import messages
 from django.conf import settings
-from django.db import IntegrityError, DatabaseError
-from django.http import HttpResponse
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, DatabaseError
 from django.db.models import Q, F
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.utils import timezone
 
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfgen import canvas
 
-from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory,RailwayStation,Carrier,Manufacturer
 from ..constants import constants_address, constants_view
-from .utils.pdfgenerate import print_containerid_lot, print_checklist_template
-from .utils.pdfextract import get_product_qty_with_inventory_from_container
+from ..models import Container, RMProduct, ContainerItem, InvoiceCustomer, LogisticsCompany, InboundCategory, RailwayStation, Carrier, Manufacturer
+
 from .utils.getPermission import get_user_permissions
+from .utils.pdfextract import get_product_qty_with_inventory_from_container
+from .utils.pdfgenerate import print_containerid_lot, print_checklist_template
 
 # container
 @login_required(login_url='/login/')

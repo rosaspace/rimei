@@ -1,21 +1,19 @@
-from datetime import date, timedelta
 import calendar
 import datetime
-
-from collections import OrderedDict,defaultdict
-
-from django.shortcuts import render, redirect
-from django.db.models import Case, When, Value, FloatField, F, ExpressionWrapper, FloatField, Sum, Q, Min, Max,Count
-from django.db.models.functions import TruncMonth
-from django.db.models.functions import TruncWeek
-
-from collections import defaultdict
 import pandas as pd
 
-from ..models import Container,Employee,ClockRecord,ContainerItem,OrderItem,RMProduct
-from .utils.getPermission import get_user_permissions
-from ..constants import constants_address,constants_view
+from collections import defaultdict, OrderedDict
+from datetime import date, timedelta
+
+from django.db.models import Case, When, Value, FloatField, F, ExpressionWrapper, Sum, Q, Min, Max, Count
+from django.db.models.functions import TruncMonth, TruncWeek
+from django.shortcuts import render, redirect
+
+from ..constants import constants_address, constants_view
+from ..models import Container, Employee, ClockRecord, ContainerItem, OrderItem, RMProduct
+
 from .inventory_count import get_quality, get_product_qty
+from .utils.getPermission import get_user_permissions
 
 def statistics_invoice(request):
     # containers = Container.objects.filter(

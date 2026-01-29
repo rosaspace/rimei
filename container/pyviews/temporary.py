@@ -1,29 +1,28 @@
 import os
 import pandas as pd
 
-from django.conf import settings
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from django.db.models import Q, F
-from django.contrib.auth.decorators import login_required
-
 from datetime import datetime, date, timedelta
+
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.utils import timezone
+
 from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
 
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
-from ..constants import constants_address,constants_view
+from ..constants import constants_address, constants_view
 from ..constants import email_constants
+from ..models import Container, RMProduct, AlineOrderRecord, RMOrder
+from ..models import InvoiceAPRecord, InvoiceVendor, Carrier, InvoicePurposeFor
+
 from .utils.pdfgenerate import print_containerid_lot
 from .utils.getPermission import get_user_permissions
-from ..models import Container,RMProduct,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation
-from ..models import InvoiceAPRecord,InvoiceVendor,Carrier,InvoicePurposeFor
 
 # Temp
 @login_required(login_url='/login/')
@@ -32,7 +31,11 @@ def temporary_view(request):
 
     years = [date.today().year]
     months = list(range(1, 13))  # 1 到 12 月
-    return render(request, constants_view.template_temporary,{'user_permissions': user_permissions,'years':years,'months':months})
+    return render(request, constants_view.template_temporary, {
+        'user_permissions': user_permissions,
+        'years': years,
+        'months': months
+    })
 
 
 def print_label_only(request):
@@ -220,8 +223,8 @@ def import_inventory(request):
             # Create RMProduct instance
             product = RMProduct.objects.create(
                 name=row["Display Name"],
-                shortname = row["Short Name"],
-                size = row["Size"],
+                shortname=row["Short Name"],
+                size=row["Size"],
                 description="",  # description 为空
                 quantity_init=row["Quantity On Hand"],
             )
@@ -285,15 +288,15 @@ def import_accounting(request):
 
             # Create RMProduct instance
             product = InvoiceAPRecord.objects.create(
-                vendor = fixed_vendor,
-                invoice_id = row["Invoice No."],
-                invoice_price = row["Amount"],
-                company = fixed_company,  
-                due_date = parse_date(row["Due Date"]),
-                givetoboss_date = parse_date(row["Give to BOSS Date"]),
-                payment_date = parse_date(row["Paid Date"]),
-                purposefor = fixed_purpose,
-                note = row["Notes"],
+                vendor=fixed_vendor,
+                invoice_id=row["Invoice No."],
+                invoice_price=row["Amount"],
+                company=fixed_company,
+                due_date=parse_date(row["Due Date"]),
+                givetoboss_date=parse_date(row["Give to BOSS Date"]),
+                payment_date=parse_date(row["Paid Date"]),
+                purposefor=fixed_purpose,
+                note=row["Notes"],
             )
 
         return JsonResponse({"message": "Excel data imported successfully!"})
@@ -393,7 +396,7 @@ def format_worksheet(ws):
 def preview_email(request):
     email_type = request.POST.get("action")
     officedepot_id = request.POST.get('officedepot_number')
-    print("officedepot_id: ",officedepot_id)
+    print("officedepot_id: ", officedepot_id)
 
     is_rimei_user = request.user.username.lower() == "rimei"
     recipient = email_constants.RECIPIENT_OMAR_rimei if is_rimei_user else email_constants.RECIPIENT_OMAR_rosa

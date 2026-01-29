@@ -18,7 +18,7 @@ urlpatterns = [
     path("inventory/", inventory_count.inventory_view, name="inventory"),
     path("inventory_diff/", inventory_count.inventory_diff_view, name="inventory_diff"), 
     path("inventory_metal/", inventory_count.inventory_metal, name="inventory_metal"), 
-    path("inventory_mcd/", inventory_count.inventory_mcd, name="inventory_mcd"),
+    path("inventory_mcd/", inventory_count.inventory_mcd, name="inventory_mcd"), 
 
     path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),# 查看产品历史记录
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    # 导出库存

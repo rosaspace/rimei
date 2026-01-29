@@ -1,18 +1,18 @@
 import os
 
-from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
-from django.http import HttpResponse
 from django.contrib import messages
+from django.http import HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
 
+from ..constants import constants_address, constants_view
 from ..models import (
     OfficeSupplyItem,
     OfficeSupplyPurpose,
     OfficeSupplyPlatform,
     OfficeSupplyRecord
 )
-from ..constants import constants_view
-from ..constants import constants_address
+
 from .utils.getPermission import get_user_permissions
 
 

@@ -4,27 +4,35 @@ from ..models import AlineOrderRecord
 from ..constants import constants_view
 from .utils.getPermission import get_user_permissions
 
+
 def edit_aline(request, order_number):
     alineOrder = get_object_or_404(AlineOrderRecord, order_number=order_number)
 
     if request.method == 'GET':
-        return render(request, constants_view.template_edit_aline,{'order': alineOrder})
+        return render(request, constants_view.template_edit_aline, {
+            'order': alineOrder,
+            'user_permissions': get_user_permissions(request.user)
+        })
     elif request.method == 'POST':
-        alineOrder.ispay = request.POST.get('is_pay') == 'on'                                         
+        alineOrder.ispay = request.POST.get('is_pay') == 'on'
         alineOrder.save()
-        
+
         return redirect('aline_payment')
-    
+
+
 def aline_ispay(request, order_number):
     alineOrder = get_object_or_404(AlineOrderRecord, order_number=order_number)
     alineOrder.ispay = not alineOrder.ispay
     alineOrder.save()
-    
+
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     return redirect(next_url)
 
 
 def aline_payment_view(request):
     alineOrders = AlineOrderRecord.objects.all().order_by('due_date')
-    user_permissions = get_user_permissions(request.user)  
-    return render(request, constants_view.template_payment_aline,{'orders':alineOrders, 'user_permissions': user_permissions})
+
+    return render(request, constants_view.template_payment_aline, {
+        'orders': alineOrders,
+        'user_permissions': get_user_permissions(request.user)
+    })

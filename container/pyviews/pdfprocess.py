@@ -2,22 +2,23 @@ import os
 import fitz  # PyMuPDF 解析 PDF
 import math
 
+from datetime import datetime, timedelta
+from io import BytesIO
+
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import Table, TableStyle
+from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Table, TableStyle
 
-from datetime import datetime,timedelta
-from io import BytesIO
-
-from ..models import RMOrder,OrderItem
-from .utils.pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page,print_bol_template,print_weekly_droplist_on_one_page
+from ..models import RMOrder, OrderItem
 from ..constants import constants_address
+
+from .utils.pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page, print_bol_template, print_weekly_droplist_on_one_page
+
 
 # Print Order
 def print_original_order(request, so_num):
@@ -91,13 +92,13 @@ def print_converted_order(request, so_num):
     doc.close()
     
     with open(updated_pdf_path, 'rb') as pdf_file:
-            response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="{updated_pdf_name}"'
-            return response
+        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{updated_pdf_name}"'
+        return response
 
 # Print Order Label
 def print_order_label(request, so_num):
-    print("----------print_order_label----------",so_num)
+    print("----------print_order_label----------", so_num)
     order = get_object_or_404(RMOrder, so_num=so_num)
     label_count = order.plts
     original_label_count = label_count  # 用于总数显示
@@ -134,13 +135,13 @@ def print_order_label(request, so_num):
             x_positions = [constants_address.MARGIN_LEFT, constants_address.MARGIN_LEFT + constants_address.LABEL_WIDTH]
 
             for x in x_positions:
-                
-                if label_count <= 0:  
+
+                if label_count <= 0:
                     break  # Stop if all labels are printed
     
                 # Center text in each label
                 text_x = x + (constants_address.LABEL_WIDTH / 2)
-                text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 20
+                text_y = y_position - (constants_address.LABEL_HEIGHT / 2) - 20
                 
                 # Set font and draw text
                 c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
@@ -357,8 +358,8 @@ def print_forklift_bol(request):
     print("----------print_forklift_bol----------")
 
     ship_to = request.POST.get("ship_to", "").strip()
-    pick_date_str  = request.POST.get("shipout_date", "").strip()
-    delivery_date_str  = request.POST.get("delivery_date", "").strip()
+    pick_date_str = request.POST.get("shipout_date", "").strip()
+    delivery_date_str = request.POST.get("delivery_date", "").strip()
     num_trucks = int(request.POST.get("forklift_number", 1))
 
     # 转换字符串为日期对象
@@ -412,7 +413,7 @@ def print_forklift_bol(request):
         # 调用模板生成单页 BOL
         print_bol_template(
             title=f"Forklift BOL - {bol_number}",
-            filename=filename,   # filename=None 表示写入当前 canvas
+            filename=filename,  # filename=None 表示写入当前 canvas
             contentTitle=f"Bill Of Lading - {bol_number}",
             container_info=container_info,
             order_details=order_details,  # 如果没有具体产品，可以传空列表

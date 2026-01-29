@@ -1,19 +1,18 @@
-import openpyxl
 import math
+import openpyxl
 
-from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission, Employee
-
-from django.shortcuts import get_object_or_404
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
-
-from datetime import datetime, date, time
-from openpyxl.utils import get_column_letter
-from io import BytesIO
 from collections import defaultdict
+from datetime import datetime, date, time
+from io import BytesIO
+from openpyxl.utils import get_column_letter
+
 from django.db.models import Q
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render, redirect
 
 from ..constants import constants_view
+from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission, Employee
+
 from .utils.getPermission import get_user_permissions
 
 def inventory_view(request):

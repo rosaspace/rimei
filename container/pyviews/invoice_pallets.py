@@ -1,25 +1,22 @@
 import math
 
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, JsonResponse
+from datetime import datetime, date, timedelta
 
-from reportlab.platypus  import SimpleDocTemplate, Image
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect
+
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Image, Spacer, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-from reportlab.platypus import Table, TableStyle, Paragraph
-from reportlab.platypus import Spacer
-
-from datetime import datetime, date, timedelta
-
-from ..models import RMProduct
-from .inventory_count import get_month_pallet_number, get_quality, get_product_qty
 
 from ..constants import constants_address, constants_view
+from ..models import RMProduct
+
+from .inventory_count import get_month_pallet_number, get_quality, get_product_qty
 from .utils.getPermission import get_user_permissions
 from .utils.pdf_temp_utils import create_temp_pdf, cleanup_temp_file
 

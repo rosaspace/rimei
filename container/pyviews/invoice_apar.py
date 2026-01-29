@@ -1,34 +1,17 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, JsonResponse
-from django.conf import settings
-from django.db.models import Q
-
-from reportlab.platypus  import SimpleDocTemplate, Image
-from reportlab.platypus import Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.platypus import Table, TableStyle, Paragraph
-from reportlab.lib import colors
-from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_LEFT, TA_RIGHT
-from django.contrib import messages
-
 import os
-import re
-import fitz  # PyMuPDF 解析 PDF
 
 from datetime import datetime
 from decimal import Decimal
 
-from .utils.pdfextract import extract_invoice_data, extract_customer_invoice_data
-from .utils.pdfgenerate import extract_text_from_pdf, converter_customer_invoice
-from .inventory_count import get_month_pallet_number, get_quality, get_product_qty
-from .utils.getPermission import get_user_permissions
+from django.conf import settings
+from django.contrib import messages
+from django.http import HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
 
 from ..constants import constants_address, constants_view
-from ..models import Container,RMProduct
-from ..models import InvoicePaidCustomer,Carrier,InvoiceVendor,InvoicePurposeFor,InvoiceAPRecord,InvoiceARRecord
+from ..models import InvoicePaidCustomer, Carrier, InvoiceVendor, InvoicePurposeFor, InvoiceAPRecord, InvoiceARRecord
+
+from .utils.getPermission import get_user_permissions
 
 # AP list
 def invoice_ap_view(request):
@@ -50,10 +33,11 @@ def invoice_ap_view(request):
     companies = Carrier.objects.all()
     user_permissions = get_user_permissions(request.user)    
 
-    return render(request, constants_view.template_ap_invoice,{'user_permissions': user_permissions,
-        'apRecord':apRecord,
-        "vendors":vendors,
-        "companies":companies,
+    return render(request, constants_view.template_ap_invoice, {
+        'user_permissions': user_permissions,
+        'apRecord': apRecord,
+        "vendors": vendors,
+        "companies": companies,
     })
 
 # AR list
@@ -76,7 +60,8 @@ def invoice_ar_view(request):
     companies = Carrier.objects.all().order_by('shortname')
     user_permissions = get_user_permissions(request.user)  
 
-    return render(request, constants_view.template_ar_invoice,{'user_permissions': user_permissions,
+    return render(request, constants_view.template_ar_invoice, {
+        'user_permissions': user_permissions,
         'arRecord': arRecord,
         'customers': customers,
         'companies': companies,
@@ -106,7 +91,7 @@ def add_ar_invoice(request):
 
             try:
                 invoice_price = Decimal(invoice_price)
-            except InvalidOperation:
+            except Exception:
                 invoice_price = Decimal("0")
             
             # 创建记录
@@ -154,9 +139,10 @@ def add_ar_invoice(request):
                 'form_data': request.POST
             })
 
-    return render(request, constants_view.template_add_ar_invoice,{'user_permissions': user_permissions,
-        'paidcustomer':paidcustomer,
-        'receivedcompany':receivedcompany,
+    return render(request, constants_view.template_add_ar_invoice, {
+        'user_permissions': user_permissions,
+        'paidcustomer': paidcustomer,
+        'receivedcompany': receivedcompany,
         'form_data': {}  # 空表单
     })
 
@@ -281,7 +267,7 @@ def add_ap_invoice(request):
                 purposefor_id=purposefor_id,
                 note=note or ""
             )
-            print("pdf_file:",pdf_file)
+            print("pdf_file:", pdf_file)
 
             # ⚠️ 保留 CharField：只存文件名
             if pdf_file:
@@ -374,12 +360,12 @@ def edit_ap_invoice(request, invoice_id):
             messages.error(request, f"更新信息失败：{str(e)}")
                         
     return render(request, constants_view.template_edit_ap_invoice, {
-                'record': ap_record,
-                'vendor':vendor,
-                'purposefor':purposefor,
-                'receivedcompany':receivedcompany,
-                'user_permissions': user_permissions,
-            })
+        'record': ap_record,
+        'vendor': vendor,
+        'purposefor': purposefor,
+        'receivedcompany': receivedcompany,
+        'user_permissions': user_permissions,
+    })
 
 # delete payable invoice
 def delete_ap_invoice(request, invoice_id):

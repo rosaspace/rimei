@@ -1,17 +1,16 @@
 import os
 import pandas as pd
 
-from datetime import date, datetime, timedelta,time
+from datetime import date, datetime, timedelta, time
 from openpyxl.styles import Border, Side, PatternFill, Alignment
 
 from django.utils import timezone
 from django.shortcuts import render, redirect
-from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
 from django.http import HttpResponse
 
-from ..models import ClockRecord,Employee,UserAndPermission
-from ..constants import constants_address,constants_view
+from ..models import ClockRecord, Employee
+from ..constants import constants_address, constants_view
+
 from .utils.getPermission import get_user_permissions
 
 def week_record(request):
@@ -58,44 +57,44 @@ def week_record(request):
             'selected_week': selected_week,
             'user_permissions': user_permissions
         })
-    
+
     # 获取所有员工的周统计数据
     employees = Employee.objects.filter(belongTo="CabinetsDepot")
     employee_records = []
-    
+
     for employee in employees:
         employee_weekly_records = weekly_records.filter(employee_name=employee)
         employee_total_hours = sum(record.total_hours for record in employee_weekly_records)
         employee_avg_hours = round(employee_total_hours / 5, 2) if employee_weekly_records else 0
         employee_attendance_rate = round((employee_total_hours / 40) * 100, 2)
-        
+
         # 只有当员工有打卡记录时才添加到列表中
         if employee_weekly_records.exists():
             employee_records.append({
-                'id':employee.id,
+                'id': employee.id,
                 'name': employee.name,
                 'period_start': selected_week_start,
                 'period_end': selected_week_end,
                 'total_hours': employee_total_hours,
                 'average_hours': employee_avg_hours,
-                "attendance_rate":employee_attendance_rate,
-                'belongTo':employee.belongTo
+                "attendance_rate": employee_attendance_rate,
+                'belongTo': employee.belongTo
             })
         else:
             employee_records.append({
-                'id':employee.id,
+                'id': employee.id,
                 'name': employee.name,
                 'period_start': selected_week_start,
                 'period_end': selected_week_end,
                 'total_hours': 0,
                 'average_hours': 0,
-                "attendance_rate":0,
-                'belongTo':employee.belongTo
+                "attendance_rate": 0,
+                'belongTo': employee.belongTo
             })
 
     # ✅ 排序
     employee_records = sorted(employee_records, key=lambda x: (x['belongTo'] or '').lower())
-    
+
     return render(request, constants_view.template_weekrecord, {
         'employee_records': employee_records,
         'years': years,
@@ -111,10 +110,10 @@ def add_week_records(request):
     # 获取上周的周一日期
     last_week_start = current_week_start - timedelta(days=7)  # 上周的周一
     last_week_end = last_week_start + timedelta(days=6)  # 上周的周日
-    print("hello: ",last_week_start,last_week_end)
-    
+    print("hello: ", last_week_start, last_week_end)
+
     weekdays = getWeek(last_week_start)
-    
+
     if request.method == 'POST':
         # 获取选择的员工名称
         name = request.POST.get('employee_name')
@@ -141,8 +140,8 @@ def add_week_records(request):
             # weekday = "Monday"
             weekdayname = day['name']
             weekday = day['weekday']
-            date = day['date']            
-            
+            date = day['date']
+
             # 获取表单数据
             morning_in = request.POST.get(f'morning_in_{weekday}')
             morning_out = request.POST.get(f'morning_out_{weekday}')
@@ -150,8 +149,8 @@ def add_week_records(request):
             afternoon_out = request.POST.get(f'afternoon_out_{weekday}')
             evening_in = request.POST.get(f'evening_in_{weekday}')
             evening_out = request.POST.get(f'evening_out_{weekday}')
-            print("I am ok now\n", employee.name,date, weekdayname)
-            print("Time: ",morning_in, morning_out, afternoon_in, afternoon_out, evening_in, evening_out )
+            print("I am ok now\n", employee.name, date, weekdayname)
+            print("Time: ", morning_in, morning_out, afternoon_in, afternoon_out, evening_in, evening_out)
             
             # 创建记录
             if any([morning_in, morning_out, afternoon_in, afternoon_out, evening_in, evening_out]):
@@ -169,9 +168,9 @@ def add_week_records(request):
                 # print("hello: ",type(wordrecord))
                 # wordrecord.save()
                 # return JsonResponse({"status": "success", "message": "Record added!"})
-        
+
         return redirect('week_record')
-    
+
     employees = Employee.objects.all()
     return render(request, constants_view.template_add_record, {
         'weekdays': weekdays,
@@ -184,9 +183,9 @@ def edit_week_records(request, employee_id=None):
     year = int(request.GET.get("year"))
     week = int(request.GET.get("week"))
     select_week_start = date.fromisocalendar(year, week, 1)  # 周一
-    select_week_end =  date.fromisocalendar(year, week, 7)    # 周日
+    select_week_end = date.fromisocalendar(year, week, 7)  # 周日
     weekdays = getWeek(select_week_start)
-    print("year: ",year," week: ",week)
+    print("year: ", year, " week: ", week)
 
     if request.method == 'POST':
         # Handle form submission to save work records
@@ -200,14 +199,14 @@ def edit_week_records(request, employee_id=None):
 
             # Get weekday value from weekdays list
             weekday = weekdays[i]['weekday']
-            dateTemp = select_week_start + timedelta(days=i)  # Calculate the date for the current weekday    
-            print("hello: ",employee.name, weekdays[i]['name'], dateTemp)
-            print("hello: ",morning_in,morning_out,afternoon_in,afternoon_out,evening_in,evening_out)
-            
+            dateTemp = select_week_start + timedelta(days=i)  # Calculate the date for the current weekday
+            print("hello: ", employee.name, weekdays[i]['name'], dateTemp)
+            print("hello: ", morning_in, morning_out, afternoon_in, afternoon_out, evening_in, evening_out)
+
             # Save or update work records
             ClockRecord.objects.update_or_create(
-                employee_name = employee,
-                date = dateTemp,
+                employee_name=employee,
+                date=dateTemp,
                 defaults={
                     'weekday': weekday,
                     'morning_in': morning_in or None,
@@ -225,15 +224,15 @@ def edit_week_records(request, employee_id=None):
     if employee_id:
         current_employee = Employee.objects.get(id=employee_id)
         work_records = ClockRecord.objects.filter(employee_name=current_employee, date__range=[select_week_start, select_week_start + timedelta(days=6)])
-    
+
     work_record_dict = {record.date: record for record in work_records}
 
     return render(request, constants_view.template_edit_record, {
         'weekdays': weekdays,
         'current_employee': current_employee,
         'work_records': work_record_dict,  # Pass the dictionary to the template
-        'selected_year':year,
-        'selected_week':week,
+        'selected_year': year,
+        'selected_week': week,
     })
 
 def export_week_records(request):
@@ -246,10 +245,10 @@ def export_week_records(request):
     year = int(request.GET.get("year"))
     week = int(request.GET.get("week"))
     select_week_start = date.fromisocalendar(year, week, 1)  # 周一
-    select_week_end =  date.fromisocalendar(year, week, 7)    # 周日
+    select_week_end = date.fromisocalendar(year, week, 7)  # 周日
     weekdays = getWeek(select_week_start)
-    print("export_week_records:",group_param)
-    print("year: ",year," week: ",week)
+    print("export_week_records:", group_param)
+    print("year: ", year, " week: ", week)
 
     # 按照 belongTo 字段分组员工
     grouped_employees = {}
@@ -257,7 +256,7 @@ def export_week_records(request):
         group = employee.belongTo  # 假设 belongTo 是一个字符串，表示员工所属的组
         if group not in grouped_employees:
             grouped_employees[group] = []
-        grouped_employees[group].append(employee)    
+        grouped_employees[group].append(employee)
     
     if group_param:
         # 只保留匹配组的员工
@@ -276,14 +275,14 @@ def export_week_records(request):
 
     # 为每个组创建一个工作表
     for group, group_employees in grouped_employees.items():
-        print("---group: ",group)
+        print("---group: ", group)
         filename = f'Working_Hours_{group}_{select_week_start.strftime("%m.%d")}-{select_week_end.strftime("%m.%d")}.2025.xlsx'
         # 拼接完整路径
         save_dir = os.path.join(os.getcwd(), constants_address.UPLOAD_DIR_workrecord)
         os.makedirs(save_dir, exist_ok=True)
         full_path = os.path.join(save_dir, filename)
-        
-        data = []        
+
+        data = []
         with pd.ExcelWriter(full_path, engine='openpyxl') as writer: 
             for employee in group_employees:
                 total_hours_weekly = 0
@@ -318,11 +317,11 @@ def export_week_records(request):
                     'Out Time3': evening_out.strftime('%H:%M') if evening_out else '',
                     'Total Hours Daily': total_hours,
                     'Total Hours Weekly': ''
-                    })  
+                })
 
                 # 在最后一条记录中添加周总时间
                 if employee_records:
-                    employee_records[-1]['Total Hours Weekly'] = total_hours_weekly 
+                    employee_records[-1]['Total Hours Weekly'] = total_hours_weekly
                     data.extend(employee_records)                  
             if data:
                 # 创建 DataFrame
@@ -363,13 +362,13 @@ def export_week_records(request):
         if os.path.exists(full_path):
             with open(full_path, 'rb') as f:
                 file_data = f.read()
-                response = HttpResponse( 
+                response = HttpResponse(
                     file_data,
                     content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
                 response['Content-Disposition'] = f'attachment; filename="{filename}"'
                 return response
-    
+
         # 如果没有数据，返回空响应
         return HttpResponse("No data available for the selected group.")
 

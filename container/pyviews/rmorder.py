@@ -1,27 +1,23 @@
 import json
 import os
 
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from django.conf import settings
-from django.core.files.storage import default_storage
-from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
-from django.db.models import Count
-from django.db.models import Q, F
-
-from datetime import datetime,date,timedelta
+from datetime import datetime, date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
-from ..models import RMOrder, RMCustomer, OrderImage, RMProduct,OrderItem, UserAndPermission
-from ..constants import constants_address,constants_view
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.files.storage import default_storage
+from django.db.models import Count, Q, F
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.views.decorators.http import require_http_methods
 
-from .utils.pdfextract import get_product_qty_with_inventory_from_order,extract_order_info,extract_items_from_pdf,get_product_qty_with_inventory
-from .utils.pdfgenerate import extract_text_from_pdf, converter_metal_invoice
+from ..constants import constants_address, constants_view
+from ..models import RMOrder, RMCustomer, OrderImage, RMProduct, OrderItem, UserAndPermission
 from .utils.getPermission import get_user_permissions
+from .utils.pdfextract import get_product_qty_with_inventory_from_order, extract_order_info, extract_items_from_pdf, get_product_qty_with_inventory
+from .utils.pdfgenerate import extract_text_from_pdf, converter_metal_invoice
 
 
 def add_order(request):

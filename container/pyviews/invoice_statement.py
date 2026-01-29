@@ -1,29 +1,23 @@
+from collections import defaultdict
+from datetime import datetime, date, timedelta
 
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.db.models import Q, F
-from django.db import transaction
-from django.utils import timezone
-from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Q, F
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect
+from django.utils import timezone
 
-from reportlab.platypus  import SimpleDocTemplate, Image
-from reportlab.platypus import Spacer
-from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.platypus import Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Image, Spacer, Table, TableStyle, Paragraph
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 
-
-from datetime import datetime, date, timedelta
-from collections import defaultdict
-
-
-from ..models import Container, InvoiceCustomer, LogisticsCompany, ContainerStatement
 from ..constants import constants_view
+from ..models import Container, InvoiceCustomer, LogisticsCompany, ContainerStatement
 
 from .utils.getPermission import get_user_permissions
 from .utils.pdf_temp_utils import create_temp_pdf, cleanup_temp_file

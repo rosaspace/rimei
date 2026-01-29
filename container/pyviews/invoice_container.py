@@ -1,18 +1,18 @@
-
 import os
 import fitz  # PyMuPDF 解析 PDF
 import re
 
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, JsonResponse
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
 
-from ..models import Container,RMProduct, InvoiceCustomer, LogisticsCompany
-from ..models import InvoicePaidCustomer,Carrier,InvoiceVendor,InvoicePurposeFor,InvoiceAPRecord,InvoiceARRecord
+from ..constants import constants_address, constants_view
+from ..models import Container, RMProduct, InvoiceCustomer, LogisticsCompany
+from ..models import InvoicePaidCustomer, Carrier, InvoiceVendor, InvoicePurposeFor, InvoiceAPRecord, InvoiceARRecord
+
 from .utils.getPermission import get_user_permissions
 from .utils.pdfgenerate import extract_text_from_pdf, converter_customer_invoice
-from ..constants import constants_view, constants_address, constants_view
 
 # container invoice list
 @login_required(login_url='/login/')

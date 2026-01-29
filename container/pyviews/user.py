@@ -1,12 +1,10 @@
-# container/views.py
-from django.shortcuts import render, redirect
-from django.contrib.auth.models import User
 from django.contrib import messages
-from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.shortcuts import render, redirect
 
+from ..constants import constants_view
 from ..models import Permission, UserAndPermission
-from ..constants import constants_address,constants_view
 
 from .utils.getPermission import get_user_permissions
 
@@ -73,4 +71,7 @@ def permission_view(request):
         users_with_permissions.append(user_permissions)
 
     user_permissions = get_user_permissions(request.user)
-    return render(request, constants_view.template_permission, {'users_with_permissions': users_with_permissions,'user_permissions': user_permissions})
+    return render(request, constants_view.template_permission, {
+        'users_with_permissions': users_with_permissions,
+        'user_permissions': user_permissions
+    })
