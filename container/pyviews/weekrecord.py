@@ -12,7 +12,7 @@ from django.http import HttpResponse
 
 from ..models import ClockRecord,Employee,UserAndPermission
 from ..constants import constants_address,constants_view
-from .getPermission import get_user_permissions
+from .utils.getPermission import get_user_permissions
 
 def week_record(request):
     # 获取当前年份和周数（ISO标准）

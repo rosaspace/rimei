@@ -13,7 +13,7 @@ from collections import defaultdict
 import pandas as pd
 
 from ..models import Container,Employee,ClockRecord,ContainerItem,OrderItem,RMProduct
-from .getPermission import get_user_permissions
+from .utils.getPermission import get_user_permissions
 from ..constants import constants_address,constants_view
 from .inventory_count import get_quality, get_product_qty
 

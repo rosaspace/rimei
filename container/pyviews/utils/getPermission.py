@@ -1,5 +1,5 @@
 
-from ..models import UserAndPermission
+from container.models import UserAndPermission
 
 def get_user_permissions(user):
     # Use permissionIndex__name to get the name of the permission related to the UserAndPermission instance

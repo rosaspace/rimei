@@ -9,14 +9,20 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count
+from django.db.models import Q, F
 
-from datetime import datetime,date
+from datetime import datetime,date,timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from ..models import RMOrder, RMCustomer, OrderImage, RMProduct,OrderItem, UserAndPermission
-from .pdfextract import get_product_qty_with_inventory_from_order,extract_order_info,extract_items_from_pdf,get_product_qty_with_inventory
 from ..constants import constants_address,constants_view
-from .pdfgenerate import extract_text_from_pdf, converter_metal_invoice
+
+from .utils.pdfextract import get_product_qty_with_inventory_from_order,extract_order_info,extract_items_from_pdf,get_product_qty_with_inventory
+from .utils.pdfgenerate import extract_text_from_pdf, converter_metal_invoice
+from .utils.getPermission import get_user_permissions
+
 
 def add_order(request):
     if request.method == "POST":
@@ -101,11 +107,13 @@ def add_order(request):
 
 @require_http_methods(["GET", "POST"])
 def edit_order(request, so_num):
-    print("--------edit_order------",so_num) 
+    
     try:
         if request.method == "GET":
             order = RMOrder.objects.get(so_num=so_num)
-            print("customer_name:",order.customer_name)
+
+            mode = request.GET.get("mode", "full")  # full / simple
+            
             customers = RMCustomer.objects.all()
             order_items = OrderItem.objects.filter(order=order)
             orderitems_new = get_product_qty_with_inventory_from_order(order_items)
@@ -129,7 +137,12 @@ def edit_order(request, so_num):
                 products = RMProduct.objects.filter(type="Metal").order_by('name')
                 print("Hello, OBL")
 
-            return render(request, constants_view.template_edit_order, {
+            # 显示编辑页面
+            if mode == "simple":
+                template = constants_view.template_edit_simple_order
+            else:
+                template = constants_view.template_edit_order  # 原完整版页面
+            return render(request, template, {
                 'order': order,
                 'customers': customers,
                 'order_items': orderitems_new, 
@@ -325,33 +338,6 @@ def order_is_allocated_to_stock(request, so_num):
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     return redirect(next_url)
 
-def edit_order_simple(request, so_num):
-    print("--------edit_order------",so_num)
-    try:
-        if request.method == "GET":
-            order = RMOrder.objects.get(so_num=so_num)
-            customers = RMCustomer.objects.all()
-            order_items = OrderItem.objects.filter(order=order)
-            orderitems_new = get_product_qty_with_inventory_from_order(order_items)
-            # ✅ 计算总重量（假设每项是字典，键名为 'weight'）
-            total_weight = sum(float(item.weight) for item in orderitems_new if item.weight)
-            total_quantity = sum(int(item.quantity) for item in orderitems_new)
-            total_pallet = sum(int(item.pallet_qty) for item in orderitems_new)
-            products = RMProduct.objects.all().order_by('name')
-            return render(request, constants_view.template_edit_simple_order, {
-                'order': order,
-                'customers': customers,
-                'order_items': orderitems_new,
-                'products': products,  # 加上这行
-                'total_weight': total_weight,  # ✅ 加入模板变量
-                'total_quantity': total_quantity,  # ✅ 加入模板变量
-                'total_pallet':total_pallet,
-            })
-        
-    except RMOrder.DoesNotExist:
-        messages.error(request, '订单不存在')
-        return redirect('rimeiorder')
-
 def print_metal_invoice(request, order_id, isInvoice=0, discount_percent=20):
     print("----------print_metal_invoice----------")
     print("isInvoice: ", isInvoice)
@@ -392,3 +378,104 @@ def print_metal_invoice(request, order_id, isInvoice=0, discount_percent=20):
         response = HttpResponse(pdf.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{new_filename}"'
         return response
+
+# order
+@login_required(login_url='/login/')
+def rimeiorder_view(request):
+    orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('-pickup_date')
+    customers = RMCustomer.objects.all().order_by('name')
+    user_permissions = get_user_permissions(request.user) 
+
+    today = date.today()
+    # 计算本周的周一和周日
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+    # 下周的时间范围
+    next_start_of_week = start_of_week + timedelta(days=7)
+    next_end_of_week = next_start_of_week + timedelta(days=6)
+    # 下下周
+    next2_start_of_week = start_of_week + timedelta(days=14)
+    next2_end_of_week = next2_start_of_week + timedelta(days=6)
+
+    customer_name = request.GET.get('customer_name')
+    is_canceled = request.GET.get('is_canceled')
+
+    if customer_name:
+        orders = orders.filter(customer_name=customer_name)
+
+    if is_canceled == "true":
+        orders = orders.filter(is_canceled=True)
+    elif is_canceled == "false":
+        orders = orders.filter(is_canceled=False)
+
+    return render(request, constants_view.template_rmorder, {
+        'rimeiorders': orders,
+        'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        "next_start_of_week": next_start_of_week,
+        "next_end_of_week": next_end_of_week,
+        "next2_start_of_week":next2_start_of_week,
+        "next2_end_of_week":next2_end_of_week,
+        'customers': customers,
+        })
+
+@login_required(login_url='/login/')
+def rimeiorder_metal(request):
+    orders = RMOrder.objects.filter(customer_name='19').annotate(image_count=Count('images')).order_by('-pickup_date')
+    user_permissions = get_user_permissions(request.user) 
+    unfinished_orders = orders.filter(
+        is_canceled=False
+    )
+
+    return render(request, constants_view.template_rmorder, {
+        'rimeiorders': unfinished_orders,
+        'user_permissions': user_permissions
+        })
+
+@login_required(login_url='/login/')
+def rimeiorder_officedepot(request):
+    orders = RMOrder.objects.filter(customer_name='4').annotate(image_count=Count('images')).order_by('-pickup_date')
+    user_permissions = get_user_permissions(request.user) 
+    finished_orders = orders.filter(
+        is_canceled=False
+    )
+    print("finished_orders, ",len(finished_orders))
+
+    return render(request, constants_view.template_rmorder, {
+        'rimeiorders': finished_orders,
+        'user_permissions': user_permissions
+        })
+
+@login_required(login_url='/login/')
+def simplified_view(request):
+    orders = RMOrder.objects.exclude(Q(customer_name='4') | Q(customer_name='19')).annotate(image_count=Count('images')).order_by('pickup_date')
+    unfinished_orders = orders.filter(
+        Q(is_canceled=False) &
+        Q(is_updateInventory=False)
+    )
+
+    today = date.today()
+    # 计算本周的周一和周日
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+    # 下周的时间范围
+    next_start_of_week = start_of_week + timedelta(days=7)
+    next_end_of_week = next_start_of_week + timedelta(days=6)
+    # 下下周
+    next2_start_of_week = start_of_week + timedelta(days=14)
+    next2_end_of_week = next2_start_of_week + timedelta(days=6)
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_simplified_order,{
+        'rimeiorders': unfinished_orders,
+        'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        "next_start_of_week": next_start_of_week,
+        "next_end_of_week": next_end_of_week,
+        "next2_start_of_week":next2_start_of_week,
+        "next2_end_of_week":next2_end_of_week
+        })

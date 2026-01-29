@@ -5,13 +5,11 @@ import re
 
 from django.conf import settings
 from django.db.models import Q
-
 from django.http import HttpResponse
+
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from datetime import timedelta
-from io import BytesIO
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
 from reportlab.platypus import Table, TableStyle, Image, Paragraph, Spacer
@@ -21,10 +19,11 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 from decimal import Decimal
 from datetime import datetime, timedelta
+from io import BytesIO
 
-from ..models import RMOrder, Container
-from ..constants import constants_address
-from ..constants.constants_address import font_Helvetica, font_Helvetica_Bold
+from container.models import RMOrder, Container
+from container.constants import constants_address
+from container.constants.constants_address import font_Helvetica, font_Helvetica_Bold
 
 # PDF 解析函数
 def extract_text_from_pdf(pdf_path):

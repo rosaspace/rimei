@@ -3,9 +3,12 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
 
 from ..models import Permission, UserAndPermission
 from ..constants import constants_address,constants_view
+
+from .utils.getPermission import get_user_permissions
 
 def add_user_view(request):
     if request.method == 'POST':
@@ -54,3 +57,20 @@ def update_user_permissions(request, user_id):
     permissions = Permission.objects.all()  # 获取所有权限
     return render(request, constants_view.template_assign_permission, {'users': users, 'permissions': permissions})
 
+# general
+@login_required(login_url='/login/')
+def permission_view(request):
+    # 查询所有用户及其权限
+    users_with_permissions = []
+    users = User.objects.all()  # 获取所有用户
+
+    for user in users:
+        permissions = user.userandpermission_set.all()  # 获取用户的所有权限
+        user_permissions = {
+            'username': user.username,
+            'permissions': [permission.permissionIndex.name for permission in permissions]  # 获取权限名称
+        }
+        users_with_permissions.append(user_permissions)
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_permission, {'users_with_permissions': users_with_permissions,'user_permissions': user_permissions})

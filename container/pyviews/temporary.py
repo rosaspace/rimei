@@ -8,8 +8,9 @@ from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.db.models import Q, F
+from django.contrib.auth.decorators import login_required
 
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
 
@@ -19,12 +20,21 @@ from reportlab.pdfgen import canvas
 
 from ..constants import constants_address,constants_view
 from ..constants import email_constants
-from .pdfgenerate import print_containerid_lot
-from .getPermission import get_user_permissions
+from .utils.pdfgenerate import print_containerid_lot
+from .utils.getPermission import get_user_permissions
 from ..models import Container,RMProduct,AlineOrderRecord,RMOrder,InboundCategory,RailwayStation
 from ..models import InvoiceAPRecord,InvoiceVendor,Carrier,InvoicePurposeFor
 
 # Temp
+@login_required(login_url='/login/')
+def temporary_view(request):
+    user_permissions = get_user_permissions(request.user)
+
+    years = [date.today().year]
+    months = list(range(1, 13))  # 1 到 12 月
+    return render(request, constants_view.template_temporary,{'user_permissions': user_permissions,'years':years,'months':months})
+
+
 def print_label_only(request):
     print("----------print_label_only----------")
     so_num = request.POST.get('so_number')

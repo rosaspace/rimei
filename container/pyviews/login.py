@@ -6,6 +6,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 
 from ..constants import constants_view
+from .utils.getPermission import get_user_permissions
 
 def login_view(request):
     if request.method == 'POST':
@@ -29,6 +30,16 @@ def register_view(request):
     else:
         form = UserCreationForm()
     return render(request, constants_view.template_register, {'form': form})
+
+# home
+@login_required
+def home(request):
+    return redirect("index")
+
+@login_required
+def index(request):
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_base, {'user_permissions': user_permissions})
 
 @login_required
 def logout_view(request):

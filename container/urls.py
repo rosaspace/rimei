@@ -2,61 +2,35 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 from . import views
-from .pyviews import container, invoice, rmorder, pdfprocess,weekrecord,payment
-from .pyviews import user, login, inventory_count,temporary,statistics,officesupply
+from .pyviews import container, rmorder, pdfprocess, inventory_count, statistics, officesupply
+from .pyviews import user, login, temporary, aline_payment, weekrecord
+from .pyviews import invoice_pallets, invoice_statement, invoice_container, invoice_apar
 
 urlpatterns = [
     # login
+    path("", login.home, name="index"),
+    path("index/", login.index, name="index"),
     path('login/', login.login_view, name='login'),
     path('register/', login.register_view, name='register'),
     path("logout", login.logout_view, name="logout"),
-    path("simplified_view/", views.simplified_view, name="simplified_view"),
-    path("simplified_container_view/", views.simplified_container_view, name="simplified_container_view"),
-    path("edit_order_simple/<str:so_num>/", rmorder.edit_order_simple, name="edit_order_simple"),
-    path("edit_container_simple/<str:container_id>/", container.edit_container_simple, name="edit_container_simple"),  
-
-    # main page
-    path("", views.home, name="index"),
-    path("index/", views.index, name="index"),    
-    path("invoice_all/", views.invoice_view, name="invoice_all"),
-    path("invoice_unpaid_customer/", views.invoice_unpaid_customer, name="invoice_unpaid_customer"),
-    path("invoice_unpaid/", views.invoice_unpaid, name="invoice_unpaid"),
-    path("invoice_statement/", views.invoice_statement, name="invoice_statement"),
-    path("invoice_pallet_labor/", views.invoice_pallet_labor, name="invoice_pallet_labor"), 
-    path("invoice_ap/", views.invoice_ap_view, name="invoice_ap"),
-    path("invoice_ar/", views.invoice_ar_view, name="invoice_ar"),
-
-    path("statement_selected_invoices/", views.statement_selected_invoices, name="statement_selected_invoices"),
-    path("statement_by_filter/", views.statement_by_filter, name="statement_by_filter"),
-    path('delete_statement/', views.delete_statement, name='delete_statement'),
-    path("paid_invoice_advance/", views.paid_invoice_advance, name="paid_invoice_advance"),
-    path("paid_invoice_customer/", views.paid_invoice_customer, name="paid_invoice_customer"),    
-    
-    path("aline_payment/", views.aline_payment_view, name="aline_payment"),    
-    path("permission_view/", views.permission_view, name ="permission_view"),
-    path("temporary/", views.temporary_view, name="temporary"),    
-
-    path("container_advance77/", views.container_advance77, name="container_advance77"), 
-    path("container_omar/", views.container_omar, name="container_omar"), 
-
-    path("rimeiorder/", views.rimeiorder_view, name="rimeiorder"),
-    path("rimeiorder_metal/", views.rimeiorder_metal, name="rimeiorder_metal"),
-    path("rimeiorder_officedepot/", views.rimeiorder_officedepot, name="rimeiorder_officedepot"), 
 
     # inventory count
     path("inventory/", inventory_count.inventory_view, name="inventory"),
     path("inventory_diff/", inventory_count.inventory_diff_view, name="inventory_diff"), 
     path("inventory_metal/", inventory_count.inventory_metal, name="inventory_metal"), 
-    path("inventory_mcd/", inventory_count.inventory_mcd, name="inventory_mcd"),     
-    path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),
-    path("export_stock/", inventory_count.export_stock, name="export_stock"),    
-    path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),
-    path('show_pallet_number/',inventory_count.show_pallet_number,name='show_pallet_number'),
-    path('edit_product/<int:product_id>/',inventory_count.edit_product,name='edit_product'),
+    path("inventory_mcd/", inventory_count.inventory_mcd, name="inventory_mcd"),
+
+    path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),# 查看产品历史记录
+    path("export_stock/", inventory_count.export_stock, name="export_stock"),    # 导出库存
+    path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),    # 库存总结
+    path('edit_product/<int:product_id>/',inventory_count.edit_product,name='edit_product'), # 编辑产品条目
 
     # container
+    path("container_advance77/", container.container_advance77, name="container_advance77"), 
+    path("container_omar/", container.container_omar, name="container_omar"), 
+    path("simplified_container_view/", container.simplified_container_view, name="simplified_container_view"),
+
     path('add_container/', container.add_container, name='add_container'), 
-    path('add_container_view/', container.add_container_view, name='add_container_view'),
     path("edit_container/<str:container_id>/", container.edit_container, name="edit_container"), 
     path("receivedin_inventory/<str:container_id>/", container.receivedin_inventory, name="receivedin_inventory"), 
     path('container_ispay/<str:container_id>/', container.container_ispay, name='container_ispay'), 
@@ -67,41 +41,64 @@ urlpatterns = [
     path('print_container_color_label/<str:container_num>/', container.print_container_color_label, name='print_container_color_label'),
     path('print_container_delivery_order/<str:container_num>/', container.print_container_delivery_order, name='print_container_delivery_order'),
     
-    # Invoice
-    path("edit_invoice_file/<str:container_id>/", invoice.edit_invoice_file, name="edit_invoice_file"),
-    path("edit_invoice/<str:container_id>/", invoice.edit_invoice, name="edit_invoice"),
-    path("edit_ladingcargo_invoice_file/<str:container_id>/", invoice.edit_ladingcargo_invoice_file, name="edit_ladingcargo_invoice_file"),
-    path("edit_customer_invoice_file/<str:container_id>/", invoice.edit_customer_invoice_file, name="edit_customer_invoice_file"),
-    path("edit_customer_invoice/<str:container_id>/", invoice.edit_customer_invoice, name="edit_customer_invoice"),
+    # Invoice Statement    
+    path("invoice_statement/", invoice_statement.invoice_statement, name="invoice_statement"),    
+    path("statement_by_filter/", invoice_statement.statement_by_filter, name="statement_by_filter"),
+    path("statement_selected_invoices/", invoice_statement.statement_selected_invoices, name="statement_selected_invoices"),
+    path('delete_statement/', invoice_statement.delete_statement, name='delete_statement'),
 
-    path("print_statement_invoice_pdf/", invoice.print_statement_invoice_pdf, name="print_statement_invoice_pdf"),
-    path("print_statement_customer_invoice_pdf/", invoice.print_statement_customer_invoice_pdf, name="print_statement_customer_invoice_pdf"),
-    path('print_original_do/<str:container_id>/', invoice.print_original_do, name='print_original_do'),
-    path('print_original_invoice/<str:container_id>/', invoice.print_original_invoice, name='print_original_invoice'),
-    path('print_converted_invoice/<str:container_id>/', invoice.print_converted_invoice, name='print_converted_invoice'),
-    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/<str:isPrepull>/', invoice.print_customer_invoice, name='print_customer_invoice'),
+    path("print_statement_invoice_pdf/", invoice_statement.print_statement_invoice_pdf, name="print_statement_invoice_pdf"),
+    path("print_statement_customer_invoice_pdf/", invoice_statement.print_statement_customer_invoice_pdf, name="print_statement_customer_invoice_pdf"),
+    path("paid_invoice_advance/", invoice_statement.paid_invoice_advance, name="paid_invoice_advance"),
+    path("paid_invoice_customer/", invoice_statement.paid_invoice_customer, name="paid_invoice_customer"),
 
-    path("export_pallet_invoice/", invoice.export_pallet_invoice, name="export_pallet_invoice"),    
-    path("add_ar_invoice/", invoice.add_ar_invoice, name="add_ar_invoice"),
-    path("edit_ar_invoice/<int:id>/", invoice.edit_ar_invoice, name="edit_ar_invoice"),
-    path("delete_ar_invoice/<str:invoice_id>/", invoice.delete_ar_invoice, name="delete_ar_invoice"),
-    path("add_ap_invoice/", invoice.add_ap_invoice, name="add_ap_invoice"),
-    path("edit_ap_invoice/<str:invoice_id>/", invoice.edit_ap_invoice, name="edit_ap_invoice"),
-    path("delete_ap_invoice/<str:invoice_id>/", invoice.delete_ap_invoice, name="delete_ap_invoice"),
+    # Invoice Container
+    path("invoice_all/", invoice_container.invoice_view, name="invoice_all"),
+    path("edit_invoice_file/<str:container_id>/", invoice_container.edit_invoice_file, name="edit_invoice_file"),
+    path("edit_invoice/<str:container_id>/", invoice_container.edit_invoice, name="edit_invoice"),
+    path("edit_ladingcargo_invoice_file/<str:container_id>/", invoice_container.edit_ladingcargo_invoice_file, name="edit_ladingcargo_invoice_file"),
+    path("edit_customer_invoice_file/<str:container_id>/", invoice_container.edit_customer_invoice_file, name="edit_customer_invoice_file"),
+    path("edit_customer_invoice/<str:container_id>/", invoice_container.edit_customer_invoice, name="edit_customer_invoice"),
 
-    path("print_original_ap_invoice/<str:so_num>/", invoice.print_original_ap_invoice, name="print_original_ap_invoice"),
-    path("print_original_ar_invoice/<str:so_num>/", invoice.print_original_ar_invoice, name="print_original_ar_invoice"),
+    path('print_original_do/<str:container_id>/', invoice_container.print_original_do, name='print_original_do'),
+    path('print_original_invoice/<str:container_id>/', invoice_container.print_original_invoice, name='print_original_invoice'),
+    path('print_converted_invoice/<str:container_id>/', invoice_container.print_converted_invoice, name='print_converted_invoice'),
+    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/<str:isPrepull>/', invoice_container.print_customer_invoice, name='print_customer_invoice'),
+
+    # monthly pallet invoice
+    path("invoice_pallet_labor/", invoice_pallets.invoice_pallet_labor, name="invoice_pallet_labor"), 
+    path('show_pallet_number/',invoice_pallets.show_pallet_number,name='show_pallet_number'),
+    path("export_pallet_invoice/", invoice_pallets.export_pallet_invoice, name="export_pallet_invoice"),
+
+    # Invoice AP and AR
+    path("invoice_ap/", invoice_apar.invoice_ap_view, name="invoice_ap"),
+    path("invoice_ar/", invoice_apar.invoice_ar_view, name="invoice_ar"),
+    path("add_ar_invoice/", invoice_apar.add_ar_invoice, name="add_ar_invoice"),
+    path("edit_ar_invoice/<int:id>/", invoice_apar.edit_ar_invoice, name="edit_ar_invoice"),
+    path("delete_ar_invoice/<str:invoice_id>/", invoice_apar.delete_ar_invoice, name="delete_ar_invoice"),
+    path("add_ap_invoice/", invoice_apar.add_ap_invoice, name="add_ap_invoice"),
+    path("edit_ap_invoice/<str:invoice_id>/", invoice_apar.edit_ap_invoice, name="edit_ap_invoice"),
+    path("delete_ap_invoice/<int:invoice_id>/", invoice_apar.delete_ap_invoice, name="delete_ap_invoice"),
+    path("print_original_ap_invoice/<int:so_num>/", invoice_apar.print_original_ap_invoice, name="print_original_ap_invoice"),
+    path("print_original_ar_invoice/<int:so_num>/", invoice_apar.print_original_ar_invoice, name="print_original_ar_invoice"),
     
-    # Payment
-    path("edit_aline/<str:order_number>/", payment.edit_aline, name="edit_aline"), 
-    path("aline_ispay/<str:order_number>/", payment.aline_ispay, name="aline_ispay"), 
+    # Aline Payment
+    path("aline_payment/", aline_payment.aline_payment_view, name="aline_payment"),  
+    path("edit_aline/<str:order_number>/", aline_payment.edit_aline, name="edit_aline"), 
+    path("aline_ispay/<str:order_number>/", aline_payment.aline_ispay, name="aline_ispay"), 
 
     # user
     path('add_user/', user.add_user_view, name='add_user'),
+    path("permission_view/", user.permission_view, name ="permission_view"),
     path('assign_permission/', user.assign_permission_view, name='assign_permission'),
     path('update_user_permissions/<str:user_id>/', user.update_user_permissions, name='update_user_permissions'),
     
     # rimei order
+    path("rimeiorder/", rmorder.rimeiorder_view, name="rimeiorder"),
+    path("rimeiorder_metal/", rmorder.rimeiorder_metal, name="rimeiorder_metal"),
+    path("rimeiorder_officedepot/", rmorder.rimeiorder_officedepot, name="rimeiorder_officedepot"), 
+    path("simplified_view/", rmorder.simplified_view, name="simplified_view"),    
+
     path('add_order/', rmorder.add_order, name='add_order'),
     path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
     path("upload_orderpdf/", rmorder.upload_orderpdf, name="upload_orderpdf"),
@@ -110,6 +107,7 @@ urlpatterns = [
     path('print_metal_invoice/<str:order_id>/<int:isInvoice>/',rmorder.print_metal_invoice,name='print_metal_invoice'),
     
     # Temporary
+    path("temporary/", temporary.temporary_view, name="temporary"),
     path("import_inventory/", temporary.import_inventory, name="import_inventory"), 
     path("import_aline/", temporary.import_aline, name="import_aline"), 
     path("import_accounting/", temporary.import_accounting, name="import_accounting"),
@@ -130,12 +128,9 @@ urlpatterns = [
     path('print_forklift_bol/', pdfprocess.print_forklift_bol, name='print_forklift_bol'),
     path('print_stored_file/<str:order_id>/', pdfprocess.print_stored_file, name='print_stored_file'),
 
-    path('pickup_tomorrow/', pdfprocess.pickup_tomorrow, name='pickup_tomorrow'),
-    path('pickup_today/', pdfprocess.pickup_today, name='pickup_today'),
-    path('pickup_third/', pdfprocess.pickup_third, name='pickup_third'),   
-    path('pickup_fourth/', pdfprocess.pickup_fourth, name='pickup_fourth'),  
-    path('pickup_week/', pdfprocess.pickup_week, name='pickup_week'),
-    path('droplist_week/', pdfprocess.droplist_week, name='droplist_week'),
+    path('print_pickup_today/', pdfprocess.print_pickup_today, name='print_pickup_today'),
+    path('print_pickup_week/', pdfprocess.print_pickup_week, name='print_pickup_week'),
+    path('print_droplist_week/', pdfprocess.print_droplist_week, name='print_droplist_week'),
 
     # 打卡记录
     path('week_record/', weekrecord.week_record, name='week_record'),

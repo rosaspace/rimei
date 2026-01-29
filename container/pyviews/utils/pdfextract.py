@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
-from ..models import RMOrder,Container,RMProduct,ContainerItem,OrderItem
-from . import inventory_count
+from container.models import RMOrder,Container,RMProduct,ContainerItem,OrderItem
+from container.pyviews import inventory_count
 
 
 # 提取订单信息

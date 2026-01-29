@@ -10,10 +10,10 @@
     <!-- 右侧按钮组 -->
     <div class="d-flex flex-wrap gap-2 ms-auto">
         <div>
-            <a href="{% url 'pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
+            <a href="{% url 'print_pickup_today' %}" class="btn btn-primary">PICKUP LIST Today</a>
         </div>
         <div>
-            <a href="{% url 'pickup_week' %}" class="btn btn-primary">PICKUP LIST Week</a>
+            <a href="{% url 'print_pickup_week' %}" class="btn btn-primary">PICKUP LIST Week</a>
         </div>
     </div> 
 </div>
@@ -45,7 +45,7 @@
     {% endif %}>
                 <td>{{ order.id }}</td>
                 <td>
-                    <a href="{% url 'edit_order_simple' order.so_num %}">{{ order.so_num }}</a>
+                    <a href="{% url 'edit_order' order.so_num %}?mode=simple">{{ order.so_num }}</a>
                 </td>
                 <td>{{ order.po_num }}</td>
                 <td>{{ order.plts }}</td>

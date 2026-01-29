@@ -2,8 +2,8 @@ import json
 import os
 import math
 
-from datetime import datetime
 from io import BytesIO
+from datetime import datetime, date, timedelta
 
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
@@ -13,6 +13,8 @@ from django.contrib import messages
 from django.conf import settings
 from django.db import IntegrityError, DatabaseError
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q, F
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
@@ -21,47 +23,132 @@ from reportlab.lib.utils import ImageReader
 
 from ..models import Container,RMProduct,ContainerItem,InvoiceCustomer,LogisticsCompany,InboundCategory,RailwayStation,Carrier,Manufacturer
 from ..constants import constants_address, constants_view
-from .pdfgenerate import print_containerid_lot, print_checklist_template
-from .pdfextract import get_product_qty_with_inventory_from_container
+from .utils.pdfgenerate import print_containerid_lot, print_checklist_template
+from .utils.pdfextract import get_product_qty_with_inventory_from_container
+from .utils.getPermission import get_user_permissions
 
-# 打开添加Container页面
-def add_container_view(request):
-    """显示添加Container的页面"""
-    customers = InvoiceCustomer.objects.all()
-    logistics = LogisticsCompany.objects.all()
-    inboundCategory = InboundCategory.objects.all()
-    manufacturer = Manufacturer.objects.all()
-    railstation= RailwayStation.objects.all()
-    carrier = Carrier.objects.all()
-    return render(request, constants_view.template_add_container,{
-        'customers': customers,
-        'logistics':logistics,
-        'inboundCategory':inboundCategory,
-        'manufacturer':manufacturer,
-        'railstation':railstation,
-        'carrier':carrier,
-    })
+# container
+@login_required(login_url='/login/')
+def container_advance77(request):
+    containers = Container.objects.select_related(
+        'customer', 'logistics', 'Carrier', 'inboundCategory'
+    ).order_by('-delivery_date') # logistics: 非Customer
+
+    mode = request.GET.get("mode", "full")  # full / simple
+
+    # 今天，计算本周的周一和周日
+    today = date.today()    
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+
+    # GET 参数
+    customer_id = request.GET.get('customer')
+    logistics_id = request.GET.get('logistics')
+    carrier_id = request.GET.get('carrier')
+    category_id = request.GET.get('category')
+
+    if customer_id:
+        containers = containers.filter(customer_id=customer_id)
+
+    if logistics_id:
+        containers = containers.filter(logistics_id=logistics_id)
+
+    if carrier_id:
+        containers = containers.filter(Carrier_id=carrier_id)
+
+    if category_id:
+        containers = containers.filter(inboundCategory_id=category_id)
+
+    user_permissions = get_user_permissions(request.user) 
+    # 显示编辑页面
+    if mode == "simple":
+        template = constants_view.template_simplified_container
+        containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
+    else:
+        template = constants_view.template_container  # 原完整版页面
+    return render(request, constants_view.template_container, {
+        'containers': containers,'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        'customers': InvoiceCustomer.objects.all(),
+        'logistics_list': LogisticsCompany.objects.all(),
+        'carriers': Carrier.objects.filter(Q(id = 1) | Q(id=5) ),
+        'inbound_categories': InboundCategory.objects.all(),
+        })
+
+@login_required(login_url='/login/')
+def container_omar(request):
+    containers = Container.objects.select_related(
+        'customer', 'logistics', 'Carrier', 'inboundCategory'
+    ).filter(Q(logistics = 2)).order_by('-delivery_date') # logistics: Customer, 排除Mcdonalds和Metal
+
+    # 今天，计算本周的周一和周日
+    today = date.today()    
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+
+    # GET 参数
+    customer_id = request.GET.get('customer')
+    logistics_id = request.GET.get('logistics')
+    carrier_id = request.GET.get('carrier')
+    category_id = request.GET.get('category')
+
+    if customer_id:
+        containers = containers.filter(customer_id=customer_id)
+
+    if logistics_id:
+        containers = containers.filter(logistics_id=logistics_id)
+
+    if carrier_id:
+        containers = containers.filter(Carrier_id=carrier_id)
+
+    if category_id:
+        containers = containers.filter(inboundCategory_id=category_id)
+
+    user_permissions = get_user_permissions(request.user) 
+    return render(request, constants_view.template_container, {
+        'containers': containers,'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        'customers': InvoiceCustomer.objects.exclude(Q(id = 1) | Q(id=2) | Q(id=3)| Q(id=12)),
+        'logistics_list': LogisticsCompany.objects.all(),
+        'carriers': Carrier.objects.filter(Q(id = 1) | Q(id=5) ),
+        'inbound_categories': InboundCategory.objects.all(),
+        })
 
 # 新增Container
 def add_container(request):
-    """处理添加Container的API请求"""
-    print("----------add_container-----------")
+    """
+    GET  : 显示添加 Container 页面
+    POST : 处理新增 Container
+    """
+
+    # ===== GET：显示页面 =====
+    if request.method == "GET":
+        return render(request, constants_view.template_add_container, {
+            'customers': InvoiceCustomer.objects.all(),
+            'logistics': LogisticsCompany.objects.all(),
+            'inboundCategory': InboundCategory.objects.all(),
+            'manufacturer': Manufacturer.objects.all(),
+            'railstation': RailwayStation.objects.all(),
+            'carrier': Carrier.objects.all(),
+        })
+
+    # ===== POST：保存数据 =====
     if request.method == 'POST':
         try:
             # 检查SO号是否已存在
             container_id = request.POST.get('container_id')
-            print("---:", container_id)
+            
             if Container.objects.filter(container_id=container_id).exists():
-                print("---已存在")
-                messages.error(request, f'创建Container失败：ID号 {container_id} 已存在')
-
                 return JsonResponse({
                     'error': True,
                     'message': f'创建Container失败：ID号 {container_id} 已存在'
                 })
             
             # 获取基本字段
-            # container_id = request.POST.get('container_id')
             pickup_number = request.POST.get('pickup_number')
             lot = request.POST.get('lot_number') or ""
             plts_value = request.POST.get('plts')
@@ -78,33 +165,24 @@ def add_container(request):
             DEFAULT_CUSTOMER = InvoiceCustomer.objects.get(name="GoldenFeather")
             DEFAULT_LOGISTICS = LogisticsCompany.objects.get(name="Advance77")            
 
-            station_id = request.POST.get('station_name')
-            station_name = RailwayStation.objects.get(id=station_id) if station_id else DEFAULT_STATION
-            print("MBL: ",mbl)
-            print("weight: ",weight)
-            print("station_id: ",station_id)
-            print("station_name: ",station_name)
+            # ===== 外键 =====
+            station = RailwayStation.objects.get(id=request.POST.get('station_name')) \
+                if request.POST.get('station_name') else DEFAULT_STATION
 
-            inbound_category_id = request.POST.get('inbound_category')
-            inbound_category = InboundCategory.objects.get(id=inbound_category_id) if inbound_category_id else DEFAULT_INBOUND_CATEGORY
-            
+            inbound_category = InboundCategory.objects.get(id=request.POST.get('inbound_category')) \
+                if request.POST.get('inbound_category') else DEFAULT_INBOUND_CATEGORY
 
-            carrier_id = request.POST.get('carrier_name')
-            carrier_name = Carrier.objects.get(id=carrier_id) if carrier_id else DEFAULT_CARRIER
+            carrier = Carrier.objects.get(id=request.POST.get('carrier_name')) \
+                if request.POST.get('carrier_name') else DEFAULT_CARRIER
 
-            manufacturer_id = request.POST.get('manufacturer')
-            manufacturer_name = Manufacturer.objects.get(id=manufacturer_id) if manufacturer_id else DEFAULT_Manufacturer
+            manufacturer = Manufacturer.objects.get(id=request.POST.get('manufacturer')) \
+                if request.POST.get('manufacturer') else DEFAULT_MANUFACTURER
 
-            customer_id = request.POST.get('customer_name')
-            customer_name = InvoiceCustomer.objects.get(id=customer_id) if customer_id else DEFAULT_CUSTOMER
-            print("customer_id:",customer_id)
+            customer = InvoiceCustomer.objects.get(id=request.POST.get('customer_name')) \
+                if request.POST.get('customer_name') else DEFAULT_CUSTOMER
 
-            logistics_id = request.POST.get('logistics_name')
-            logistics_name = LogisticsCompany.objects.get(id=logistics_id) if logistics_id else DEFAULT_LOGISTICS
-            
-            print("plts_value: ",plts_value)
-            print("customer_name: ",customer_name)
-            print("logistics_name: ",logistics_name)
+            logistics = LogisticsCompany.objects.get(id=request.POST.get('logistics_name')) \
+                if request.POST.get('logistics_name') else DEFAULT_LOGISTICS
             
             # 创建新的Container实例
             container = Container(
@@ -116,11 +194,11 @@ def add_container(request):
                 mbl = mbl,
                 weight = weight,
                 inboundCategory= inbound_category,
-                customer = customer_name,
-                logistics = logistics_name,
-                railwayStation = station_name,
-                Carrier = carrier_name,
-                manufacturer = manufacturer_name,
+                customer = customer,
+                logistics = logistics,
+                railwayStation = station,
+                Carrier = carrier,
+                manufacturer = manufacturer,
                 created_at=timezone.now(),
                 created_user=request.user,  # ✅ 保存创建人
             )
@@ -129,11 +207,7 @@ def add_container(request):
             date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']
             for field in date_fields:
                 value = request.POST.get(field)
-                if value:
-                    parsed_date = datetime.strptime(value, '%Y-%m-%d').date()
-                    setattr(container, field, parsed_date)
-                else:
-                    setattr(container, field, None)
+                setattr(container, field, datetime.strptime(value, '%Y-%m-%d').date() if value else None)
             
             # 处理PDF文件
             if 'container_pdf' in request.FILES:
@@ -159,9 +233,11 @@ def add_container(request):
 def edit_container(request, container_id):
     """处理编辑Container的API请求"""
     container = get_object_or_404(Container, container_id=container_id)
+
+    mode = request.GET.get("mode", "full")  # full / simple
     
     if request.method == 'GET':
-        # products = RMProduct.objects.all().order_by('name') 
+        
         if container.inboundCategory.id != 13:
             products = RMProduct.objects.exclude(type="Metal").order_by('name')
             print("Hello, Gloves")
@@ -181,7 +257,11 @@ def edit_container(request, container_id):
         carrier = Carrier.objects.all()
 
         # 显示编辑页面
-        return render(request, constants_view.template_edit_container, {
+        if mode == "simple":
+            template = constants_view.template_edit_simple_container
+        else:
+            template = constants_view.template_edit_container  # 原完整版页面
+        return render(request, template, {
             'container': container, 
             "products": products,
             'customers': customers,
@@ -204,6 +284,7 @@ def edit_container(request, container_id):
             container.mbl = request.POST.get('mbl', container.mbl)
             container.weight = request.POST.get('weight', container.weight)
             container.content = request.POST.get('description', container.content)
+            container.is_updateInventory = request.POST.get('is_updateInventory') == 'on'
             print(f"pickup_number: {container.pickup_number}")
 
             # 更新 PLTS 字段
@@ -218,7 +299,7 @@ def edit_container(request, container_id):
             container.inboundCategory= InboundCategory.objects.get(id=request.POST.get('inbound_category'))
             container.manufacturer = Manufacturer.objects.get(id=request.POST.get('manufacturer'))
             container.railwayStation= RailwayStation.objects.get(id=request.POST.get('station_name'))
-            container.Carrier = Carrier.objects.get(id=request.POST.get('carrier_name'))
+            container.Carrier = Carrier.objects.get(id=request.POST.get('carrier_name'))            
             
             # 更新日期字段
             date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']
@@ -274,38 +355,21 @@ def edit_container(request, container_id):
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-def edit_container_simple(request, container_id):
-    container = get_object_or_404(Container, container_id=container_id)
-    
-    if request.method == 'GET':
-        products = RMProduct.objects.all().order_by('name')
-        container_items = ContainerItem.objects.filter(container=container)
-        container_items_new = get_product_qty_with_inventory_from_container(container_items)
-        total_quantity = sum(int(item.quantity) for item in container_items_new)
-        total_pallet = sum(int(item.pallet_qty) for item in container_items_new)
-        customers = InvoiceCustomer.objects.all()
-        logistics = LogisticsCompany.objects.all()
-        inboundCategory = InboundCategory.objects.all()
-        manufacturer = Manufacturer.objects.all()
-        railstation = RailwayStation.objects.all()
-        carrier = Carrier.objects.all()
+@login_required(login_url='/login/')
+def simplified_container_view(request):
+    containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
 
-        # 显示编辑页面
-        return render(request, constants_view.template_edit_simple_container, {
-            'container': container, 
-            "products": products,
-            'customers': customers,
-            'logistics': logistics,
-            'inboundCategory':inboundCategory,
-            'manufacturer':manufacturer,
-            'railstation':railstation,
-            'carrier':carrier,
-            "container_items":container_items_new,
-            'total_quantity': total_quantity,  # ✅ 加入模板变量
-            'total_pallet':total_pallet,
-        })
+    # 今天，计算本周的周一和周日
+    today = date.today()    
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
 
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    user_permissions = get_user_permissions(request.user) 
+    return render(request, constants_view.template_simplified_container, {
+        'containers': containers,'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,})
 
 # 更新库存
 def receivedin_inventory(request, container_id):

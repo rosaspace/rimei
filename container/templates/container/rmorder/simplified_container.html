@@ -5,7 +5,7 @@
     <!-- 右侧按钮组 -->
     <div class="d-flex flex-wrap gap-2 ms-auto">
         <div>
-            <a href="{% url 'droplist_week' %}" class="btn btn-primary">DROP LIST</a>
+            <a href="{% url 'print_droplist_week' %}" class="btn btn-primary">DROP LIST</a>
         </div>
     </div> 
 </div>
@@ -36,7 +36,7 @@
                 {% endif %}>
                 <!-- <td>{{ container.id }}</td> -->
                 <td>
-                    <a href="{% url 'edit_container_simple' container.container_id %}">{{ container.container_id }}</a>
+                    <a href="{% url 'edit_container' container.container_id %}?mode=simple">{{ container.container_id }}</a>
                 </td>
                 <td>{{ container.customer.name }}</td>
                 <!-- <td>{{ container.logistics.name }}</td> -->

@@ -14,7 +14,7 @@ from collections import defaultdict
 from django.db.models import Q
 
 from ..constants import constants_view
-from .getPermission import get_user_permissions
+from .utils.getPermission import get_user_permissions
 
 def inventory_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
@@ -238,57 +238,7 @@ def inventory_summary(request):
         'final_summary': final_summary, 
     })
 
-def show_pallet_number(request):
-    # 获取请求中的月份和年份
-    select_month = request.GET.get('month')
-    select_year = request.GET.get('year')
 
-    # 当月剩余托盘数
-    inventory_items = RMProduct.objects.filter(type = "Rimei")
-    total_storage_pallets = 0
-    for product in inventory_items:
-        # 查询库存记录
-        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
-        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
-        total_storage_pallets += math.ceil(product.quantity / product.Pallet) # 数量，向上取整
-
-    # ✅ 出入库托盘数
-    total_container,total_in_plts,total_out_plts, gloves_in_data,container_in_orders = get_month_pallet_number(select_month, select_year)
-    total_plts = total_in_plts + total_out_plts
-
-    # ✅ 总价格
-    total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4+total_plts * 12 + total_storage_pallets * 6
-
-    # 成本统计表格
-    cost_table = [{
-        'type': 'Container Unload Fee', 'pallets': total_container, 'unit': 450, 'value': total_container * 450
-    }, {
-        'type': 'Pallet Fee', 'pallets': total_plts, 'unit': 12, 'value': total_plts * 12
-    }, {
-        'type': 'Pallet Storage Per Month', 'pallets': total_storage_pallets, 'unit': 6, 'value': total_storage_pallets * 6
-    }, {
-        'type': 'Pallet Inbound Labor Fee', 'pallets': total_in_plts, 'unit': 4, 'value': total_in_plts * 4
-    }, {
-        'type': 'Pallet Outbound Labor Fee', 'pallets': total_out_plts, 'unit': 4, 'value': total_out_plts * 4
-
-    }]    
-
-    years = [date.today().year]
-    months = list(range(1, 13))  # 1 到 12 月
-    user_permissions = get_user_permissions(request.user) 
-    return render(request, constants_view.template_generete_monthLabor, {
-        'gloves_in_data':gloves_in_data,
-        'user_permissions': user_permissions,
-        'total_in_plts': total_in_plts,
-        'total_out_plts': total_out_plts,
-        'cost_table': cost_table,
-        'total_plts': total_plts,
-        'total_container': total_container,
-        'total_pallets' : total_storage_pallets,
-        'total_price': total_price,
-        'years':years,'months':months,
-        'selectYear':select_year,'selectMonth':select_month,
-    }) 
 
 def edit_product(request,product_id):
     product = get_object_or_404(RMProduct, id=product_id)

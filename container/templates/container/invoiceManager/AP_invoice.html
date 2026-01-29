@@ -71,8 +71,8 @@
                 <td>{{ item.payment_date |date:"m/d/Y"}}</td>
                 <td>{{ item.purposefor.name |default:""}}</td>
                 <td>{{ item.note }}</td> 
-                <td><a href="{% url 'print_original_ap_invoice' item.invoice_id %}">{{ item.ar_invoice_pdfname |default:""}}</a></td>
-                <td><a href="{% url 'delete_ap_invoice' item.invoice_id %}" class="text-danger text-decoration-underline">Delete</a></td>
+                <td><a href="{% url 'print_original_ap_invoice' item.id %}">{{ item.ar_invoice_pdfname |default:""}}</a></td>
+                <td><a href="{% url 'delete_ap_invoice' item.id %}" class="text-danger text-decoration-underline">Delete</a></td>
             </tr>
             {% endfor %}
         </tbody>

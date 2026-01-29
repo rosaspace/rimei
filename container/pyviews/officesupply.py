@@ -13,7 +13,7 @@ from ..models import (
 )
 from ..constants import constants_view
 from ..constants import constants_address
-from .getPermission import get_user_permissions
+from .utils.getPermission import get_user_permissions
 
 
 def office_supply_add(request):
@@ -90,10 +90,26 @@ def office_supply_list(request):
         .order_by("-created_at")
     ).order_by('-delivered_date')
 
+    supply_item_id = request.GET.get('supply_item')
+    purpose_id = request.GET.get('purpose')
+    platform_id = request.GET.get('platform')
+
+    if supply_item_id:
+        records = records.filter(supply_item_id=supply_item_id)
+
+    if purpose_id:
+        records = records.filter(purpose_id=purpose_id)
+
+    if platform_id:
+        records = records.filter(platform_id=platform_id)
+
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_officesupply_list, {
         "records": records,
         'user_permissions': user_permissions,
+        'supply_items': OfficeSupplyItem.objects.all(),
+        'purposes': OfficeSupplyPurpose.objects.all(),
+        'platforms': OfficeSupplyPlatform.objects.all(),
     })
 
 # print Invoice

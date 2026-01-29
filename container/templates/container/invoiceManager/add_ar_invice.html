@@ -3,7 +3,8 @@
 {% block content %}
 <div class="container">
     <h4>Add AR Invoice</h4>
-    <form method="POST" class="needs-validation" action="{% url 'add_ar_invoice' %}" novalidate>
+
+    <form method="POST" enctype="multipart/form-data" action="{% url 'add_ar_invoice' %}" novalidate>
         {% csrf_token %}
         
         <div class="row mb-3">
@@ -61,7 +62,7 @@
 
             <div class="col-md-3">
                 <label for="order_pdf" class="form-label">Invoice PDF</label>
-                <input type="file" class="form-control" id="container-pdf" name="container_pdf" accept="application/pdf">
+                <input type="file" class="form-control" id="invoice_pdf" name="invoice_pdf" accept="application/pdf">
             </div>
         </div>   
 

@@ -205,10 +205,28 @@
                 </div>
             </div>
 
-            <div class="row mb-2">
-                <div class="col-md-12">
-                    <label for="description" class="form-label">Description</label>
-                    <input type="text" class="form-control" id="description" name="description" 
+            <div class="row mb-2 align-items-center">
+                <!-- Update Inventory（居中） -->
+                <div class="col-md-3 d-flex">
+                    <div class="form-check">
+                        <input type="checkbox"
+                            class="form-check-input"
+                            id="is_updateInventory"
+                            name="is_updateInventory"
+                            {% if container.is_updateInventory %}checked{% endif %}>
+                        <label class="form-check-label ms-1" for="is_updateInventory">
+                            Update Inventory
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="col-md-9">
+                    <label for="description" class="form-label mb-1">Description</label>
+                    <input type="text"
+                        class="form-control"
+                        id="description"
+                        name="description"
                         value="{{ container.content }}">
                 </div>
             </div>

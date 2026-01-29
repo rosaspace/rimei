@@ -16,10 +16,10 @@ from datetime import datetime,timedelta
 from io import BytesIO
 
 from ..models import RMOrder,OrderItem
-from .pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page,print_bol_template,print_weekly_droplist_on_one_page
+from .utils.pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page,print_bol_template,print_weekly_droplist_on_one_page
 from ..constants import constants_address
 
-# Order
+# Print Order
 def print_original_order(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
 
@@ -39,6 +39,7 @@ def print_original_order(request, so_num):
         response['Content-Disposition'] = f'inline; filename="{order.order_pdfname}"'
         return response
 
+# Print Convert Order
 def print_converted_order(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
 
@@ -94,6 +95,7 @@ def print_converted_order(request, so_num):
             response['Content-Disposition'] = f'inline; filename="{updated_pdf_name}"'
             return response
 
+# Print Order Label
 def print_order_label(request, so_num):
     print("----------print_order_label----------",so_num)
     order = get_object_or_404(RMOrder, so_num=so_num)
@@ -167,6 +169,7 @@ def print_order_label(request, so_num):
         response['Content-Disposition'] = f'inline; filename="{so_num}.pdf"'
         return response
 
+# Print Order BOL
 def print_order_bol(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
     orderItems = OrderItem.objects.filter(order=order)
@@ -223,6 +226,7 @@ def print_order_bol(request, so_num):
         response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
         return response
 
+# Print Order MCD
 def print_order_mcd(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
     order_items = OrderItem.objects.filter(order=order)
@@ -234,10 +238,10 @@ def print_order_mcd(request, so_num):
 
     LOT_MAPPING = {
         "07604-034": "GF041124-S",
-        "07605-039": "GF100524-M",
-        "07606-039": "GF100524-L",
+        "07605-039": "GF041124-M",
+        "07606-039": "GF052015-L",
         "07607-024": "GF052015-XL",
-        "07326-024": "GF072124B",
+        "07326-024": "GF101025-B",
         # Add more mappings if needed
     }
 
@@ -326,6 +330,29 @@ def print_order_mcd(request, so_num):
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
 
+# Print stored file
+def print_stored_file(request, order_id):
+    print("----------print_stored_file----------")
+    order = get_object_or_404(RMOrder, so_num=order_id)
+
+    if not order.invoice_pdfname:
+        return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
+
+    # 构建PDF文件路径
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.INVOICE_FOLDER, order.invoice_pdfname)
+    
+    # 检查文件是否存在
+    if not os.path.exists(pdf_path):
+        return HttpResponse("PDF文件未找到", status=404)
+    
+    # 打开并读取PDF文件
+    with open(pdf_path, 'rb') as pdf:
+        response = HttpResponse(pdf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{order.order_pdfname}"'
+        return response
+
+
+# Print forklift BOL
 def print_forklift_bol(request):
     print("----------print_forklift_bol----------")
 
@@ -428,59 +455,22 @@ def print_forklift_bol(request):
 
 
 # pick up list
-def pickup_fourth(request):
-    target_date = datetime.today()
-    target_date += timedelta(days=3)
-    response = print_pickuplist(target_date)
-    return response
-
-def pickup_tomorrow(request):
-    # 获取今天或明天
-    target_date = datetime.today()
-    target_date += timedelta(days=1)
-    response = print_pickuplist(target_date)
-    return response
-
-def pickup_third(request):
-    target_date = datetime.today()
-    target_date += timedelta(days=2)
-    response = print_pickuplist(target_date)
-    return response
-
-def pickup_today(request):
+def print_pickup_today(request):
     # 获取今天或明天
     target_date = datetime.today()
     response = print_pickuplist(target_date)
     return response
 
-def pickup_week(request):
+# pick up one week
+def print_pickup_week(request):
     target_date = datetime.today()
     target_date += timedelta(days=1)
     response = print_weekly_pickuplist_on_one_page(target_date)
     return response
 
-def droplist_week(request):
+# container drop list
+def print_droplist_week(request):
     target_date = datetime.today()
     target_date += timedelta(days=-1)
     response = print_weekly_droplist_on_one_page(target_date)
     return response
-
-def print_stored_file(request, order_id):
-    print("----------print_stored_file----------")
-    order = get_object_or_404(RMOrder, so_num=order_id)
-
-    if not order.invoice_pdfname:
-        return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
-
-    # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.INVOICE_FOLDER, order.invoice_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{order.order_pdfname}"'
-        return response
