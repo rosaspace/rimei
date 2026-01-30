@@ -2,9 +2,6 @@
 from django.utils import timezone
 from datetime import datetime, date, time
 
-# 日期
-CURRENT_DATE = datetime.now().strftime("%m/%d/%Y")
-
 # 收件人
 SIGNATURE_AVA = "Ava"
 SIGNATURE_JING = "Jing"
@@ -14,17 +11,30 @@ RECIPIENT_ADVANCE = "jovana@advance77.com;tijana@advance77.com;raluca@advance77.
 
 # container_email 的邮件模板（按类型）
 INVENTORY_EMAIL_TEMPLATES = {
-    "inventory": lambda officedepot_id, signature, is_rimei_user: {
+    "inventory": lambda *, signature, is_rimei_user, current_date, **kwargs: {
         "recipient": RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa,
-        "subject": f"INVENTORY {CURRENT_DATE}",
-        "body": f"Hello,\n\nINVENTORY SUMMARY {CURRENT_DATE}. \nPaperwork attached.\n\n{signature}"
+        "subject": f"INVENTORY {current_date}",
+        "body": (
+            f"Hello,\n\n"
+            f"INVENTORY SUMMARY {current_date}.\n"
+            f"Paperwork attached.\n\n"
+            f"{signature}"
+        )
     },
-    "officedepot": lambda officedepot_id, signature, is_rimei_user: {
+
+    "officedepot": lambda *, officedepot_id, signature, is_rimei_user, current_date, **kwargs: {
         "recipient": RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa,
         "subject": f"OFFICE DEPOT #{officedepot_id} shipped out",
-        "body": f"Hello,\n\nOffice Depot# {officedepot_id} has been shipped out. \nPaperwork is attached.\n\nThank you!\n{signature}"
+        "body": (
+            f"Hello,\n\n"
+            f"Office Depot# {officedepot_id} has been shipped out.\n"
+            f"Paperwork is attached.\n\n"
+            f"Thank you!\n"
+            f"{signature}"
+        )
     },
-    "default": lambda officedepot_id, signature, is_rimei_user: {
+
+    "default": lambda *, signature, is_rimei_user, current_date, **kwargs: {
         "recipient": RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa,
         "subject": "Received Order Email",
         "body": f"Well Received.\n\nThank you!\n{signature}"

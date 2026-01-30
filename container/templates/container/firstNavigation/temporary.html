@@ -160,7 +160,7 @@
             <div class="row">
                 <div class="col-6"> 
                     <div class="d-flex align-items-center gap-2 mb-3">
-                        <input type="text" name="officedepot_number" id="officedepot_number" class="form-control" placeholder="OfficeDepot Number" style="width:180px;" required style="min-width: 100px;">
+                        <input type="text" name="officedepot_number" id="officedepot_number" class="form-control" placeholder="OfficeDepot Number" style="width:180px;">
                         <button type="submit" class="btn btn-outline-primary" name="action" value="officedepot">
                             <i class="fas fa-plus"></i> OfficeDepot
                         </button>
@@ -259,4 +259,17 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+function requireOfficeDepot(isRequired) {
+    const input = document.getElementById("officedepot_number");
+    input.required = isRequired;
+
+    if (!isRequired) {
+        input.value = ""; // 可选：防止误提交旧值
+    }
+}
+</script>
 {% endblock %}

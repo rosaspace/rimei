@@ -13,9 +13,6 @@ from django.utils import timezone
 from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
 
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-
 from ..constants import constants_address, constants_view
 from ..constants import email_constants
 from ..models import Container, RMProduct, AlineOrderRecord, RMOrder
@@ -23,6 +20,7 @@ from ..models import InvoiceAPRecord, InvoiceVendor, Carrier, InvoicePurposeFor
 
 from .utils.pdfgenerate import print_containerid_lot
 from .utils.getPermission import get_user_permissions
+from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
 
 # Temp
 @login_required(login_url='/login/')
@@ -57,7 +55,7 @@ def print_label_only(request):
         return HttpResponse("PDF文件未找到", status=404)
 
     filename = os.path.join(pdf_path, f"{so_num}.pdf")  # Save inside "label" folder
-    c = canvas.Canvas(filename, pagesize=letter)
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
 
     # Set font
     c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
@@ -103,12 +101,7 @@ def print_label_only(request):
             y_position -= constants_address.LABEL_HEIGHT  # Move to next row
             labels_on_page += 2  # Two labels per row
 
-    c.save()
-    
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
+    return finalize_pdf_and_response(c, filename)
 
 def print_label_containerid_lot(request):
     print("----------print_label_containerid_lot----------")
@@ -123,14 +116,9 @@ def print_label_containerid_lot(request):
     os.makedirs(pdf_path, exist_ok=True)
     filename = os.path.join(pdf_path, f"{container_id}_lot.pdf")
 
-    c = canvas.Canvas(filename, pagesize=letter)
-    print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date)
-    c.save()
-
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date, 84)
+    return finalize_pdf_and_response(c, filename)
 
 def print_mcd_label(request):
     print("----------print_mcd_label----------")
@@ -152,9 +140,9 @@ def print_mcd_label(request):
 
     filename = os.path.join(pdf_dir, f"LOT_{lotnum}.pdf")
 
-    # === 页面设置 ===
-    PAGE_WIDTH, PAGE_HEIGHT = letter
-    c = canvas.Canvas(filename, pagesize=letter)
+    # === 页面设置 ===    
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    PAGE_WIDTH, PAGE_HEIGHT = pagesize
 
     # === Label 布局 ===
     COLS = 5
@@ -203,13 +191,8 @@ def print_mcd_label(request):
         c.drawCentredString(center_x, base_y - line_gap,     f"{startdate}")
         c.drawCentredString(center_x, base_y - line_gap * 2, f"{expireddate}")
 
-    c.save()
+    return finalize_pdf_and_response(c, filename)
 
-    # === 返回 PDF ===
-    with open(filename, "rb") as f:
-        response = HttpResponse(f.read(), content_type="application/pdf")
-        response["Content-Disposition"] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
 
 def import_inventory(request):
     if request.method == "POST" and request.FILES.get("excel_file"):
@@ -303,6 +286,7 @@ def import_accounting(request):
     
     return JsonResponse({"error": "No file uploaded"}, status=400)
 
+# export pallets
 def export_pallet(request):
     # 获取请求中的月份和年份
     month = request.GET.get('month')
@@ -392,27 +376,31 @@ def format_worksheet(ws):
         adjusted_width = max(max_length + 2, 12)  # 设置最小宽度为12
         ws.column_dimensions[column_letter].width = adjusted_width
 
-# 邮件  
+# Office depot, inventory, order received
 def preview_email(request):
     email_type = request.POST.get("action")
     officedepot_id = request.POST.get('officedepot_number')
-    print("officedepot_id: ", officedepot_id)
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    recipient = email_constants.RECIPIENT_OMAR_rimei if is_rimei_user else email_constants.RECIPIENT_OMAR_rosa
     signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
 
+    current_date = datetime.now().strftime("%m/%d/%Y")
     template_func = email_constants.INVENTORY_EMAIL_TEMPLATES.get(email_type, email_constants.INVENTORY_EMAIL_TEMPLATES["default"])
-    email_data = template_func(officedepot_id, signature, is_rimei_user)
+    email_data = template_func(
+        officedepot_id=officedepot_id,  # 👈 只有需要的模板才会用
+        signature=signature,
+        is_rimei_user=is_rimei_user,
+        current_date=current_date,
+    )
 
     return render(request, constants_view.template_temporary, email_data)
 
+# order ship out
 def order_email(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
     email_type = request.GET.get("type", "shippeout")  # default to 'do' if not provided
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    recipient = email_constants.RECIPIENT_OMAR_rimei if is_rimei_user else email_constants.RECIPIENT_OMAR_rosa
     signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
 
     # 获取模板（默认为 shippedout）
@@ -421,12 +409,12 @@ def order_email(request, so_num):
 
     return render(request, constants_view.template_temporary, email_data)
 
+# container DO, empty, receive in
 def container_email(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
     email_type = request.GET.get("type", "do")  # default to 'do' if not provided
 
     is_rimei_user = request.user.username.lower() == "rimei"
-    recipient = email_constants.RECIPIENT_OMAR_rimei if is_rimei_user else email_constants.RECIPIENT_OMAR_rosa
     signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
 
     # 获取模板（默认使用 default）

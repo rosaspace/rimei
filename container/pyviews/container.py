@@ -3,7 +3,6 @@ import os
 import math
 
 from datetime import datetime, date, timedelta
-from io import BytesIO
 
 from django.conf import settings
 from django.contrib import messages
@@ -14,17 +13,13 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfgen import canvas
-
 from ..constants import constants_address, constants_view
 from ..models import Container, RMProduct, ContainerItem, InvoiceCustomer, LogisticsCompany, InboundCategory, RailwayStation, Carrier, Manufacturer
 
 from .utils.getPermission import get_user_permissions
 from .utils.pdfextract import get_product_qty_with_inventory_from_container
 from .utils.pdfgenerate import print_containerid_lot, print_checklist_template
+from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
 
 # container
 @login_required(login_url='/login/')
@@ -116,6 +111,22 @@ def container_omar(request):
         'carriers': Carrier.objects.filter(Q(id = 1) | Q(id=5) ),
         'inbound_categories': InboundCategory.objects.all(),
         })
+
+@login_required(login_url='/login/')
+def simplified_container_view(request):
+    containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
+
+    # 今天，计算本周的周一和周日
+    today = date.today()    
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+
+    user_permissions = get_user_permissions(request.user) 
+    return render(request, constants_view.template_simplified_container, {
+        'containers': containers,'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,})
 
 # 新增Container
 def add_container(request):
@@ -354,22 +365,6 @@ def edit_container(request, container_id):
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-@login_required(login_url='/login/')
-def simplified_container_view(request):
-    containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
-
-    # 今天，计算本周的周一和周日
-    today = date.today()    
-    start_of_week = today - timedelta(days=today.weekday())   # 本周一
-    end_of_week = start_of_week + timedelta(days=6)           # 本周日
-
-    user_permissions = get_user_permissions(request.user) 
-    return render(request, constants_view.template_simplified_container, {
-        'containers': containers,'user_permissions': user_permissions,
-        'today': today,
-        'start_of_week': start_of_week,
-        'end_of_week': end_of_week,})
-
 # 更新库存
 def receivedin_inventory(request, container_id):
     print("-------------receivedin_inventory--------------")
@@ -403,103 +398,30 @@ def container_customer_ispay(request, container_id):
     return redirect(next_url)
 
 # Container
-def print_container_label(request, container_num):
-    container = get_object_or_404(Container, container_id=container_num)
-    label_count = 10
-
-    # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.LABEL_FOLDER)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-
-    today_date = datetime.today().strftime("%m/%d/%Y").replace("/0", "/")  # Fix for Windows
-    filename = os.path.join(pdf_path, f"{container_num}_old.pdf")  # Save inside "label" folder
-    c = canvas.Canvas(filename, pagesize=letter)
-    c.setTitle(f"Label - {container.container_id}")
-
-    # Set font
-    c.setFont("Helvetica-Bold", constants_address.FONT_SIZE_Container)
-    
-    y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
-    labels_on_page = 0  # Track labels per page
-    first_page = True
-
-    while label_count > 0:
-        if not first_page:  
-            c.showPage()  # Create a new page *only if necessary*
-            c.setFont("Helvetica-Bold", constants_address.FONT_SIZE_Container)  # Reset font on new page
-            y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
-            labels_on_page = 0  # Reset row counter
-
-        first_page = False 
-
-        for _ in range(5):  # Max 5 rows per page
-            if label_count <= 0:
-                break  # Stop when all labels are printed
-    
-            # Two labels per row, calculate positions
-            x_positions = [MARGIN_LEFT, MARGIN_LEFT + LABEL_WIDTH]
-
-            for x in x_positions:
-                if label_count <= 0:  
-                    break  # Stop if all labels are printed
-    
-                # Center text in each label
-                text_x = x + (LABEL_WIDTH / 2)
-                text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 10
-                
-                # Print first line (custom text) and second line (today's date)
-                c.drawCentredString(text_x, text_y + (LINE_SPACING / 2), container_num)  # First line (higher)
-                c.drawCentredString(text_x, text_y - (LINE_SPACING / 2), today_date)  # Second line (lower)
-    
-                # Draw label borders (for testing)
-                if constants_address.DRAW_BORDERS:
-                    c.rect(x, y_position - constants_address.LABEL_HEIGHT, constants_address.LABEL_WIDTH, constants_address.LABEL_HEIGHT)
-    
-                label_count -= 1  # Reduce remaining label count
-
-            y_position -= constants_address.LABEL_HEIGHT  # Move to next row
-            labels_on_page += 2  # Two labels per row
-
-    c.save()
-    
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
-
 def print_container_color_label(request, container_num):
     container = get_object_or_404(Container, container_id=container_num)
     containerItems = ContainerItem.objects.filter(container=container)
 
     small_font = request.GET.get("small_font") == "1"
 
-    # 设置continuous
-    continuous = False
-    if(container.customer.id == 12):
-        continuous = True
+    # 是否连续打印
+    continuous = container.customer.id == 12
 
-    # 统计每个 so_num 的数量
+    # 统计 label
     so_label_map = {}
     for item in containerItems:
-        pallet_qty = item.product.Pallet or 1  # 避免除以0
+        pallet_qty = item.product.Pallet or 1
         plts = math.ceil(item.quantity / pallet_qty)
 
-        try:
-            product = item.product
-            if product and product.shortname:
-                so_num = product.shortname
-                spec = product.Pallet
+        product = item.product
+        if product and product.shortname:
+            so_num = product.shortname
+            spec = product.Pallet
 
-                if so_num not in so_label_map:
-                    so_label_map[so_num] = {"count": 0, "spec": spec}
+            if so_num not in so_label_map:
+                so_label_map[so_num] = {"count": 0, "spec": spec}
 
-                so_label_map[so_num]["count"] += plts
-
-        except AttributeError:
-            continue
+            so_label_map[so_num]["count"] += plts
 
     if not so_label_map:
         return HttpResponse("找不到相关的订单号", status=400)
@@ -507,88 +429,65 @@ def print_container_color_label(request, container_num):
     # 通用信息
     container_id = container.container_id
     lot_number = container.lot
-    # current_date = datetime.now().strftime('%m/%d/%Y')
-    if container.delivery_date:
-        current_date = container.delivery_date.strftime('%m/%d/%Y')
-    else:
-        current_date = "None"
+    current_date = (
+        container.delivery_date.strftime('%m/%d/%Y')
+        if container.delivery_date else "None"
+    )
 
-    # PDF 路径设置
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.LABEL_FOLDER)
+    # 是否显示 LOT
+    showLot = container.inboundCategory.id != 13
+
+    # PDF 保存路径（和 detail 一致）
+    pdf_path = os.path.join(
+        settings.MEDIA_ROOT,
+        constants_address.UPLOAD_DIR_container,
+        constants_address.LABEL_FOLDER
+    )
     os.makedirs(pdf_path, exist_ok=True)
+
     filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
 
-    # 使用内存文件构建 PDF
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
+    # ✅ 直接用文件路径创建 Canvas（不再使用 BytesIO）
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
 
-    # 设置showLot
-    showLot = True
-    if container.inboundCategory.id == 13:
-        showLot = False
-
-    # ===== 新增：连续打印控制 =====
-    current_page_count = 0  # 当前页已打印 label 数量（最多 10）
-
-    # for so_num, info in so_label_map.items():
-    #     total_count = info["count"]
-    #     spec = info["spec"]
-
-    #     pages = (total_count + 9) // 10  # 计算需要的总页数，每页最多 10 个
-
-    #     for page in range(pages):
-    #         # 计算当前页应打印的 label 数量
-    #         page_label_count = min(10, total_count - page * 10)
-    #         try:
-    #             print_containerid_lot(c, so_num, page_label_count, container_id, lot_number, current_date, spec, showLot)
-    #             c.showPage()
-    #         except Exception as e:
-    #             print(f"生成标签出错：{e}")
-    #             return HttpResponse(f"生成标签时出错：{e}", status=500)
+    current_page_count = 0  # 每页最多 10 个 label
 
     for so_num, info in so_label_map.items():
-        total_count = info["count"]
+        total_labels = info["count"]
         spec = info["spec"]
 
-        remaining = total_count
+        start_index = 0
 
-        while remaining > 0:
-            available_slots = 10 - current_page_count
-            print_count = min(remaining, available_slots)
+        while start_index < total_labels:
+            print_containerid_lot(
+                c=c,
+                so_num=so_num,
+                label_count=total_labels,
+                container_id=container_id,
+                lot_number=lot_number,
+                current_date=current_date,
+                spec=spec,
+                showLot=True,
+                start_index=start_index,
+                smallFont=small_font,
+            )
 
-            try:
-                print_containerid_lot(c, so_num, print_count, container_id, lot_number, current_date, spec, showLot, start_index=current_page_count, smallFont = small_font)
-            except Exception as e:
-                return HttpResponse(f"生成标签时出错：{e}", status=500)
+            start_index += 10   # 👈 一页 10 个
 
-            current_page_count += print_count
-            remaining -= print_count
+            if start_index < total_labels:
+                c.showPage()    # ✅ 只翻页，不保存
 
-            # 页面满了才换页
-            if current_page_count == 10:
-                c.showPage()
-                current_page_count = 0
-
-        # 🔴 非连续模式：不同类型强制换页
+        # 非连续模式：不同 SO 强制换页
         if not continuous and current_page_count > 0:
             c.showPage()
             current_page_count = 0
 
-    # 如果最后一页没满，也要结束页面
+    # 最后一页未满也要结束
     if current_page_count > 0:
         c.showPage()
 
-    c.save()
-    buffer.seek(0)
-
-    # 保存到文件
-    with open(filename, 'wb') as f:
-        f.write(buffer.read())
-
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
+    # 返回 PDF
+    return finalize_pdf_and_response(c, filename)
 
 def print_container_detail(request, container_num):
     container = get_object_or_404(Container, container_id=container_num)
@@ -599,11 +498,14 @@ def print_container_detail(request, container_num):
     total_plts = 0
 
     for item in containerItems:
-        pallet_qty = item.product.Pallet or 1  # 避免除以0
-        plts = math.ceil(item.quantity // pallet_qty)
+        pallet_qty = item.product.Pallet or 1
+
+        plts = item.quantity // pallet_qty
         plts_withextracase = math.ceil(item.quantity / pallet_qty)
         case = item.quantity % pallet_qty
+
         total_plts += plts_withextracase  # 累加托盘总数
+
         can_liner_details.append({
             "Size": item.product.size if hasattr(item.product, 'size') else "N/A",
             "Name": item.product.shortname,
@@ -630,18 +532,17 @@ def print_container_detail(request, container_num):
     pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.CHECKLIST_FOLDER)
     os.makedirs(pdf_path, exist_ok=True)  # 如果目录不存在，则创建
 
-    filename = os.path.join(pdf_path, f"container.container_id.pdf")
+    filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
+
     title = f"Container - {container.container_id}"
     contentType = container.inboundCategory.Type
     contentTitle = f"Inbound Container {contentType} Quality Checklist"
 
-    print_checklist_template(title,filename, contentTitle,container_info,can_liner_details, constants_address.note_lines)
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    print_checklist_template(c,pagesize, title,filename, contentTitle,container_info,can_liner_details, constants_address.note_lines)
 
     # 返回 PDF 响应
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
+    return finalize_pdf_and_response(c, filename)
 
 def print_container_delivery_order(request, container_num):
     print("------------print_container_delivery_order------------")
@@ -676,8 +577,8 @@ def print_container_delivery_order(request, container_num):
     os.makedirs(pdf_path, exist_ok=True)
     filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
 
-    c = canvas.Canvas(filename, pagesize=letter)
-    width, height = letter
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    width, height = pagesize
 
     # 插入 logo
     logo_width, logo_height = 80, 80  
@@ -804,10 +705,5 @@ def print_container_delivery_order(request, container_num):
         draw_text(width / 2, y, line)
         y -= line_height
 
-    c.save()
-
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
+    return finalize_pdf_and_response(c, filename)
 

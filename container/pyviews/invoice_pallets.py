@@ -7,8 +7,8 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Image, Spacer, Table, TableStyle, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Image, Spacer, Table, TableStyle, Paragraph
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -147,13 +147,8 @@ def export_pallet_invoice(request):
 
 # Template -- export pallet and labor invoice monthly
 def invoice_template(title,wrapped_container, total_container, total_in_plts,total_out_plts,total_plts,total_pallets,total_price):
-    # ✅ 创建临时文件
-    temp_path = create_temp_pdf()
-
-    # ✅ 使用 ReportLab 写入该 PDF 文件
-    doc = SimpleDocTemplate(temp_path, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=60, bottomMargin=30)
+    # 组织Table
     elements = []
-    styles = getSampleStyleSheet()
 
     # 样式
     normal = ParagraphStyle(name='Normal', fontSize=10, leading=12)
@@ -305,8 +300,8 @@ def invoice_template(title,wrapped_container, total_container, total_in_plts,tot
     elements.append(info_table)
     #endregion
 
-    # 构建 PDF
-    doc.build(elements)
+    # ✅ 创建临时文件
+    temp_path = create_temp_pdf(elements)
 
     return temp_path
 

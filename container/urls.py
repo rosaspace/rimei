@@ -37,7 +37,6 @@ urlpatterns = [
     path('container_customer_ispay/<str:container_id>/', container.container_customer_ispay, name='container_customer_ispay'),
 
     path('print_container_detail/<str:container_num>/', container.print_container_detail, name='print_container_detail'),
-    path('print_container_label/<str:container_num>/', container.print_container_label, name='print_container_label'),
     path('print_container_color_label/<str:container_num>/', container.print_container_color_label, name='print_container_color_label'),
     path('print_container_delivery_order/<str:container_num>/', container.print_container_delivery_order, name='print_container_delivery_order'),
     

@@ -7,15 +7,12 @@ from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
 
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
+
+
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch
-from reportlab.platypus import Table, TableStyle, Image, Paragraph, Spacer
+from reportlab.platypus import Image, Spacer, Table, TableStyle, Paragraph
 from reportlab.lib import colors
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
+from reportlab.lib.units import inch
 
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -24,6 +21,8 @@ from io import BytesIO
 from container.models import RMOrder, Container
 from container.constants import constants_address
 from container.constants.constants_address import font_Helvetica, font_Helvetica_Bold
+
+from .pdf_utils import create_pdf_canvas, finalize_pdf_and_response
 
 # PDF 解析函数
 def extract_text_from_pdf(pdf_path):
@@ -45,7 +44,6 @@ def print_pickuplist(target_date):
     # 格式化日期文本：TUESDAY 04/10
     weekday_str = target_date.strftime('%A').upper()
     date_str = target_date.strftime('%m/%d')
-
     title_font_size = 20
 
     # 查询 RMOrder 表中的 Pickup No.
@@ -60,29 +58,26 @@ def print_pickuplist(target_date):
     # 如果没有数据，显示占位
     if not pickup_numbers:
         pickup_numbers = ["N/A"]
-    # if target_date.weekday() == 0:  # Monday
-    #     pickup_numbers.append("Office Depot")
+    if not delivery_numbers:
+        delivery_numbers = ["N/A"]
+
+    # PDF 文件路径（临时文件）
+    pdf_path = os.path.join(constants_address.UPLOAD_DIR_temp, f"pickup_{target_date.strftime('%Y%m%d')}.pdf")
+    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
 
     # 生成 PDF
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'inline; filename="pickup_report.pdf"'
+    c, pagesize, inch, ImageReader = create_pdf_canvas(pdf_path)
+    width, height = pagesize
 
-    c = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
     left_margin = 1 * inch
     y = height - 2 * inch
 
     # 日期行样式
     c.setFont(font_Helvetica_Bold, 48)
-    # 日期文字
     date_text = f"{weekday_str}   {date_str}"
     c.drawString(left_margin, y, date_text)
-
-    # 计算文字宽度以便画下划线
     text_width = c.stringWidth(date_text, font_Helvetica_Bold, 48)
     underline_y = y - 5  # 稍微低一点以贴近文字底部
-
-    # 画下划线
     c.setLineWidth(3)
     c.line(left_margin, underline_y, left_margin + text_width, underline_y)
 
@@ -90,8 +85,6 @@ def print_pickuplist(target_date):
     y -= 60
     c.setFont("Helvetica", 30)
     c.drawString(left_margin, y, "PICKUPS:")
-
-    # Pickup 编号列表
     y -= 30
     c.setFont("Helvetica", title_font_size)
     for num in pickup_numbers:
@@ -104,23 +97,21 @@ def print_pickuplist(target_date):
     y -= 30
     c.setFont("Helvetica", 30)
     c.drawString(left_margin, y, "Delivery:")
-
-    # Delivery 编号列表
     y -= 30
     c.setFont("Helvetica", title_font_size)
     for num in delivery_numbers:
         c.drawString(left_margin, y, num)
         y -= 30
 
-    c.save()
-    return response
+    return finalize_pdf_and_response(c, pdf_path)
 
 def print_weekly_pickuplist_on_one_page(start_date):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'inline; filename="weekday_pickup_report.pdf"'
+    # PDF 文件路径（临时文件）
+    pdf_path = os.path.join(constants_address.UPLOAD_DIR_temp, f"pickup_{start_date.strftime('%Y%m%d')}.pdf")
+    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
 
-    c = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
+    c, pagesize, inch, ImageReader = create_pdf_canvas(pdf_path)
+    width, height = pagesize
 
     # 配置
     left_margin = 1 * inch
@@ -177,17 +168,16 @@ def print_weekly_pickuplist_on_one_page(start_date):
 
         current_date += timedelta(days=1)
 
-    c.save()
-    return response
+    return finalize_pdf_and_response(c, pdf_path)
 
 def print_weekly_droplist_on_one_page(start_date):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'inline; filename="weekday_pickup_report.pdf"'
+    pdf_path = os.path.join(constants_address.UPLOAD_DIR_temp, f"pickup_{start_date.strftime('%Y%m%d')}.pdf")
+    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
 
     containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
 
-    c = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
+    c, pagesize, inch, ImageReader = create_pdf_canvas(pdf_path)
+    width, height = pagesize
 
     # 配置
     left_margin = 1 * inch
@@ -242,16 +232,16 @@ def print_weekly_droplist_on_one_page(start_date):
 
         current_date += timedelta(days=1)
 
-    c.save()
-    return response
+    return finalize_pdf_and_response(c, pdf_path)
 
 
 def print_weekly_pickuplist(start_date):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'inline; filename="weekly_pickup_report.pdf"'
+    pdf_path = os.path.join(constants_address.UPLOAD_DIR_temp, f"pickup_{start_date.strftime('%Y%m%d')}.pdf")
+    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
 
-    c = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
+    c, pagesize, inch, ImageReader = create_pdf_canvas(pdf_path)
+    width, height = pagesize
+
     left_margin = 1 * inch
 
     for i in range(7):  # 接下来 7 天
@@ -302,33 +292,31 @@ def print_weekly_pickuplist(start_date):
 
         c.showPage()  # 每天单独一页
 
-    c.save()
-    return response
+    return finalize_pdf_and_response(c, pdf_path)
 
-def print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date, spec, showLot = True, start_index=0, smallFont = False):
+def print_containerid_lot(c, so_num,label_count,container_id,lot_number,current_date,spec,showLot=True,start_index=0,smallFont=False):
     try:
         label_count = int(label_count) if label_count is not None else 0
     except ValueError:
-        label_count = 10  # Handle invalid input gracefully
+        label_count = 10
 
-    # Set font
     font_size = (
         constants_address.FONT_SIZE_SMALL
         if smallFont
         else constants_address.FONT_SIZE
     )
+
     c.setFont(font_Helvetica_Bold, font_size)
-    
-    # 一页最多 10 个（5 行 × 2 列）
-    for i in range(label_count):
-        index = start_index + i   # 👈 核心
 
-        row = index // 2          # 每行 2 个
-        col = index % 2
+    # 一页最多 10 个
+    max_per_page = 10
+    end_index = min(start_index + max_per_page, label_count)
 
-        if row >= 5:
-            # 超出本页的内容，交由外层处理分页
-            break
+    for index in range(start_index, end_index):
+        pos = index - start_index   # 👈 本页位置 0~9
+
+        row = pos // 2
+        col = pos % 2
 
         x = constants_address.MARGIN_LEFT + col * constants_address.LABEL_WIDTH
         y_top = (
@@ -337,7 +325,6 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
             - row * constants_address.LABEL_HEIGHT
         )
 
-        # 中心点
         text_x = x + constants_address.LABEL_WIDTH / 2
         text_y = y_top - constants_address.LABEL_HEIGHT / 2
 
@@ -345,13 +332,12 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
         c.setFont(font_Helvetica_Bold, font_size)
         c.drawCentredString(text_x, text_y, so_num)
 
-        # 边框（调试用）
         if constants_address.DRAW_BORDERS:
             c.rect(
                 x,
                 y_top - constants_address.LABEL_HEIGHT,
                 constants_address.LABEL_WIDTH,
-                constants_address.LABEL_HEIGHT
+                constants_address.LABEL_HEIGHT,
             )
 
         # 底部信息
@@ -359,21 +345,24 @@ def print_containerid_lot(c, so_num, label_count, container_id, lot_number, curr
         c.drawCentredString(
             text_x,
             text_y - 30,
-            f"{container_id}    {current_date}"
+            f"{container_id}    {current_date}",
         )
 
         if showLot:
             c.drawCentredString(
                 text_x,
                 text_y - 50,
-                f"Lot: {lot_number}   Qty: {spec}"
+                f"Lot: {lot_number}   Qty: {spec}",
             )
 
 def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull):
-    # 构建新的PDF文件（使用 reportlab）
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4    
+    
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, new_filename)
+    c, (width, height), inch, ImageReader = create_pdf_canvas(
+        file_path=output_path,
+        pagesize=A4
+    )
 
     y = height - 80
     y_offset = 30  # ✅ 向下移动整体内容高度
@@ -581,24 +570,20 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
     table.wrapOn(c, width, height)
     table.drawOn(c, 40, height - 690 - y_offset)
 
-    # 关闭 canvas 并写入 buffer
-    c.save()
-    buffer.seek(0)
 
-    # 确保输出目录存在
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, new_filename)
 
-    # 写入 PDF 文件
-    with open(output_path, "wb") as f:
-        f.write(buffer.read())
+    # ✅ 统一交给 finalize_pdf_and_response
+    return finalize_pdf_and_response(
+        canvas_obj=c,
+        file_path=output_path,
+        filename=new_filename
+    )
 
-def print_checklist_template(title,filename, contentTitle, container_info,can_liner_details, note_lines, issign = False):
+def print_checklist_template(c,pagesize, title,filename, contentTitle, container_info,can_liner_details, note_lines, issign = False):
   
     # 创建 PDF 文件
-    c = canvas.Canvas(filename, pagesize=letter)
     c.setTitle(title)
-    width, height = letter
+    width, height = pagesize
 
     # 设置标题居中
     c.setFont(font_Helvetica_Bold, 16)
@@ -654,6 +639,11 @@ def print_checklist_template(title,filename, contentTitle, container_info,can_li
 
             c.setFont("Helvetica", 11)
             for item in can_liner_details:
+                if y < 100:   # 👈 页面安全底线
+                    c.showPage()
+                    c.setFont("Helvetica", 11)
+                    y = height - 80
+
                 c.drawString(x_sub_table, y, item["Size"])
 
                 c.drawString(x_sub_table + x_line_1 + 10, y, item["Name"])
@@ -720,22 +710,35 @@ def print_checklist_template(title,filename, contentTitle, container_info,can_li
                     c.drawString(x_pos, signature_y - 30, "Date:")
                     c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
 
-    # 保存 PDF
-    c.save()
+def print_mcd_template(c, x, y, width, table_data):
+
+    table = Table(
+        table_data,
+        colWidths=[100, 300, 100],
+        rowHeights=50
+    )
+
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.white),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+    ]))
+
+    table.wrapOn(c, width, 800)
+    table.drawOn(c, x, y)
 
 
-def print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes, canvas_obj=None):
+def print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes, canvas_obj, pagesize):
     # 创建 PDF 文件
     # 使用传入的 canvas 或创建新的
-    if canvas_obj:
-        c = canvas_obj
-        new_canvas = False
-    else:
-        c = canvas.Canvas(filename, pagesize=letter)
-        new_canvas = True
-
+    c = canvas_obj
     c.setTitle(title)
-    width, height = letter
+    width, height = pagesize
 
     # 设置标题居中
     c.setFont(font_Helvetica_Bold, 16)
@@ -849,16 +852,14 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
         c.drawString(x_pos, signature_y - 30, "Date:")
         c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
 
-    # 保存 PDF 仅在自己创建 canvas 时
-    if new_canvas:
-        c.save()
-
-
 def converter_metal_invoice(container, amount_items, output_dir, new_filename, isInvoice, discount_percent=0):
-    # 构建新的PDF文件（使用 reportlab）
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4    
+    
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, new_filename)
+    c, (width, height), inch, ImageReader = create_pdf_canvas(
+        file_path=output_path,
+        pagesize=A4
+    )
 
     y = height - 80
     y_offset = 30  # ✅ 向下移动整体内容高度
@@ -1071,17 +1072,12 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
         # c.drawCentredString(center_x, y_text - 75, "Email: info@securesourceamerica.com")
 
 
-    # 关闭 canvas 并写入 buffer
-    c.save()
-    buffer.seek(0)
-
-    # 确保输出目录存在
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, new_filename)
-
-    # 写入 PDF 文件
-    with open(output_path, "wb") as f:
-        f.write(buffer.read())
+    # ✅ 统一交给 finalize_pdf_and_response
+    return finalize_pdf_and_response(
+        canvas_obj=c,
+        file_path=output_path,
+        filename=new_filename
+    )
 
 # === Helper function to draw section headers ===
 def draw_section_header(c, title, x, y):

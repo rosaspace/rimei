@@ -264,9 +264,10 @@ def edit_product(request,product_id):
 
         if product.type == 'Metal':
             return redirect('inventory_metal')
-        elif product.type == 'Mcdonalds' | product.type == 'MCD':
+        elif product.type == 'Mcdonalds' or product.type == 'MCD':
             return redirect('inventory_mcd')
-        return redirect('inventory')
+        else:
+            return redirect('inventory')
 
     return render(request, constants_view.template_edit_product, {
         'product': product,

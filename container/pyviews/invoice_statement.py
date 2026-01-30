@@ -10,11 +10,9 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Image, Spacer, Table, TableStyle, Paragraph
-from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+from reportlab.platypus import Image, Spacer, Table, TableStyle, Paragraph
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
-from reportlab.lib.units import inch
 
 from ..constants import constants_view
 from ..models import Container, InvoiceCustomer, LogisticsCompany, ContainerStatement
@@ -133,18 +131,12 @@ def print_statement_invoice_pdf(request):
     containers = Container.objects.filter(container_id__in=selected_ids)
     total_price = sum([c.price or 0 for c in containers])
 
-    # ✅ 创建临时文件
-    temp_path = create_temp_pdf()
-
-    # ✅ 使用 ReportLab 写入该 PDF 文件
-    doc = SimpleDocTemplate(temp_path, pagesize=A4)
+    # 组织表格
     elements = []
-    styles = getSampleStyleSheet()
 
     # 标题
     large_title_style = ParagraphStyle(
         name="LargeTitle",
-        parent=styles["Title"],
         fontSize=20,  # 设置大标题字体大小
         leading=24
     )
@@ -184,7 +176,9 @@ def print_statement_invoice_pdf(request):
     ]))
 
     elements.append(table)
-    doc.build(elements)
+
+    # ✅ 创建临时文件
+    temp_path = create_temp_pdf(elements)    
 
     # ✅ 读取 PDF 文件并返回
     new_filename = "invoice_statement.pdf"
@@ -210,18 +204,12 @@ def print_statement_customer_invoice_pdf(request):
     containers = Container.objects.filter(container_id__in=selected_ids)
     total_price = sum([c.customer_price or 0 for c in containers])
 
-    # ✅ 创建临时文件
-    temp_path = create_temp_pdf()
-
-    # ✅ 使用 ReportLab 写入该 PDF 文件
-    doc = SimpleDocTemplate(temp_path, pagesize=A4)
+    # 组织Table
     elements = []
-    styles = getSampleStyleSheet()
 
     # 标题
     large_title_style = ParagraphStyle(
         name="LargeTitle",
-        parent=styles["Title"],
         fontSize=20,  # 设置大标题字体大小
         leading=24
     )
@@ -261,7 +249,9 @@ def print_statement_customer_invoice_pdf(request):
     ]))
 
     elements.append(table)
-    doc.build(elements)
+
+    # ✅ 创建临时文件
+    temp_path = create_temp_pdf(elements)
 
     # ✅ 读取 PDF 文件并返回
     new_filename = "invoice_statement.pdf"

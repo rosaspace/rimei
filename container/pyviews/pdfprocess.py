@@ -9,15 +9,11 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib import colors
-from reportlab.pdfgen import canvas
-from reportlab.platypus import Table, TableStyle
-
 from ..models import RMOrder, OrderItem
 from ..constants import constants_address
 
-from .utils.pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page, print_bol_template, print_weekly_droplist_on_one_page
+from .utils.pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page, print_bol_template, print_weekly_droplist_on_one_page, print_mcd_template
+from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
 
 
 # Print Order
@@ -108,7 +104,7 @@ def print_order_label(request, so_num):
     os.makedirs(label_dir, exist_ok=True)  # 如果目录不存在，则创建
     
     filename = os.path.join(label_dir, f"{so_num}.pdf")  # Save inside "label" folder
-    c = canvas.Canvas(filename, pagesize=letter)
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
 
     # Set font
     c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
@@ -163,12 +159,7 @@ def print_order_label(request, so_num):
             y_position -= constants_address.LABEL_HEIGHT  # Move to next row
             labels_on_page += 2  # Two labels per row
 
-    c.save()
-    
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{so_num}.pdf"'
-        return response
+    return finalize_pdf_and_response(c, filename)
 
 # Print Order BOL
 def print_order_bol(request, so_num):
@@ -219,22 +210,34 @@ def print_order_bol(request, so_num):
     title = f"Order - {container_info['SO Number']}"
     contentTitle =  f"Bill Of Lading - {order.so_num}"
 
-    print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes)
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    print_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes,c,pagesize)
 
     # 返回 PDF 响应
-    with open(filename, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
-        return response
+    return finalize_pdf_and_response(
+        canvas_obj=c,
+        file_path=filename,
+        filename="bol.pdf"
+    )
 
 # Print Order MCD
 def print_order_mcd(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
     order_items = OrderItem.objects.filter(order=order)
 
-    buffer = BytesIO()
-    p = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
+    # 输出路径
+    pdf_path = os.path.join(
+        settings.MEDIA_ROOT,
+        constants_address.UPLOAD_DIR_order,
+        "mcd_packing_slip"
+    )
+    os.makedirs(pdf_path, exist_ok=True)
+
+    file_path = os.path.join(pdf_path, f"mcd_{so_num}.pdf")
+
+    # ✅ 创建 canvas（reportlab 全部隐藏）
+    p, pagesize, inch, ImageReader = create_pdf_canvas(file_path)
+    width, height = pagesize
     y = height - 80
 
     LOT_MAPPING = {
@@ -305,31 +308,19 @@ def print_order_mcd(request, so_num):
 
     table_data.append(["", "Total", total_qty])
 
-    table = Table(table_data, colWidths=[100, 300, 100], rowHeights=50)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.white),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('ALIGN', (1, 1), (1, -1), 'LEFT'), 
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTSIZE', (0, 0), (-1, -1), 11),
-    ]))
-
-    table.wrapOn(p, width, height)
-    table.drawOn(p, 40, y - (20 * len(table_data)))
+    print_mcd_template(p, 40, y - (20 * len(table_data)), width, table_data)
 
     # ✅ 底部公司名
     for line in constants_address.GF_ADDRESS:
         p.drawString(40, y-220, line)
         y -= 15
 
-    p.showPage()
-    p.save()
-
-    buffer.seek(0)
-    return HttpResponse(buffer, content_type='application/pdf')
+    # ✅ 统一保存 & 返回
+    return finalize_pdf_and_response(
+        canvas_obj=p,
+        file_path=file_path,
+        filename=f"mcd_{so_num}.pdf",
+    )
 
 # Print stored file
 def print_stored_file(request, order_id):
@@ -366,9 +357,22 @@ def print_forklift_bol(request):
     pick_date = datetime.fromisoformat(pick_date_str)
     delivery_date = datetime.fromisoformat(delivery_date_str)
 
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
+    # 输出路径
+    pdf_path = os.path.join(
+        settings.MEDIA_ROOT,
+        constants_address.UPLOAD_DIR_order,
+        constants_address.BOL_FOLDER,
+    )
+    os.makedirs(pdf_path, exist_ok=True)
+
+    file_path = os.path.join(
+        pdf_path,
+        f"forklift_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    )
+
+    # ✅ 创建 canvas（reportlab 全部藏在工具函数里）
+    c, pagesize, inch, ImageReader = create_pdf_canvas(file_path)
+    width, height = pagesize
 
     order_details = []
     order_details.append({
@@ -394,14 +398,6 @@ def print_forklift_bol(request):
         "Carrier: Receipt of goods and placards; emergency info provided or accessible. Goods received in apparent good order unless noted.",
     ]
 
-    # 输出目录
-    # pdf_dir = os.path.join(settings.MEDIA_ROOT, "forklift_bol")
-    # os.makedirs(pdf_dir, exist_ok=True)
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.BOL_FOLDER)
-    os.makedirs(pdf_path, exist_ok=True)  # 如果目录不存在，则创建
-    filename = os.path.join(pdf_path, f"forklift_{pick_date_str}.pdf")
-    print("forklift bol path:", filename)
-
     # --- 生成前 3 页 Pick Up ---
     for i in range(1, num_trucks + 1):
         bol_number = f"{pick_date.strftime('%m%d%Y')}{i:02d}"
@@ -413,12 +409,13 @@ def print_forklift_bol(request):
         # 调用模板生成单页 BOL
         print_bol_template(
             title=f"Forklift BOL - {bol_number}",
-            filename=filename,  # filename=None 表示写入当前 canvas
+            filename=file_path,  # filename=None 表示写入当前 canvas
             contentTitle=f"Bill Of Lading - {bol_number}",
             container_info=container_info,
             order_details=order_details,  # 如果没有具体产品，可以传空列表
             certification_notes=certification_notes,
-            canvas_obj=c  # 传入已有 canvas
+            canvas_obj=c,  # 传入已有 canvas
+            pagesize=pagesize,
         )
         c.showPage()  # 新页
 
@@ -437,22 +434,22 @@ def print_forklift_bol(request):
 
         print_bol_template(
             title=f"Forklift BOL - {bol_number} Return",
-            filename=filename,
+            filename=file_path,
             contentTitle=f"Bill Of Lading - {bol_number} Return",
             container_info=container_info,
             order_details=order_details,
             certification_notes=certification_notes,
-            canvas_obj=c
+            canvas_obj=c,
+            pagesize=pagesize,
         )
         c.showPage()  # 新页
 
-    # 保存 PDF
-    c.save()
-    buffer.seek(0)
-
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="forklift_bol_{datetime.now().strftime("%Y%m%d%H%M%S")}.pdf"'
-    return response
+    # ✅ 统一保存 + 返回 Response
+    return finalize_pdf_and_response(
+        canvas_obj=c,
+        file_path=file_path,
+        filename=os.path.basename(file_path),
+    )
 
 
 # pick up list
