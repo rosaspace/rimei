@@ -7,6 +7,7 @@ from openpyxl.styles import Border, Side, PatternFill, Alignment
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
+from django.conf import settings
 
 from ..models import ClockRecord, Employee
 from ..constants import constants_address, constants_view
@@ -278,7 +279,7 @@ def export_week_records(request):
         print("---group: ", group)
         filename = f'Working_Hours_{group}_{select_week_start.strftime("%m.%d")}-{select_week_end.strftime("%m.%d")}.2025.xlsx'
         # 拼接完整路径
-        save_dir = os.path.join(os.getcwd(), constants_address.UPLOAD_DIR_workrecord)
+        save_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_workrecord)
         os.makedirs(save_dir, exist_ok=True)
         full_path = os.path.join(save_dir, filename)
 

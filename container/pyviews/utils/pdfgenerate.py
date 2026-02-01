@@ -62,7 +62,7 @@ def print_pickuplist(target_date):
         delivery_numbers = ["N/A"]
 
     # PDF 文件路径（临时文件）
-    pdf_path = os.path.join(constants_address.UPLOAD_DIR_temp, f"pickup_{target_date.strftime('%Y%m%d')}.pdf")
+    pdf_path = os.path.join(settings.MEDIA_ROOT,constants_address.UPLOAD_DIR_temp, f"pickup_today_{target_date.strftime('%Y%m%d')}.pdf")
     os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
 
     # 生成 PDF
@@ -107,7 +107,7 @@ def print_pickuplist(target_date):
 
 def print_weekly_pickuplist_on_one_page(start_date):
     # PDF 文件路径（临时文件）
-    pdf_path = os.path.join(constants_address.UPLOAD_DIR_temp, f"pickup_{start_date.strftime('%Y%m%d')}.pdf")
+    pdf_path = os.path.join(settings.MEDIA_ROOT,constants_address.UPLOAD_DIR_temp, f"pickup_week_{start_date.strftime('%Y%m%d')}.pdf")
     os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
 
     c, pagesize, inch, ImageReader = create_pdf_canvas(pdf_path)
@@ -171,7 +171,7 @@ def print_weekly_pickuplist_on_one_page(start_date):
     return finalize_pdf_and_response(c, pdf_path)
 
 def print_weekly_droplist_on_one_page(start_date):
-    pdf_path = os.path.join(constants_address.UPLOAD_DIR_temp, f"pickup_{start_date.strftime('%Y%m%d')}.pdf")
+    pdf_path = os.path.join(settings.MEDIA_ROOT,constants_address.UPLOAD_DIR_temp, f"droplist_week_{start_date.strftime('%Y%m%d')}.pdf")
     os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
 
     containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
@@ -231,66 +231,6 @@ def print_weekly_droplist_on_one_page(start_date):
             printed_days += 1
 
         current_date += timedelta(days=1)
-
-    return finalize_pdf_and_response(c, pdf_path)
-
-
-def print_weekly_pickuplist(start_date):
-    pdf_path = os.path.join(constants_address.UPLOAD_DIR_temp, f"pickup_{start_date.strftime('%Y%m%d')}.pdf")
-    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
-
-    c, pagesize, inch, ImageReader = create_pdf_canvas(pdf_path)
-    width, height = pagesize
-
-    left_margin = 1 * inch
-
-    for i in range(7):  # 接下来 7 天
-        target_date = start_date + timedelta(days=i)
-        weekday_str = target_date.strftime('%A').upper()
-        date_str = target_date.strftime('%m/%d')
-
-        pickup_orders = RMOrder.objects.filter(
-            pickup_date=target_date.date()
-        ).exclude(Q(customer_name="4") | Q(is_canceled=True))
-
-        pickup_numbers = [str(order.so_num) for order in pickup_orders]
-        if not pickup_numbers:
-            pickup_numbers = ["N/A"]
-        if target_date.weekday() == 0:
-            pickup_numbers.append("Office Depot")
-
-        # 页面起始 Y 坐标
-        y = height - 2 * inch
-
-        # 日期标题
-        c.setFont(font_Helvetica_Bold, 48)
-        date_text = f"{weekday_str}   {date_str}"
-        c.drawString(left_margin, y, date_text)
-
-        text_width = c.stringWidth(date_text, font_Helvetica_Bold, 48)
-        underline_y = y - 5
-        c.setLineWidth(3)
-        c.line(left_margin, underline_y, left_margin + text_width, underline_y)
-
-        # Pickup 标签
-        y -= 60
-        c.setFont("Helvetica", 30)
-        c.drawString(left_margin, y, "PICKUPS:")
-
-        # 列表
-        y -= 50
-        for num in pickup_numbers:
-            if y < 1.5 * inch:  # 页面到底了，加新页
-                c.showPage()
-                y = height - 2 * inch
-                c.setFont(font_Helvetica_Bold, 48)
-                c.drawString(left_margin, y, f"{weekday_str}   {date_str}")
-                y -= 110  # 留出 Pickup 标签空间
-                c.setFont("Helvetica", 30)
-            c.drawString(left_margin, y, num)
-            y -= 50
-
-        c.showPage()  # 每天单独一页
 
     return finalize_pdf_and_response(c, pdf_path)
 

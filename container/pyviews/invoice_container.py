@@ -83,7 +83,7 @@ def print_original_invoice(request, container_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, container.invoice_pdfname)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOLDER, container.invoice_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -158,7 +158,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
             return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
         # 构建PDF文件路径
-        input_pdf_path  = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, container.invoice_pdfname)    
+        input_pdf_path  = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOLDER, container.invoice_pdfname)    
         # 检查文件是否存在
         if not os.path.exists(input_pdf_path ):
             return HttpResponse("PDF文件未找到", status=404)
@@ -259,7 +259,7 @@ def edit_invoice_file(request, container_id):
     try:
         # 保存文件
         container.invoice_pdfname = invoice_file.name
-        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, invoice_file.name)
+        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOLDER, invoice_file.name)
         full_path = os.path.join(settings.MEDIA_ROOT, file_path)
         with open(full_path, 'wb+') as destination:
             for chunk in invoice_file.chunks():
@@ -317,7 +317,7 @@ def edit_ladingcargo_invoice_file(request, container_id):
     try:
         # 保存文件
         container.invoice_pdfname = invoice_file.name
-        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOUDER, invoice_file.name)
+        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOLDER, invoice_file.name)
         full_path = os.path.join(settings.MEDIA_ROOT, file_path)
         with open(full_path, 'wb+') as destination:
             for chunk in invoice_file.chunks():

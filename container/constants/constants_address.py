@@ -103,17 +103,23 @@ description_mapping = {
 # media中的一级目录
 UPLOAD_DIR_container = "containers/"
 UPLOAD_DIR_invoice = "invoices/"
-UPLOAD_DIR_orderpallets = "orderpallets/"
 UPLOAD_DIR_order = "orders/"
 UPLOAD_DIR_temp = "temp/"
 UPLOAD_DIR_workrecord = "workrecord/"
 
 # Order中的二级目录
 BOL_FOLDER = "BOL/"
-ORDER_FOLDER = "ORDER/"
 ORDER_CONVERTED_FOLDER = "CONVERTED/"
 LABEL_FOLDER = "label"
-INVOICE_FOLDER = "INVOICE/"
+MCD_FOLDER = "mcd_packing_slip/"
+ORDER_FOLDER = "ORDER/"
+STORED_FOLDER = "Stored/"
+
+# temp中的二级目录
+Forklift_FOLDER = "forklift/"
+MCD_FOLDER_Temp = "lot_labels/"
+UPLOAD_DIR_orderpallets = "orderpallets/"
+
 
 # Container中的二级目录
 CHECKLIST_FOLDER = "checklist/"
@@ -121,11 +127,11 @@ DO_FOLDER = "DO/"
 ORIGINAL_DO_FOUDER = "original"
 
 # INVOICE中的二级目录
-INVOICE_FOUDER = "INVOICE"
-CUSTOMER_INVOICE_FOLDER = "CustomerInvoice"
-INVOICE_METAL_ORDER = "metalInvoice"
 INVOICE_AP = "APInvoice"
 INVOICE_AR = "ARInvoice"
+CUSTOMER_INVOICE_FOLDER = "CustomerInvoice"
+INVOICE_FOLDER = "INVOICE/"
+INVOICE_METAL_ORDER = "metalInvoice"
 INVOICE_OFFICE_SUPPLY = "office_supply"
 
 # logo

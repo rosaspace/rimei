@@ -202,7 +202,7 @@ def edit_order(request, so_num):
                     print(f"Uploaded Invoice PDF file name: {order.invoice_pdfname}")
 
                     # 构造保存路径
-                    order_dir = os.path.join(settings.MEDIA_ROOT, "orders", "INVOICE")
+                    order_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.STORED_FOLDER)
                     os.makedirs(order_dir, exist_ok=True)  # 确保目录存在
                     file_path = os.path.join(order_dir, uploaded_file.name)
 

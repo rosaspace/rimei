@@ -229,7 +229,7 @@ def print_order_mcd(request, so_num):
     pdf_path = os.path.join(
         settings.MEDIA_ROOT,
         constants_address.UPLOAD_DIR_order,
-        "mcd_packing_slip"
+        constants_address.MCD_FOLDER
     )
     os.makedirs(pdf_path, exist_ok=True)
 
@@ -331,7 +331,7 @@ def print_stored_file(request, order_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.INVOICE_FOLDER, order.invoice_pdfname)
+    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.STORED_FOLDER, order.invoice_pdfname)
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -360,8 +360,8 @@ def print_forklift_bol(request):
     # 输出路径
     pdf_path = os.path.join(
         settings.MEDIA_ROOT,
-        constants_address.UPLOAD_DIR_order,
-        constants_address.BOL_FOLDER,
+        constants_address.UPLOAD_DIR_temp, 
+        constants_address.Forklift_FOLDER,
     )
     os.makedirs(pdf_path, exist_ok=True)
 
