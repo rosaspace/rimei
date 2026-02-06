@@ -2,59 +2,85 @@
 
 {% block content %}
 <!-- 同一行容器 -->
-<div class="d-flex flex-wrap align-items-center w-100  mb-2">
+<div class="d-flex flex-wrap align-items-center w-100  mb-2">    
     <!-- 左侧 -->
-    <div class="me-auto">
+    <div class="me-2">
         <a href="{% url 'statement_by_filter' %}?{{ request.GET.urlencode }}"
             class="btn btn-success ms-2">
             Generate Statement
         </a>
+        <a href="{% url 'statement_clearance' %}?{{ request.GET.urlencode }}"
+            class="btn btn-success ms-2">
+            Generate Clearence Statement
+        </a>
     </div>
-
     <!-- 右侧过滤（GET 表单） -->
-    <form method="get" class="d-flex align-items-center">
-        <!-- Customer -->
-        <select name="customer" class="form-select me-2"
-                onchange="this.form.submit()" style="width:180px;">
-            <option value="">All Customers</option>
-            {% for c in customers %}
-                <option value="{{ c.id }}"
-                    {% if request.GET.customer == c.id|stringformat:"s" %}selected{% endif %}>
-                    {{ c.name }}
+    <div class="d-flex flex-wrap gap-2 ms-auto"> 
+        <form method="get" class="d-flex align-items-center">
+            <!-- Customer -->
+            <select name="customer" class="form-select me-2"
+                    onchange="this.form.submit()" style="width:180px;">
+                <option value="">All Customers</option>
+                {% for c in customers %}
+                    <option value="{{ c.id }}"
+                        {% if request.GET.customer == c.id|stringformat:"s" %}selected{% endif %}>
+                        {{ c.name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <!-- Logistics -->
+            <select name="logistics" class="form-select me-2"
+                    onchange="this.form.submit()" style="width:180px;">
+                <option value="">All Logistics</option>
+                {% for l in logistics_list %}
+                    <option value="{{ l.id }}"
+                        {% if request.GET.logistics == l.id|stringformat:"s" %}selected{% endif %}>
+                        {{ l.name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <!-- 未付款（公司） -->
+            <select name="ispay" class="form-select me-2"
+                    onchange="this.form.submit()" style="width:160px;">
+                <option value="">Company Pay</option>
+                <option value="true" {% if request.GET.ispay == "true" %}selected{% endif %}>Paid</option>
+                <option value="false" {% if request.GET.ispay == "false" %}selected{% endif %}>
+                    Unpaid
                 </option>
-            {% endfor %}
-        </select>
+            </select>
 
-        <!-- Logistics -->
-        <select name="logistics" class="form-select me-2"
-                onchange="this.form.submit()" style="width:180px;">
-            <option value="">All Logistics</option>
-            {% for l in logistics_list %}
-                <option value="{{ l.id }}"
-                    {% if request.GET.logistics == l.id|stringformat:"s" %}selected{% endif %}>
-                    {{ l.name }}
+            <!-- 客户未付款 -->
+            <select name="customer_ispay" class="form-select"
+                    onchange="this.form.submit()" style="width:170px;">
+                <option value="">Customer Pay</option>
+                <option value="false" {% if request.GET.customer_ispay == "false" %}selected{% endif %}>
+                    Unpaid
                 </option>
-            {% endfor %}
-        </select>
+            </select>
 
-        <!-- 未付款（公司） -->
-        <select name="ispay" class="form-select me-2"
-                onchange="this.form.submit()" style="width:160px;">
-            <option value="">Company Pay</option>
-            <option value="false" {% if request.GET.ispay == "false" %}selected{% endif %}>
-                Unpaid
-            </option>
-        </select>
+            <!-- 清关未付款 -->
+            <select name="clearance_ispay" class="form-select"
+                    onchange="this.form.submit()" style="width:170px;">
+                <option value="">Clearance Pay</option>
+                <option value="true" {% if request.GET.clearance_ispay == "true" %}selected{% endif %}>
+                    Paid
+                </option>
+                <option value="false" {% if request.GET.clearance_ispay == "false" %}selected{% endif %}>
+                    Unpaid
+                </option>
+            </select>
 
-        <!-- 客户未付款 -->
-        <select name="customer_ispay" class="form-select"
-                onchange="this.form.submit()" style="width:170px;">
-            <option value="">Customer Pay</option>
-            <option value="false" {% if request.GET.customer_ispay == "false" %}selected{% endif %}>
-                Unpaid
-            </option>
-        </select>
-    </form>
+            <!-- Year -->
+            <select name="year" class="form-select me-2"
+                onchange="this.form.submit()" style="width:140px;">
+                <option value="">All Years</option>
+                <option value="2025" {% if request.GET.year == "2025" %}selected{% endif %}>2025</option>
+                <option value="2026" {% if request.GET.year == "2026" %}selected{% endif %}>2026</option>
+            </select>
+        </form>
+    </div>
 </div>
 
 <!-- invoice container table -->
@@ -76,6 +102,10 @@
                 <th>Price</th>
                 <th>Invoice Date</th>
                 <th>Due Date</th>
+                <th>Pay Date</th>
+                <th>Pay</th>
+                <th>Clearance#</th>
+                <th>Price</th>
                 <th>Pay Date</th>
                 <th>Pay</th>
             </tr>
@@ -152,6 +182,16 @@
                         {% endif %}
                     {% else %}
                         -
+                    {% endif %}
+                </td>
+                <td>{{ container.clearance_id }}</td>
+                <td>{{ container.clearance_price }}</td>
+                <td>{{ container.clearance_payment_date|date:"m/d/Y" }}</td>
+                <td class="text-center">
+                    {% if container.clearance_ispay %}
+                    <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
+                    {% else %}
+                    <i class="far fa-circle text-muted" style="font-size: 1.2em;"></i>
                     {% endif %}
                 </td>
             </tr>

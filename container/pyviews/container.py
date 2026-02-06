@@ -4,7 +4,6 @@ import math
 
 from datetime import datetime, date, timedelta
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, DatabaseError
@@ -14,12 +13,16 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 
 from ..constants import constants_address, constants_view
-from ..models import Container, RMProduct, ContainerItem, InvoiceCustomer, LogisticsCompany, InboundCategory, RailwayStation, Carrier, Manufacturer
-
+from ..models import (
+    Container, RMProduct, ContainerItem, InvoiceCustomer,
+    LogisticsCompany, InboundCategory, RailwayStation, Carrier, Manufacturer
+)
 from .utils.getPermission import get_user_permissions
-from .utils.pdfextract import get_product_qty_with_inventory_from_container
+from .utils.invoice_utils import get_product_qty_with_inventory_from_container
 from .utils.pdfgenerate import print_containerid_lot, print_checklist_template
 from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
+from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file
+from .utils.date_utils import parse_date
 
 # container
 @login_required(login_url='/login/')
@@ -217,7 +220,7 @@ def add_container(request):
             date_fields = ['railway_date', 'pickup_date', 'delivery_date', 'empty_date']
             for field in date_fields:
                 value = request.POST.get(field)
-                setattr(container, field, datetime.strptime(value, '%Y-%m-%d').date() if value else None)
+                setattr(container, field, parse_date(value) if value else None)
             
             # 处理PDF文件
             if 'container_pdf' in request.FILES:
@@ -316,7 +319,7 @@ def edit_container(request, container_id):
             for field in date_fields:
                 value = request.POST.get(field)
                 if value:
-                    parsed_date = datetime.strptime(value, '%Y-%m-%d').date()
+                    parsed_date = parse_date(value)
                     setattr(container, field, parsed_date)
                 else:
                     setattr(container, field, None)
@@ -328,12 +331,31 @@ def edit_container(request, container_id):
                 # 打印 PDF 文件名
                 print(f"Uploaded PDF file name: {container.container_pdfname}")
 
-                file_path = os.path.join(settings.MEDIA_ROOT, "containers", "original", filename)
+                file_path = get_media_path("containers", "original", filename)
+                save_uploaded_file(
+                    container.container_pdfname,
+                    file_path,
+                    filename
+                )
 
-               # 保存文件
-                with open(file_path, 'wb+') as destination:
-                    for chunk in container.container_pdfname.chunks():
-                        destination.write(chunk)
+            container.clearance_id = request.POST.get('clearance_id', container.clearance_id)
+            container.clearance_price = request.POST.get('clearance_price', container.clearance_price)
+            payment_date = request.POST.get('clearance_payment_date')
+            container.clearance_payment_date = payment_date if payment_date else None
+            container.clearance_ispay = request.POST.get('clearance_ispay', container.clearance_ispay) == 'on'
+
+            if 'clearance_pdfname' in request.FILES:
+                container.clearance_pdfname = request.FILES['clearance_pdfname']
+                filename = container.clearance_pdfname.name
+                # 打印 PDF 文件名
+                print(f"Uploaded PDF file name: {container.clearance_pdfname}")
+
+                file_path = get_media_path("containers", "clearence", filename)
+                save_uploaded_file(
+                    container.clearance_pdfname,
+                    file_path,
+                    filename
+                )
 
             container.save()
 
@@ -435,56 +457,56 @@ def print_container_color_label(request, container_num):
     )
 
     # 是否显示 LOT
-    showLot = container.inboundCategory.id != 13
+    showLot = container.customer.id != 12
 
     # PDF 保存路径（和 detail 一致）
-    pdf_path = os.path.join(
-        settings.MEDIA_ROOT,
+    pdf_path = get_media_path(
         constants_address.UPLOAD_DIR_container,
         constants_address.LABEL_FOLDER
     )
-    os.makedirs(pdf_path, exist_ok=True)
+    ensure_dir_exists(pdf_path)
 
     filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
 
     # ✅ 直接用文件路径创建 Canvas（不再使用 BytesIO）
     c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
-
-    current_page_count = 0  # 每页最多 10 个 label
+    
+    page_index = 0
 
     for so_num, info in so_label_map.items():
         total_labels = info["count"]
-        spec = info["spec"]
+        spec = info["spec"]        
 
-        start_index = 0
-
-        while start_index < total_labels:
+        # print("--start_index: ",start_index,",total_labels: ", total_labels)
+        for _ in range(total_labels):
+            
             print_containerid_lot(
                 c=c,
                 so_num=so_num,
-                label_count=total_labels,
                 container_id=container_id,
                 lot_number=lot_number,
                 current_date=current_date,
                 spec=spec,
-                showLot=True,
-                start_index=start_index,
+                showLot=showLot,
+                start_index=page_index,
                 smallFont=small_font,
             )
 
-            start_index += 10   # 👈 一页 10 个
+            
+            page_index += 1
 
-            if start_index < total_labels:
-                c.showPage()    # ✅ 只翻页，不保存
+            # if continuous and page_label_count == 10:
+            #     c.showPage()
+            #     page_label_count = 0   # 👈 重置页面计数
 
-        # 非连续模式：不同 SO 强制换页
-        if not continuous and current_page_count > 0:
+            if page_index == 10:
+                c.showPage()
+                page_index = 0
+
+        if not continuous:
             c.showPage()
-            current_page_count = 0
-
-    # 最后一页未满也要结束
-    if current_page_count > 0:
-        c.showPage()
+            start_index = 0
+            page_index = 0
 
     # 返回 PDF
     return finalize_pdf_and_response(c, filename)
@@ -529,8 +551,11 @@ def print_container_detail(request, container_num):
     }
 
     # 保存路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.CHECKLIST_FOLDER)
-    os.makedirs(pdf_path, exist_ok=True)  # 如果目录不存在，则创建
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_container,
+        constants_address.CHECKLIST_FOLDER
+    )
+    ensure_dir_exists(pdf_path)
 
     filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
 
@@ -573,8 +598,11 @@ def print_container_delivery_order(request, container_num):
 
 
     # PDF 路径设置
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.DO_FOLDER)
-    os.makedirs(pdf_path, exist_ok=True)
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_container,
+        constants_address.DO_FOLDER
+    )
+    ensure_dir_exists(pdf_path)
     filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
 
     c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
@@ -591,8 +619,8 @@ def print_container_delivery_order(request, container_num):
     line_height = 18
     font_size = 10
     font_size_small = 8
-    bold_font = "Helvetica-Bold"
-    regular_font = "Helvetica"
+    bold_font = constants_address.font_Helvetica_Bold
+    regular_font = constants_address.font_Helvetica
 
     def draw_text(x, y, text, font=regular_font, size=font_size):
         c.setFont(font, size)
@@ -601,7 +629,7 @@ def print_container_delivery_order(request, container_num):
     y = height - 75
 
     # 标题
-    c.setFont("Helvetica-Bold", 18)
+    c.setFont(constants_address.font_Helvetica_Bold, 18)
     c.drawCentredString(width / 2 , y, "DELIVERY ORDER")
 
     # US Headquarter

@@ -40,6 +40,10 @@ class RMOrder(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
     created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
 
+    customer_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    customer_payment_date = models.DateField(blank=True, null=True)  # 付款日期
+    customer_ispay = models.BooleanField(default=False) # 是否付款
+
     def __str__(self):
         return f"{self.so_num} - {self.customer_name}"
 
@@ -285,6 +289,12 @@ class Container(models.Model):
     customer_due_date = models.DateField(blank=True, null=True)  # 截止日期
     customer_payment_date = models.DateField(blank=True, null=True)  # 付款日期
     customer_ispay = models.BooleanField(default=False) # 是否付款
+
+    clearance_id = models.CharField(max_length=255, blank=True, null=True)  # 清关ID
+    clearance_pdfname = models.CharField(max_length=255, blank=True, null=True)  # 清关PDF文件名
+    clearance_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    clearance_payment_date = models.DateField(blank=True, null=True)  # 付款日期
+    clearance_ispay = models.BooleanField(default=False) # 是否付款
     
     class Meta:
         ordering = ['delivery_date']  # 默认按 delivery_date 升序排序

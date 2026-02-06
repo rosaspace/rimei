@@ -11,9 +11,13 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 
 from ..constants import constants_view
-from ..models import RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem, AlineOrderRecord, ContainerItem, UserAndPermission, Employee
+from ..models import (
+    RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem,
+    AlineOrderRecord, ContainerItem, UserAndPermission, Employee
+)
 
 from .utils.getPermission import get_user_permissions
+from .utils.date_utils import sort_by_date
 
 def inventory_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
@@ -441,17 +445,6 @@ def get_quality(product):
     } for item in outbound_stock_logs]
 
     return inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list
-
-# 排序逻辑：将'N/A'视为最小（或最大）值，按需要可修改
-def sort_by_date(entry, field_name):
-    date_val = entry.get(field_name)
-    if date_val is None:
-        return datetime.min  # 或 datetime.max，如果想将空值排在最后
-    if isinstance(date_val, datetime):
-        return date_val
-    elif isinstance(date_val, date):
-        return datetime.combine(date_val, time.min)
-    return datetime.min
 
 def export_inventory_to_excel(items):
     wb = openpyxl.Workbook()

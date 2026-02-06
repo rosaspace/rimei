@@ -9,6 +9,7 @@
                 <button class="btn btn-primary" id="printOriginalDO">Original DO</button>
                 <button class="btn btn-primary" id="printInvoice">Original Invoice</button>
                 <button class="btn btn-primary" id="printConvertedInvoice">Converted Invoice</button>
+                <button class="btn btn-primary" id="printClearenceInvoice">Clearence Invoice</button>
             </div>
         </div>
     
@@ -87,6 +88,10 @@
                     <p>Customer Invoice ID: <strong>{{ container.customer_invoiceId }}</strong></p>
                     <p>Customer Invoice File Name: <strong>{{ container.customer_invoice_pdfname }}</strong></p>
                     <p>Customer Invoice Price: <strong>{{ container.customer_price }}</strong></p>
+                    <hr class="my-2 opacity-100">
+                    <p>Clearance Invoice ID: <strong>{{ container.clearance_id }}</strong></p>
+                    <p>Clearance Invoice File Name: <strong>{{ container.clearance_pdfname }}</strong></p>
+                    <p>Clearance Invoice Price: <strong>{{ container.clearance_price }}</strong></p>
                 {% endif %}
             </div>
             <div class="col-6 right-info">
@@ -322,6 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const isClassisSplit = is_chassis_split ? '1' : '0';
         const isPrepull = is_prepull ? '1' : '0';
         window.open(`/print_customer_invoice/${containerID}/${isEmptyContainerRelocate}/${isClassisSplit}/${isPrepull}`, '_blank');
+    });
+
+    // 打印清关发票
+    document.getElementById('printClearenceInvoice').addEventListener('click', function() {
+        window.open(`/print_clearence_invoice/${containerID}/`, '_blank');
     });
 });
 </script>

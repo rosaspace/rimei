@@ -45,9 +45,11 @@ urlpatterns = [
     path("statement_by_filter/", invoice_statement.statement_by_filter, name="statement_by_filter"),
     path("statement_selected_invoices/", invoice_statement.statement_selected_invoices, name="statement_selected_invoices"),
     path('delete_statement/', invoice_statement.delete_statement, name='delete_statement'),
+    path("statement_clearance/", invoice_statement.statement_clearance, name="statement_clearance"),
 
     path("print_statement_invoice_pdf/", invoice_statement.print_statement_invoice_pdf, name="print_statement_invoice_pdf"),
     path("print_statement_customer_invoice_pdf/", invoice_statement.print_statement_customer_invoice_pdf, name="print_statement_customer_invoice_pdf"),
+    path("print_statement_clearance_pdf/", invoice_statement.print_statement_clearance_pdf, name="print_statement_clearance_pdf"),
     path("paid_invoice_advance/", invoice_statement.paid_invoice_advance, name="paid_invoice_advance"),
     path("paid_invoice_customer/", invoice_statement.paid_invoice_customer, name="paid_invoice_customer"),
 
@@ -63,6 +65,7 @@ urlpatterns = [
     path('print_original_invoice/<str:container_id>/', invoice_container.print_original_invoice, name='print_original_invoice'),
     path('print_converted_invoice/<str:container_id>/', invoice_container.print_converted_invoice, name='print_converted_invoice'),
     path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/<str:isPrepull>/', invoice_container.print_customer_invoice, name='print_customer_invoice'),
+    path('print_clearence_invoice/<str:container_id>/', invoice_container.print_clearence_invoice, name='print_clearence_invoice'),
 
     # monthly pallet invoice
     path("invoice_pallet_labor/", invoice_pallets.invoice_pallet_labor, name="invoice_pallet_labor"), 

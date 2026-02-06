@@ -1,33 +1,32 @@
 import os
-import fitz  # PyMuPDF 解析 PDF
-import textwrap
 import re
+import textwrap
+from datetime import datetime, timedelta
+from decimal import Decimal
+
+import fitz  # PyMuPDF 解析 PDF
 
 from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
-
-
 
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import Image, Spacer, Table, TableStyle, Paragraph
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 
-from decimal import Decimal
-from datetime import datetime, timedelta
-from io import BytesIO
-
 from container.models import RMOrder, Container
 from container.constants import constants_address
 from container.constants.constants_address import font_Helvetica, font_Helvetica_Bold
 
 from .pdf_utils import create_pdf_canvas, finalize_pdf_and_response
+from .file_utils import get_media_path, ensure_dir_exists
 
 # PDF 解析函数
-def extract_text_from_pdf(pdf_path):
+def extract_text_from_pdf(full_path):
     """ 解析 PDF 并提取文本 """
-    full_path = os.path.join(settings.MEDIA_ROOT, pdf_path)  # 获取完整路径
+    # full_path = get_media_path(pdf_path)
+    # print("edit_invoice_file extract_text_from_pdf: ",full_path)
 
     # ✅ 检查文件是否存在
     if not os.path.exists(full_path):
@@ -62,8 +61,11 @@ def print_pickuplist(target_date):
         delivery_numbers = ["N/A"]
 
     # PDF 文件路径（临时文件）
-    pdf_path = os.path.join(settings.MEDIA_ROOT,constants_address.UPLOAD_DIR_temp, f"pickup_today_{target_date.strftime('%Y%m%d')}.pdf")
-    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_temp,
+        f"pickup_today_{target_date.strftime('%Y%m%d')}.pdf"
+    )
+    ensure_dir_exists(os.path.dirname(pdf_path))
 
     # 生成 PDF
     c, pagesize, inch, ImageReader = create_pdf_canvas(pdf_path)
@@ -73,20 +75,20 @@ def print_pickuplist(target_date):
     y = height - 2 * inch
 
     # 日期行样式
-    c.setFont(font_Helvetica_Bold, 48)
+    c.setFont(constants_address.font_Helvetica_Bold, 48)
     date_text = f"{weekday_str}   {date_str}"
     c.drawString(left_margin, y, date_text)
-    text_width = c.stringWidth(date_text, font_Helvetica_Bold, 48)
+    text_width = c.stringWidth(date_text, constants_address.font_Helvetica_Bold, 48)
     underline_y = y - 5  # 稍微低一点以贴近文字底部
     c.setLineWidth(3)
     c.line(left_margin, underline_y, left_margin + text_width, underline_y)
 
     # Pickup 标签
     y -= 60
-    c.setFont("Helvetica", 30)
+    c.setFont(constants_address.font_Helvetica, 30)
     c.drawString(left_margin, y, "PICKUPS:")
     y -= 30
-    c.setFont("Helvetica", title_font_size)
+    c.setFont(constants_address.font_Helvetica, title_font_size)
     for num in pickup_numbers:
         c.drawString(left_margin, y, num)
         y -= 30
@@ -95,10 +97,10 @@ def print_pickuplist(target_date):
     if not delivery_numbers:
         delivery_numbers = ["N/A"]
     y -= 30
-    c.setFont("Helvetica", 30)
+    c.setFont(constants_address.font_Helvetica, 30)
     c.drawString(left_margin, y, "Delivery:")
     y -= 30
-    c.setFont("Helvetica", title_font_size)
+    c.setFont(constants_address.font_Helvetica, title_font_size)
     for num in delivery_numbers:
         c.drawString(left_margin, y, num)
         y -= 30
@@ -107,8 +109,11 @@ def print_pickuplist(target_date):
 
 def print_weekly_pickuplist_on_one_page(start_date):
     # PDF 文件路径（临时文件）
-    pdf_path = os.path.join(settings.MEDIA_ROOT,constants_address.UPLOAD_DIR_temp, f"pickup_week_{start_date.strftime('%Y%m%d')}.pdf")
-    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_temp,
+        f"pickup_week_{start_date.strftime('%Y%m%d')}.pdf"
+    )
+    ensure_dir_exists(os.path.dirname(pdf_path))
 
     c, pagesize, inch, ImageReader = create_pdf_canvas(pdf_path)
     width, height = pagesize
@@ -121,7 +126,7 @@ def print_weekly_pickuplist_on_one_page(start_date):
     item_font_size = 16
 
     # 标题
-    c.setFont(font_Helvetica_Bold, title_font_size + 10)
+    c.setFont(constants_address.font_Helvetica_Bold, title_font_size + 10)
     c.drawCentredString(width / 2, height - 1 * inch, "WEEKDAY PICKUP LIST")
 
     # 当前绘制位置
@@ -138,7 +143,7 @@ def print_weekly_pickuplist_on_one_page(start_date):
             date_str = current_date.strftime('%m/%d')
             header_text = f"{weekday_str} {date_str}"
 
-            c.setFont(font_Helvetica_Bold, title_font_size)
+            c.setFont(constants_address.font_Helvetica_Bold, title_font_size)
             c.drawString(left_margin, y, header_text)
             y -= line_height
 
@@ -154,12 +159,12 @@ def print_weekly_pickuplist_on_one_page(start_date):
                 pickup_list.append("Office Depot")
 
             # 编号列表
-            c.setFont("Helvetica", item_font_size)
+            c.setFont(constants_address.font_Helvetica, item_font_size)
             for entry in pickup_list:
                 if y < 1 * inch:
                     c.showPage()
                     y = top_margin
-                    c.setFont("Helvetica", item_font_size)
+                    c.setFont(constants_address.font_Helvetica, item_font_size)
                 c.drawString(left_margin + 10, y, f"- {entry}")
                 y -= line_height
 
@@ -171,8 +176,11 @@ def print_weekly_pickuplist_on_one_page(start_date):
     return finalize_pdf_and_response(c, pdf_path)
 
 def print_weekly_droplist_on_one_page(start_date):
-    pdf_path = os.path.join(settings.MEDIA_ROOT,constants_address.UPLOAD_DIR_temp, f"droplist_week_{start_date.strftime('%Y%m%d')}.pdf")
-    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_temp,
+        f"droplist_week_{start_date.strftime('%Y%m%d')}.pdf"
+    )
+    ensure_dir_exists(os.path.dirname(pdf_path))
 
     containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
 
@@ -187,7 +195,7 @@ def print_weekly_droplist_on_one_page(start_date):
     item_font_size = 16
 
     # 标题
-    c.setFont(font_Helvetica_Bold, title_font_size + 10)
+    c.setFont(constants_address.font_Helvetica_Bold, title_font_size + 10)
     c.drawCentredString(width / 2, height - 1 * inch, "WEEKDAY DROP LIST")
 
     # 当前绘制位置
@@ -204,7 +212,7 @@ def print_weekly_droplist_on_one_page(start_date):
             date_str = current_date.strftime('%m/%d')
             header_text = f"{weekday_str} {date_str}"
 
-            c.setFont(font_Helvetica_Bold, title_font_size)
+            c.setFont(constants_address.font_Helvetica_Bold, title_font_size)
             c.drawString(left_margin, y, header_text)
             y -= line_height
 
@@ -218,12 +226,12 @@ def print_weekly_droplist_on_one_page(start_date):
                 pickup_list = ["N/A"]
 
             # 编号列表
-            c.setFont("Helvetica", item_font_size)
+            c.setFont(constants_address.font_Helvetica, item_font_size)
             for entry in pickup_list:
                 if y < 1 * inch:
                     c.showPage()
                     y = top_margin
-                    c.setFont("Helvetica", item_font_size)
+                    c.setFont(constants_address.font_Helvetica, item_font_size)
                 c.drawString(left_margin + 10, y, f"- {entry}")
                 y -= line_height
 
@@ -234,70 +242,71 @@ def print_weekly_droplist_on_one_page(start_date):
 
     return finalize_pdf_and_response(c, pdf_path)
 
-def print_containerid_lot(c, so_num,label_count,container_id,lot_number,current_date,spec,showLot=True,start_index=0,smallFont=False):
-    try:
-        label_count = int(label_count) if label_count is not None else 0
-    except ValueError:
-        label_count = 10
-
+def print_containerid_lot(
+    c,
+    so_num,
+    container_id,
+    lot_number,
+    current_date,
+    spec,
+    showLot=True,
+    start_index=0,
+    smallFont=False,
+):
     font_size = (
         constants_address.FONT_SIZE_SMALL
         if smallFont
         else constants_address.FONT_SIZE
     )
 
-    c.setFont(font_Helvetica_Bold, font_size)
+    c.setFont(constants_address.font_Helvetica_Bold, font_size)
 
-    # 一页最多 10 个
-    max_per_page = 10
-    end_index = min(start_index + max_per_page, label_count)
+    # ⭐ 全局顺序 → 当前页位置
+    pos = start_index % 10
+    row = pos // 2
+    col = pos % 2
 
-    for index in range(start_index, end_index):
-        pos = index - start_index   # 👈 本页位置 0~9
+    x = constants_address.MARGIN_LEFT + col * constants_address.LABEL_WIDTH
+    y_top = (
+        constants_address.PAGE_HEIGHT
+        - constants_address.MARGIN_TOP
+        - row * constants_address.LABEL_HEIGHT
+    )
 
-        row = pos // 2
-        col = pos % 2
+    text_x = x + constants_address.LABEL_WIDTH / 2
+    text_y = y_top - constants_address.LABEL_HEIGHT / 2
 
-        x = constants_address.MARGIN_LEFT + col * constants_address.LABEL_WIDTH
-        y_top = (
-            constants_address.PAGE_HEIGHT
-            - constants_address.MARGIN_TOP
-            - row * constants_address.LABEL_HEIGHT
+    # 主标题
+    c.setFont(constants_address.font_Helvetica_Bold, font_size)
+    c.drawCentredString(text_x, text_y, so_num)
+
+    if constants_address.DRAW_BORDERS:
+        c.rect(
+            x,
+            y_top - constants_address.LABEL_HEIGHT,
+            constants_address.LABEL_WIDTH,
+            constants_address.LABEL_HEIGHT,
         )
 
-        text_x = x + constants_address.LABEL_WIDTH / 2
-        text_y = y_top - constants_address.LABEL_HEIGHT / 2
+    # 底部信息
+    c.setFont(constants_address.font_Helvetica, constants_address.FONT_SIZE_Lot)
+    c.drawCentredString(
+        text_x,
+        text_y - 30,
+        f"{container_id}    {current_date}",
+    )
 
-        # 主标题
-        c.setFont(font_Helvetica_Bold, font_size)
-        c.drawCentredString(text_x, text_y, so_num)
-
-        if constants_address.DRAW_BORDERS:
-            c.rect(
-                x,
-                y_top - constants_address.LABEL_HEIGHT,
-                constants_address.LABEL_WIDTH,
-                constants_address.LABEL_HEIGHT,
-            )
-
-        # 底部信息
-        c.setFont("Helvetica", constants_address.FONT_SIZE_Lot)
+    if showLot:
         c.drawCentredString(
             text_x,
-            text_y - 30,
-            f"{container_id}    {current_date}",
+            text_y - 50,
+            f"Lot: {lot_number}   Qty: {spec}",
         )
 
-        if showLot:
-            c.drawCentredString(
-                text_x,
-                text_y - 50,
-                f"Lot: {lot_number}   Qty: {spec}",
-            )
 
 def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull):
     
-    os.makedirs(output_dir, exist_ok=True)
+    ensure_dir_exists(output_dir)
     output_path = os.path.join(output_dir, new_filename)
     c, (width, height), inch, ImageReader = create_pdf_canvas(
         file_path=output_path,
@@ -526,7 +535,7 @@ def print_checklist_template(c,pagesize, title,filename, contentTitle, container
     width, height = pagesize
 
     # 设置标题居中
-    c.setFont(font_Helvetica_Bold, 16)
+    c.setFont(constants_address.font_Helvetica_Bold, 16)
     title = contentTitle
     c.drawCentredString(width / 2, height - 40, title)
 
@@ -539,7 +548,7 @@ def print_checklist_template(c,pagesize, title,filename, contentTitle, container
     x_sub_table = 100   #子表起始点
 
     # 设置正文字体
-    c.setFont("Helvetica", 12)
+    c.setFont(constants_address.font_Helvetica, 12)
 
     for key, value in container_info.items():
         # 写字段标签
@@ -569,7 +578,7 @@ def print_checklist_template(c,pagesize, title,filename, contentTitle, container
 
         if key == "Total Pallets":
             # 插入子表头
-            c.setFont(font_Helvetica_Bold, 11)
+            c.setFont(constants_address.font_Helvetica_Bold, 11)
             c.drawString(x_sub_table + 0, y, "Size")
             c.drawString(x_sub_table + x_line_1 + 10, y, "Name")
             c.drawString(x_sub_table + x_line_2, y, "CTNS")
@@ -577,11 +586,11 @@ def print_checklist_template(c,pagesize, title,filename, contentTitle, container
             c.drawString(x_sub_table + x_line_4, y, "Case")
             y -= 20
 
-            c.setFont("Helvetica", 11)
+            c.setFont(constants_address.font_Helvetica, 11)
             for item in can_liner_details:
                 if y < 100:   # 👈 页面安全底线
                     c.showPage()
-                    c.setFont("Helvetica", 11)
+                    c.setFont(constants_address.font_Helvetica, 11)
                     y = height - 80
 
                 c.drawString(x_sub_table, y, item["Size"])
@@ -605,7 +614,7 @@ def print_checklist_template(c,pagesize, title,filename, contentTitle, container
             line_spacing_extra = 35  # 每组行距
             
 
-            c.setFont("Helvetica", 12)
+            c.setFont(constants_address.font_Helvetica, 12)
             for i, note in enumerate(constants_address.note_lines):
                 wrapped_lines = textwrap.wrap(note, width=constants_address.max_line_width)
                 for line in wrapped_lines:
@@ -641,7 +650,7 @@ def print_checklist_template(c,pagesize, title,filename, contentTitle, container
                 signature_y = y     # 签名区开始的 Y 坐标
                 signature_x_start = x_label
 
-                c.setFont("Helvetica", 12)
+                c.setFont(constants_address.font_Helvetica, 12)
                 for i, label in enumerate(signature_labels):
                     x_pos = signature_x_start + i * signature_spacing
                     c.drawString(x_pos, signature_y, f"{label}:")
@@ -664,7 +673,7 @@ def print_mcd_template(c, x, y, width, table_data):
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('ALIGN', (1, 1), (1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), constants_address.font_Helvetica_Bold),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('FONTSIZE', (0, 0), (-1, -1), 11),
     ]))
@@ -681,7 +690,7 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     width, height = pagesize
 
     # 设置标题居中
-    c.setFont(font_Helvetica_Bold, 16)
+    c.setFont(constants_address.font_Helvetica_Bold, 16)
     title = contentTitle
     c.drawCentredString(width / 2, height - 80, title)
 
@@ -693,10 +702,10 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     x_sub_table = 100   #子表起始点
 
     # 设置正文字体
-    c.setFont("Helvetica", 12)
+    c.setFont(constants_address.font_Helvetica, 12)
 
-    regular_font = "Helvetica"
-    bold_font = font_Helvetica_Bold
+    regular_font = constants_address.font_Helvetica
+    bold_font = constants_address.font_Helvetica_Bold
     font_size = 10
     left_margin = 0.8 * inch
     line_height = 18
@@ -783,7 +792,7 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
     signature_y = y     # 签名区开始的 Y 坐标
     signature_x_start = x_label
 
-    c.setFont("Helvetica", 12)
+    c.setFont(constants_address.font_Helvetica, 12)
     for i, label in enumerate(signature_labels):
         x_pos = signature_x_start + i * signature_spacing
         c.drawString(x_pos, signature_y, f"{label}:")
@@ -794,7 +803,7 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
 
 def converter_metal_invoice(container, amount_items, output_dir, new_filename, isInvoice, discount_percent=0):
     
-    os.makedirs(output_dir, exist_ok=True)
+    ensure_dir_exists(output_dir)
     output_path = os.path.join(output_dir, new_filename)
     c, (width, height), inch, ImageReader = create_pdf_canvas(
         file_path=output_path,
@@ -814,7 +823,7 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
     # ---- Center Title (Invoice / Order) ----
     title_text = "Invoice" if isInvoice == 1 else "Order"
 
-    c.setFont("Helvetica-Bold", 20)
+    c.setFont(constants_address.font_Helvetica_Bold, 20)
     c.drawCentredString(width / 2, height - 101, title_text)
 
     ADDRESS_MAPPING = {
@@ -942,7 +951,7 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
         
         summary_y = table_bottom_y - 20
 
-        c.setFont("Helvetica-Bold", 11)
+        c.setFont(constants_address.font_Helvetica_Bold, 11)
 
         # discount
         discount_rate = Decimal(discount_percent) / Decimal("100")
@@ -980,12 +989,10 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
         summary_y -= line_height* 1.3
 
         # Total
-        # c.setFont("Helvetica-Bold", 12)
         c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Total:   ${grand_total:,.2f}")
         summary_y -= line_height
 
         # Credit card total 3%
-        # c.setFont("Helvetica-Bold", 12)
         c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Credit Card (3%):   ${credit_total:,.2f}")
         summary_y -= line_height
 
@@ -996,7 +1003,7 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
 
     if not isJustTableOrder:
         # 2 行：靠左显示
-        c.setFont("Helvetica", 10)
+        c.setFont(constants_address.font_Helvetica, 10)
         c.drawString(40, left_text_y, "*Products availability and lead time may change")
         c.drawString(40, left_text_y - 15, "*SSA reserve the right to change pricing and terms without notice")
 
@@ -1021,11 +1028,11 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
 
 # === Helper function to draw section headers ===
 def draw_section_header(c, title, x, y):
-    c.setFont(font_Helvetica_Bold, 11)
+    c.setFont(constants_address.font_Helvetica_Bold, 11)
     c.drawString(x, y, title)
     c.setLineWidth(0.5)
     c.line(x, y - 2, x + 150, y - 2)
-    c.setFont("Helvetica", 11)
+    c.setFont(constants_address.font_Helvetica, 11)
 
 def draw_address_block(c, label, address_lines, x, y_start):
     draw_section_header(c, label, x, y_start)
@@ -1039,9 +1046,7 @@ def draw_address_block(c, label, address_lines, x, y_start):
 def draw_address_block2(c, title, text, x, y):
     draw_section_header(c, title, x, y)
 
-    # c.setFont("Helvetica-Bold", 10)
-    # c.drawString(x, y, title)
-    c.setFont("Helvetica", 10)
+    c.setFont(constants_address.font_Helvetica, 10)
 
     # ---- 清洗不可见 / 非法换行字符 ----
     clean_text = (

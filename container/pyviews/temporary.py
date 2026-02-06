@@ -3,24 +3,24 @@ import pandas as pd
 
 from datetime import datetime, date, timedelta
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
-from django.utils import timezone
-
-from openpyxl.styles import Alignment
-from openpyxl.utils import get_column_letter
 
 from ..constants import constants_address, constants_view
 from ..constants import email_constants
-from ..models import Container, RMProduct, AlineOrderRecord, RMOrder
-from ..models import InvoiceAPRecord, InvoiceVendor, Carrier, InvoicePurposeFor
+from ..models import (
+    Container, RMProduct, AlineOrderRecord, RMOrder,
+    InvoiceAPRecord, InvoiceVendor, Carrier, InvoicePurposeFor
+)
 
 from .utils.pdfgenerate import print_containerid_lot
 from .utils.getPermission import get_user_permissions
 from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
+from .utils.date_utils import parse_date
+from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file
+from .utils.excel_utils import format_worksheet
 
 # Temp
 @login_required(login_url='/login/')
@@ -47,8 +47,10 @@ def print_label_only(request):
         label_count = 10  # Handle invalid input gracefully
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_temp, constants_address.LABEL_FOLDER)
-    print("pdf_path: ", pdf_path)
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_temp,
+        constants_address.LABEL_FOLDER
+    )
     
     # 检查文件是否存在
     if not os.path.exists(pdf_path):
@@ -58,7 +60,7 @@ def print_label_only(request):
     c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
 
     # Set font
-    c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
+    c.setFont(constants_address.font_Helvetica_Bold, constants_address.FONT_SIZE)
     
     y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
     labels_on_page = 0  # Track labels per page
@@ -67,7 +69,7 @@ def print_label_only(request):
     while label_count > 0:
         if not first_page:  
             c.showPage()  # Create a new page *only if necessary*
-            c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)  # Reset font on new page
+            c.setFont(constants_address.font_Helvetica_Bold, constants_address.FONT_SIZE)  # Reset font on new page
             y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
             labels_on_page = 0  # Reset row counter
 
@@ -89,7 +91,7 @@ def print_label_only(request):
                 text_y = y_position  - (constants_address.LABEL_HEIGHT / 2) - 20
                 
                 # Set font and draw text
-                c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
+                c.setFont(constants_address.font_Helvetica_Bold, constants_address.FONT_SIZE)
                 c.drawCentredString(text_x, text_y, so_num)
     
                 # Draw label borders (for testing)
@@ -112,12 +114,20 @@ def print_label_containerid_lot(request):
     current_date = datetime.now().strftime('%m/%d/%Y')
 
     # PDF 路径设置
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_temp, constants_address.LABEL_FOLDER)
-    os.makedirs(pdf_path, exist_ok=True)
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_temp,
+        constants_address.LABEL_FOLDER
+    )
+    ensure_dir_exists(pdf_path)
     filename = os.path.join(pdf_path, f"{container_id}_lot.pdf")
 
     c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
-    print_containerid_lot(c, so_num, label_count, container_id, lot_number, current_date, 84)
+    start_index = 0
+    for _ in range(int(label_count)):
+        print_containerid_lot(c, so_num, container_id, lot_number, current_date, 84, True, start_index)
+        start_index += 1
+        if start_index % 10 == 0:
+            c.showPage()
     return finalize_pdf_and_response(c, filename)
 
 def print_mcd_label(request):
@@ -131,12 +141,11 @@ def print_mcd_label(request):
         return HttpResponse("LOT number is required", status=400)
 
     # === PDF 路径 ===
-    pdf_dir = os.path.join(
-        settings.MEDIA_ROOT,
+    pdf_dir = get_media_path(
         constants_address.UPLOAD_DIR_temp,
         constants_address.MCD_FOLDER_Temp
     )
-    os.makedirs(pdf_dir, exist_ok=True)
+    ensure_dir_exists(pdf_dir)
 
     filename = os.path.join(pdf_dir, f"LOT_{lotnum}.pdf")
 
@@ -185,9 +194,9 @@ def print_mcd_label(request):
         base_y = label_center_y + text_block_height / 2
 
         # ===== Draw text =====
-        c.setFont("Helvetica-Bold", FONT_SIZE_TITLE)
+        c.setFont(constants_address.font_Helvetica_Bold, FONT_SIZE_TITLE)
         c.drawCentredString(center_x, base_y,                f"{lotnum}")
-        c.setFont("Helvetica", FONT_SIZE_TEXT)
+        c.setFont(constants_address.font_Helvetica, FONT_SIZE_TEXT)
         c.drawCentredString(center_x, base_y - line_gap,     f"{startdate}")
         c.drawCentredString(center_x, base_y - line_gap * 2, f"{expireddate}")
 
@@ -261,13 +270,10 @@ def import_accounting(request):
 
         # Ensure column names match the model fields
         for index, row in df.iterrows():
-            # 处理日期字段
-            def parse_date(value):
-                if pd.isna(value):
-                    return None
-                if isinstance(value, datetime):
-                    return value.date()
-                return value  # 假如已经是 str 或 date
+            # 处理日期字段 - 使用工具函数
+            due_date = parse_date(row["Due Date"]) if pd.notna(row.get("Due Date", None)) else None
+            givetoboss_date = parse_date(row["Give to BOSS Date"]) if pd.notna(row.get("Give to BOSS Date", None)) else None
+            payment_date = parse_date(row["Paid Date"]) if pd.notna(row.get("Paid Date", None)) else None
 
             # Create RMProduct instance
             product = InvoiceAPRecord.objects.create(
@@ -275,9 +281,9 @@ def import_accounting(request):
                 invoice_id=row["Invoice No."],
                 invoice_price=row["Amount"],
                 company=fixed_company,
-                due_date=parse_date(row["Due Date"]),
-                givetoboss_date=parse_date(row["Give to BOSS Date"]),
-                payment_date=parse_date(row["Paid Date"]),
+                due_date=due_date,
+                givetoboss_date=givetoboss_date,
+                payment_date=payment_date,
                 purposefor=fixed_purpose,
                 note=row["Notes"],
             )
@@ -333,8 +339,11 @@ def export_pallet(request):
         }
         gloves_out_df = pd.DataFrame(gloves_out_data) 
 
-        full_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_temp, constants_address.UPLOAD_DIR_orderpallets)
-        os.makedirs(full_path, exist_ok=True)  # 确保目录存在
+        full_path = get_media_path(
+            constants_address.UPLOAD_DIR_temp,
+            constants_address.UPLOAD_DIR_orderpallets
+        )
+        ensure_dir_exists(full_path)
         filename = f'Pallets_{year}_{month}.xlsx'
         file_path = os.path.join(full_path, filename)
 
@@ -362,20 +371,6 @@ def export_pallet(request):
     else:
         return HttpResponse("Invalid month or year", status=400)
     
-
-# 设置列宽和居中样式
-def format_worksheet(ws):
-    alignment = Alignment(horizontal='center', vertical='center')
-    for col in ws.columns:
-        max_length = 0
-        column_letter = get_column_letter(col[0].column)
-        for cell in col:
-            cell.alignment = alignment
-            if cell.value:
-                max_length = max(max_length, len(str(cell.value)))
-        adjusted_width = max(max_length + 2, 12)  # 设置最小宽度为12
-        ws.column_dimensions[column_letter].width = adjusted_width
-
 # Office depot, inventory, order received
 def preview_email(request):
     email_type = request.POST.get("action")

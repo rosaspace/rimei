@@ -6,10 +6,9 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 
-from reportlab.lib.pagesizes import A4
 from reportlab.platypus import Image, Spacer, Table, TableStyle, Paragraph
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_RIGHT
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 
@@ -160,7 +159,7 @@ def invoice_template(title,wrapped_container, total_container, total_in_plts,tot
         alignment=TA_RIGHT,
         textColor=colors.black,
         spaceAfter=6,
-        fontName='Helvetica-Bold',
+        fontName=constants_address.font_Helvetica_Bold,
     )
     invoice_cell_style = ParagraphStyle(
         name="InvoiceCell",

@@ -1,18 +1,19 @@
 import os
 import pandas as pd
 
-from datetime import date, datetime, timedelta, time
-from openpyxl.styles import Border, Side, PatternFill, Alignment
+from datetime import date, datetime, timedelta
 
-from django.utils import timezone
-from django.shortcuts import render, redirect
+from openpyxl.styles import Alignment, Border, Side, PatternFill
+
 from django.http import HttpResponse
-from django.conf import settings
+from django.shortcuts import render, redirect
 
 from ..models import ClockRecord, Employee
 from ..constants import constants_address, constants_view
 
 from .utils.getPermission import get_user_permissions
+from .utils.date_utils import convert_to_time as convertToTime, get_week_days as getWeek
+from .utils.file_utils import get_media_path, ensure_dir_exists
 
 def week_record(request):
     # 获取当前年份和周数（ISO标准）
@@ -106,7 +107,7 @@ def week_record(request):
     })
 
 def add_week_records(request):
-    today = timezone.now().date()
+    today = date.today()
     current_week_start = today - timedelta(days=today.weekday())
     # 获取上周的周一日期
     last_week_start = current_week_start - timedelta(days=7)  # 上周的周一
@@ -279,8 +280,8 @@ def export_week_records(request):
         print("---group: ", group)
         filename = f'Working_Hours_{group}_{select_week_start.strftime("%m.%d")}-{select_week_end.strftime("%m.%d")}.2025.xlsx'
         # 拼接完整路径
-        save_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_workrecord)
-        os.makedirs(save_dir, exist_ok=True)
+        save_dir = get_media_path(constants_address.UPLOAD_DIR_workrecord)
+        ensure_dir_exists(save_dir)
         full_path = os.path.join(save_dir, filename)
 
         data = []
@@ -373,22 +374,6 @@ def export_week_records(request):
         # 如果没有数据，返回空响应
         return HttpResponse("No data available for the selected group.")
 
-def convertToTime(workTime):
-    if isinstance(workTime, str):
-        print("Convert string to time")
-        workTime = datetime.strptime(workTime, '%H:%M').time()  # Convert string to time object
-
-    elif isinstance(workTime, datetime):
-        print("Extract time from datetime")
-        workTime = workTime.time()  # Extract only time from datetime object
-
-    elif not isinstance(workTime, time):
-        print("Set default time (08:00)")
-        workTime = time(8, 0)  # Default to 8:00 AM if invalid
-
-    return workTime
-
-def getWeek(last_week_start):
     weekdays = []
     for i in range(7):  # Get all days of the week
         weekday_date = last_week_start + timedelta(days=i)
@@ -398,3 +383,4 @@ def getWeek(last_week_start):
             'date': weekday_date
         })
     return weekdays
+

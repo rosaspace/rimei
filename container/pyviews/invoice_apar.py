@@ -3,15 +3,17 @@ import os
 from datetime import datetime
 from decimal import Decimal
 
-from django.conf import settings
 from django.contrib import messages
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 
 from ..constants import constants_address, constants_view
 from ..models import InvoicePaidCustomer, Carrier, InvoiceVendor, InvoicePurposeFor, InvoiceAPRecord, InvoiceARRecord
+from ..models import InvoicePurposeFor
 
 from .utils.getPermission import get_user_permissions
+from .utils.date_utils import clean_date, parse_date
+from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file, serve_pdf_file
 
 # AP list
 def invoice_ap_view(request):
@@ -22,6 +24,7 @@ def invoice_ap_view(request):
 
     vendor_id = request.GET.get('vendor')
     company_id = request.GET.get('company')
+    purpose_id = request.GET.get('purposefor')
 
     if vendor_id:
         apRecord = apRecord.filter(vendor_id=vendor_id)
@@ -29,8 +32,12 @@ def invoice_ap_view(request):
     if company_id:
         apRecord = apRecord.filter(company_id=company_id)
 
+    if purpose_id:
+        apRecord = apRecord.filter(purposefor_id=purpose_id)
+
     vendors = InvoiceVendor.objects.all()
     companies = Carrier.objects.all()
+    purposefor = InvoicePurposeFor.objects.all()
     user_permissions = get_user_permissions(request.user)    
 
     return render(request, constants_view.template_ap_invoice, {
@@ -38,6 +45,7 @@ def invoice_ap_view(request):
         'apRecord': apRecord,
         "vendors": vendors,
         "companies": companies,
+        "purposefor": purposefor,
     })
 
 # AR list
@@ -111,17 +119,14 @@ def add_ar_invoice(request):
             if pdf_file:
                 ar_invoice.ar_invoice_pdfname = pdf_file.name
 
-                save_dir = os.path.join(
-                    settings.MEDIA_ROOT,
+                save_dir = get_media_path(
                     constants_address.UPLOAD_DIR_invoice,
                     constants_address.INVOICE_AR
                 )
-                os.makedirs(save_dir, exist_ok=True)
+                ensure_dir_exists(save_dir)
 
                 file_path = os.path.join(save_dir, pdf_file.name)
-                with open(file_path, "wb+") as destination:
-                    for chunk in pdf_file.chunks():
-                        destination.write(chunk)
+                save_uploaded_file(pdf_file, file_path, pdf_file.name)
 
             # 校验 + 保存
             ar_invoice.full_clean()  # 🔑 先校验字段
@@ -175,17 +180,14 @@ def edit_ar_invoice(request, id):
                 uploaded_file = request.FILES["invoice_pdf"]
                 ar_invoice.ar_invoice_pdfname = uploaded_file.name
 
-                save_dir = os.path.join(
-                    settings.MEDIA_ROOT,
+                save_dir = get_media_path(
                     constants_address.UPLOAD_DIR_invoice,
                     constants_address.INVOICE_AR
                 )
-                os.makedirs(save_dir, exist_ok=True)
+                ensure_dir_exists(save_dir)
 
                 file_path = os.path.join(save_dir, uploaded_file.name)
-                with open(file_path, "wb+") as destination:
-                    for chunk in uploaded_file.chunks():
-                        destination.write(chunk)
+                save_uploaded_file(uploaded_file, file_path, uploaded_file.name)
 
             ar_invoice.full_clean()
             ar_invoice.save()
@@ -222,17 +224,12 @@ def print_original_ar_invoice(request, so_num):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_AR, order.ar_invoice_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{order.ar_invoice_pdfname}"'
-        return response
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.INVOICE_AR,
+        order.ar_invoice_pdfname
+    )
+    return serve_pdf_file(pdf_path, order.ar_invoice_pdfname)
 
 # add paidable invoice
 def add_ap_invoice(request):
@@ -273,17 +270,14 @@ def add_ap_invoice(request):
             if pdf_file:
                 ap_invoice.ar_invoice_pdfname = pdf_file.name
 
-                save_dir = os.path.join(
-                    settings.MEDIA_ROOT,
+                save_dir = get_media_path(
                     constants_address.UPLOAD_DIR_invoice,
                     constants_address.INVOICE_AP
                 )
-                os.makedirs(save_dir, exist_ok=True)
+                ensure_dir_exists(save_dir)
 
                 file_path = os.path.join(save_dir, pdf_file.name)
-                with open(file_path, "wb+") as destination:
-                    for chunk in pdf_file.chunks():
-                        destination.write(chunk)
+                save_uploaded_file(pdf_file, file_path, pdf_file.name)
 
             # 校验 + 保存
             ap_invoice.full_clean()  # 🔑 先校验字段
@@ -342,14 +336,15 @@ def edit_ap_invoice(request, invoice_id):
                 print(f"Uploaded PDF file name: {uploaded_file.name}")
 
                 # 构造保存路径
-                order_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_AP)
-                os.makedirs(order_dir, exist_ok=True)  # 确保目录存在                
+                order_dir = get_media_path(
+                    constants_address.UPLOAD_DIR_invoice,
+                    constants_address.INVOICE_AP
+                )
+                ensure_dir_exists(order_dir)              
 
                 # 保存文件
                 file_path = os.path.join(order_dir, uploaded_file.name)
-                with open(file_path, 'wb+') as destination:
-                    for chunk in uploaded_file.chunks():
-                        destination.write(chunk)
+                save_uploaded_file(uploaded_file, file_path, uploaded_file.name)
 
             ap_record.full_clean()
             ap_record.save()
@@ -383,29 +378,10 @@ def print_original_ap_invoice(request, so_num):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_AP, order.ar_invoice_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{order.ar_invoice_pdfname}"'
-        return response
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.INVOICE_AP,
+        order.ar_invoice_pdfname
+    )
+    return serve_pdf_file(pdf_path, order.ar_invoice_pdfname)
 
-# Template -- format the data
-def clean_date(value):
-    if value in ["", None]:
-        return None
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").date()
-    except ValueError:
-        return None
-
-# sub function
-def parse_date(value):
-    if not value:
-        return None
-    return datetime.strptime(value, "%Y-%m-%d").date()

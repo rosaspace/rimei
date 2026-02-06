@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 
 from ..constants import constants_view
+
 from .utils.getPermission import get_user_permissions
 
 def login_view(request):

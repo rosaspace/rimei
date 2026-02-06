@@ -1,19 +1,27 @@
 import os
-import fitz  # PyMuPDF 解析 PDF
 import re
+import fitz  # PyMuPDF 解析 PDF
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q, F
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.conf import settings
+
+from decimal import Decimal
 
 from ..constants import constants_address, constants_view
-from ..models import Container, RMProduct, InvoiceCustomer, LogisticsCompany
-from ..models import InvoicePaidCustomer, Carrier, InvoiceVendor, InvoicePurposeFor, InvoiceAPRecord, InvoiceARRecord
-
+from ..models import (
+    Container, RMProduct, InvoiceCustomer, LogisticsCompany,
+    InvoicePaidCustomer, Carrier, InvoiceVendor, InvoicePurposeFor,
+    InvoiceAPRecord, InvoiceARRecord
+)
+from .invoice_statement import filter_containers
 from .utils.getPermission import get_user_permissions
 from .utils.pdfgenerate import extract_text_from_pdf, converter_customer_invoice
+from .utils.file_utils import get_media_path, serve_pdf_file, ensure_dir_exists, save_uploaded_file
+from .utils.invoice_utils import extract_invoice_data, extract_customer_invoice_data
+from .utils.date_utils import parse_date
 
 # container invoice list
 @login_required(login_url='/login/')
@@ -24,29 +32,17 @@ def invoice_view(request):
         logistics=2
     ).order_by('-delivery_date')
 
-    # GET 参数
-    customer_id = request.GET.get('customer')
-    logistics_id = request.GET.get('logistics')
-    ispay = request.GET.get('ispay')
-    customer_ispay = request.GET.get('customer_ispay')
+    containerss = filter_containers(request).exclude(
+        logistics=2
+    ).order_by('-delivery_date')
 
-    if customer_id:
-        containers = containers.filter(customer_id=customer_id)
-
-    if logistics_id:
-        containers = containers.filter(logistics_id=logistics_id)
-
-    if ispay == 'false':
-        containers = containers.filter(Q(ispay=False, invoice_id__isnull=False))
-
-    if customer_ispay == 'false':
-        containers = containers.filter(Q(customer_ispay=False, customer_invoiceId__isnull=False))
+    
     
     customers = InvoiceCustomer.objects.all().order_by('name')
     logistics_list = LogisticsCompany.objects.all().order_by('name')
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_invoice, {
-        'containers': containers,'user_permissions': user_permissions,
+        'containers': containerss,'user_permissions': user_permissions,
         'customers': customers,
         'logistics_list': logistics_list,
         })
@@ -54,26 +50,16 @@ def invoice_view(request):
 # print original delivery order
 def print_original_do(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
-
     if not container.container_pdfname:
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    do_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_container, constants_address.ORIGINAL_DO_FOUDER)
-    os.makedirs(do_path , exist_ok=True)  # 如果目录不存在，则创建
-
-    # 构建完整 PDF 文件路径
-    pdf_path = os.path.join(do_path, container.container_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{container.container_pdfname}"'
-        return response
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_container,
+        constants_address.ORIGINAL_DO_FOUDER,
+        container.container_pdfname
+    )
+    return serve_pdf_file(pdf_path, container.container_pdfname)
 
 # print advance invoice
 def print_original_invoice(request, container_id):
@@ -83,17 +69,12 @@ def print_original_invoice(request, container_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOLDER, container.invoice_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{container.invoice_pdfname}"'
-        return response
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.INVOICE_FOLDER,
+        container.invoice_pdfname
+    )
+    return serve_pdf_file(pdf_path, container.invoice_pdfname)
 
 # print invoice to omar
 def print_converted_invoice(request, container_id):
@@ -103,21 +84,15 @@ def print_converted_invoice(request, container_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    invoice_dir  = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.ORDER_CONVERTED_FOLDER)
-    os.makedirs(invoice_dir , exist_ok=True)  # 如果目录不存在，则创建
+    invoice_dir = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.ORDER_CONVERTED_FOLDER
+    )
+    ensure_dir_exists(invoice_dir)
 
     # 构建完整 PDF 文件路径
-    pdf_path = os.path.join(invoice_dir, container.customer_invoice_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{container.customer_invoice_pdfname}"'
-        return response
+    pdf_path = os.path.join(invoice_dir, container.customer_invoice_pdfname)    
+    return serve_pdf_file(pdf_path, container.customer_invoice_pdfname)
 
 # generate invoice for omar
 def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, isClassisSplit = 0, isPrepull = 0):
@@ -158,11 +133,12 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
             return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
         # 构建PDF文件路径
-        input_pdf_path  = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOLDER, container.invoice_pdfname)    
-        # 检查文件是否存在
-        if not os.path.exists(input_pdf_path ):
-            return HttpResponse("PDF文件未找到", status=404)
-        
+        input_pdf_path = get_media_path(
+            constants_address.UPLOAD_DIR_invoice,
+            constants_address.INVOICE_FOLDER,
+            container.invoice_pdfname
+        )
+
         # 打开原始 PDF
         original_doc  = fitz.open(input_pdf_path)
         amount_items = []
@@ -237,16 +213,32 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
     # 生成客户发票 PDF（共用）
     # ============================
     new_filename = f"{container.container_id}.pdf"
-    output_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.CUSTOMER_INVOICE_FOLDER)
-    output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
+    output_dir = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.CUSTOMER_INVOICE_FOLDER
+    )
+    output_file_path = os.path.join(output_dir, new_filename)
     converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull)
-    
     # 打开并读取PDF文件
-    with open(output_file_path , 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{new_filename}"'
-        return response
+    return serve_pdf_file(output_file_path, new_filename)
 
+def print_clearence_invoice(request, container_id):
+    container = get_object_or_404(Container, container_id=container_id)
+    print("----------print_clearence_invoice----------")
+    print("container: ", container)
+    print("container.clearance_pdfname: ", container.clearance_pdfname)
+    if not container.clearance_pdfname:
+        return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
+
+    # 构建PDF文件路径
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_container,
+        constants_address.CLEARANCE_INVOICE_FOLDER,
+        container.clearance_pdfname,
+        container.clearance_pdfname
+    )
+    print("pdf_path: ", pdf_path)
+    return serve_pdf_file(pdf_path, container.clearance_pdfname)
 
 # upload advance invoice
 def edit_invoice_file(request, container_id):
@@ -259,14 +251,15 @@ def edit_invoice_file(request, container_id):
     try:
         # 保存文件
         container.invoice_pdfname = invoice_file.name
-        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOLDER, invoice_file.name)
-        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
-        with open(full_path, 'wb+') as destination:
-            for chunk in invoice_file.chunks():
-                destination.write(chunk)
+        file_path = get_media_path(
+            constants_address.UPLOAD_DIR_invoice,
+            constants_address.INVOICE_FOLDER
+        )
+        save_uploaded_file(invoice_file, file_path)
 
         # 解析发票内容
-        text = extract_text_from_pdf(file_path)
+        new_file_path = os.path.join(file_path, invoice_file.name)
+        text = extract_text_from_pdf(new_file_path)
         data = extract_invoice_data(text)
 
         # 更新 container 部分字段（不保存付款相关信息）
@@ -306,10 +299,10 @@ def edit_ladingcargo_invoice_file(request, container_id):
     invoice_duedate = invoice_duedate or None
 
     if invoice_date:
-        invoice_date = datetime.strptime(invoice_date, "%Y-%m-%d").date()
+        invoice_date = parse_date(invoice_date)
 
     if invoice_duedate:
-        invoice_duedate = datetime.strptime(invoice_duedate, "%Y-%m-%d").date()
+        invoice_duedate = parse_date(invoice_duedate)
 
     if not invoice_file:
         return HttpResponse("No file uploaded.", status=404)
@@ -317,11 +310,12 @@ def edit_ladingcargo_invoice_file(request, container_id):
     try:
         # 保存文件
         container.invoice_pdfname = invoice_file.name
-        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_FOLDER, invoice_file.name)
-        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
-        with open(full_path, 'wb+') as destination:
-            for chunk in invoice_file.chunks():
-                destination.write(chunk)
+        full_path = get_media_path(
+            constants_address.UPLOAD_DIR_invoice,
+            constants_address.INVOICE_FOLDER,
+            invoice_file.name
+        )
+        save_uploaded_file(invoice_file, full_path, invoice_file.name)
 
         # 不用解析发票内容，价格为450
 
@@ -350,16 +344,15 @@ def edit_customer_invoice_file(request, container_id):
 
     try:        
         container.customer_invoice_pdfname = invoice_file.name
-        file_path = os.path.join(constants_address.UPLOAD_DIR_invoice, constants_address.ORDER_CONVERTED_FOLDER, invoice_file.name) 
-        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
-
-        # 保存文件
-        with open(full_path, 'wb+') as destination:
-            for chunk in invoice_file.chunks():
-                destination.write(chunk)
+        full_path = get_media_path(
+            constants_address.UPLOAD_DIR_invoice,
+            constants_address.ORDER_CONVERTED_FOLDER
+        )
+        save_uploaded_file(invoice_file, full_path, invoice_file.name)
 
         # 解析 PDF 内容
-        text = extract_text_from_pdf(file_path)
+        new_file_path = os.path.join(file_path, invoice_file.name)
+        text = extract_text_from_pdf(new_file_path)
         data = extract_customer_invoice_data(text)
 
         # 更新模型字段

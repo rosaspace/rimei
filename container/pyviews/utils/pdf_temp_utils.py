@@ -2,7 +2,7 @@ import tempfile
 import os
 
 from reportlab.platypus import SimpleDocTemplate
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import letter
 
 def create_temp_pdf(elements):
     """

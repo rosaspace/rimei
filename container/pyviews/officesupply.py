@@ -14,7 +14,7 @@ from ..models import (
 )
 
 from .utils.getPermission import get_user_permissions
-
+from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file, serve_pdf_file
 
 def office_supply_add(request):
     if request.method == "POST":
@@ -57,17 +57,13 @@ def office_supply_edit(request, pk):
 
             print(f"Uploaded PDF file name: {uploaded_file.name}")
 
-            save_dir = os.path.join(
-                settings.MEDIA_ROOT,
+            save_dir = get_media_path(
                 constants_address.UPLOAD_DIR_invoice,
-                constants_address.INVOICE_OFFICE_SUPPLY,
+                constants_address.INVOICE_OFFICE_SUPPLY
             )
-            os.makedirs(save_dir, exist_ok=True)
-
+            ensure_dir_exists(save_dir)
             file_path = os.path.join(save_dir, uploaded_file.name)
-            with open(file_path, "wb+") as f:
-                for chunk in uploaded_file.chunks():
-                    f.write(chunk)
+            save_uploaded_file(uploaded_file, file_path, uploaded_file.name)
 
         record.save()
 
@@ -120,17 +116,12 @@ def print_original_officesupply_invoice(request, so_num):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_OFFICE_SUPPLY, order.storage_pdf)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{order.storage_pdf}"'
-        return response
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.INVOICE_OFFICE_SUPPLY,
+        order.storage_pdf
+    )
+    return serve_pdf_file(pdf_path, order.storage_pdf)
 
 def delete_officesupply_invoice(request, so_num):
     office_supply_record = get_object_or_404(OfficeSupplyRecord, pk=so_num)

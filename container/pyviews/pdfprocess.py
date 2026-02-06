@@ -3,9 +3,7 @@ import fitz  # PyMuPDF 解析 PDF
 import math
 
 from datetime import datetime, timedelta
-from io import BytesIO
 
-from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
@@ -14,27 +12,21 @@ from ..constants import constants_address
 
 from .utils.pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page, print_bol_template, print_weekly_droplist_on_one_page, print_mcd_template
 from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
-
+from .utils.file_utils import get_media_path, ensure_dir_exists, serve_pdf_file
 
 # Print Order
 def print_original_order(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
-
     if not order.order_pdfname:
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.ORDER_FOLDER, order.order_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{order.order_pdfname}"'
-        return response
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_order,
+        constants_address.ORDER_FOLDER,
+        order.order_pdfname
+    )
+    return serve_pdf_file(pdf_path, order.order_pdfname)
 
 # Print Convert Order
 def print_converted_order(request, so_num):
@@ -44,17 +36,18 @@ def print_converted_order(request, so_num):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.ORDER_FOLDER, order.order_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    converted_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.ORDER_CONVERTED_FOLDER)
-    os.makedirs(converted_dir, exist_ok=True)  # 确保目录存在
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_order,
+        constants_address.ORDER_FOLDER,
+        order.order_pdfname
+    )
+    converted_dir = get_media_path(
+        constants_address.UPLOAD_DIR_order,
+        constants_address.ORDER_CONVERTED_FOLDER
+    )
+    ensure_dir_exists(converted_dir)
 
-    base_name, ext = os.path.splitext(order.order_pdfname)
-    updated_pdf_name = f"{base_name}_updated.pdf"
+    updated_pdf_name = f"{order.order_pdfname}_updated.pdf"
     updated_pdf_path = os.path.join(converted_dir, updated_pdf_name)
     doc = fitz.open(pdf_path)
 
@@ -87,10 +80,7 @@ def print_converted_order(request, so_num):
     doc.save(updated_pdf_path)
     doc.close()
     
-    with open(updated_pdf_path, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{updated_pdf_name}"'
-        return response
+    return serve_pdf_file(updated_pdf_path, updated_pdf_name)
 
 # Print Order Label
 def print_order_label(request, so_num):
@@ -100,14 +90,17 @@ def print_order_label(request, so_num):
     original_label_count = label_count  # 用于总数显示
 
     # 构建PDF文件路径
-    label_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.LABEL_FOLDER)
-    os.makedirs(label_dir, exist_ok=True)  # 如果目录不存在，则创建
+    label_dir = get_media_path(
+        constants_address.UPLOAD_DIR_order,
+        constants_address.LABEL_FOLDER
+    )
+    ensure_dir_exists(label_dir)
     
     filename = os.path.join(label_dir, f"{so_num}.pdf")  # Save inside "label" folder
     c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
 
     # Set font
-    c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
+    c.setFont(constants_address.font_Helvetica_Bold, constants_address.FONT_SIZE)
     
     y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Start from the top of the page
     labels_on_page = 0  # Track labels per page
@@ -117,7 +110,7 @@ def print_order_label(request, so_num):
     while label_count > 0:
         if not first_page:  
             c.showPage()  # Create a new page *only if necessary*
-            c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)  # Reset font on new page
+            c.setFont(constants_address.font_Helvetica_Bold, constants_address.FONT_SIZE)  # Reset font on new page
             y_position = constants_address.PAGE_HEIGHT - constants_address.MARGIN_TOP  # Reset y position
             labels_on_page = 0  # Reset row counter
 
@@ -140,7 +133,7 @@ def print_order_label(request, so_num):
                 text_y = y_position - (constants_address.LABEL_HEIGHT / 2) - 20
                 
                 # Set font and draw text
-                c.setFont("Helvetica-Bold", constants_address.FONT_SIZE)
+                c.setFont(constants_address.font_Helvetica_Bold, constants_address.FONT_SIZE)
                 c.drawCentredString(text_x, text_y, so_num)
     
                 # Draw label borders (for testing)
@@ -148,7 +141,7 @@ def print_order_label(request, so_num):
                     c.rect(x, y_position - constants_address.LABEL_HEIGHT, constants_address.LABEL_WIDTH, constants_address.LABEL_HEIGHT)
 
                 # Add smaller text for container_id, lot_number, and current date below the label
-                c.setFont("Helvetica", constants_address.FONT_SIZE - 30)  # Smaller font size for the new text
+                c.setFont(constants_address.font_Helvetica, constants_address.FONT_SIZE - 30)  # Smaller font size for the new text
                 label_number_text = f"{label_index}/{original_label_count}"
                 
                 c.drawCentredString(text_x, text_y - 30, label_number_text)
@@ -203,8 +196,11 @@ def print_order_bol(request, so_num):
     ]
 
     # 保存路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.BOL_FOLDER)
-    os.makedirs(pdf_path, exist_ok=True)  # 如果目录不存在，则创建
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_order,
+        constants_address.BOL_FOLDER
+    )
+    ensure_dir_exists(pdf_path)
 
     filename = os.path.join(pdf_path, f"{container_info['SO Number']}.pdf")
     title = f"Order - {container_info['SO Number']}"
@@ -226,12 +222,11 @@ def print_order_mcd(request, so_num):
     order_items = OrderItem.objects.filter(order=order)
 
     # 输出路径
-    pdf_path = os.path.join(
-        settings.MEDIA_ROOT,
+    pdf_path = get_media_path(
         constants_address.UPLOAD_DIR_order,
         constants_address.MCD_FOLDER
     )
-    os.makedirs(pdf_path, exist_ok=True)
+    ensure_dir_exists(pdf_path)
 
     file_path = os.path.join(pdf_path, f"mcd_{so_num}.pdf")
 
@@ -244,7 +239,7 @@ def print_order_mcd(request, so_num):
         "07604-034": "GF041124-S",
         "07605-039": "GF041124-M",
         "07606-039": "GF052015-L",
-        "07607-024": "GF052015-XL",
+        "07607-024": "GF082625-XL",
         "07326-024": "GF101025-B",
         # Add more mappings if needed
     }
@@ -252,12 +247,12 @@ def print_order_mcd(request, so_num):
     # ✅ Logo 和标题
     if os.path.exists(constants_address.GF_LOGO_PATH):
         p.drawImage(constants_address.GF_LOGO_PATH, 40, y - 60, width=100, height=50, preserveAspectRatio=True, mask='auto')
-    p.setFont("Helvetica-Bold", 20)
+    p.setFont(constants_address.font_Helvetica_Bold, 20)
     p.drawString(220, y, "Packing Slip")
     y -= 80
 
     # ✅ 公司地址
-    p.setFont("Helvetica", 11)
+    p.setFont(constants_address.font_Helvetica, 11)
     for line in constants_address.GF_ADDRESS:
         p.drawString(40, y, line)
         y -= 15
@@ -284,11 +279,11 @@ def print_order_mcd(request, so_num):
     p.rect(box_x, box_top_y - box_height, 300, box_height)
 
     # 绘制标题行 “Ship to:”
-    p.setFont("Helvetica-Bold", 11)
+    p.setFont(constants_address.font_Helvetica_Bold, 11)
     p.drawString(box_x + 5, box_top_y - line_height, "Ship to:")
 
     # 写入文字（从 top_y - line_height 开始写入）
-    p.setFont("Helvetica", 11)
+    p.setFont(constants_address.font_Helvetica, 11)
     text_y = box_top_y - (2 * line_height)
     for line in ship_lines:
         p.drawString(box_x + 5, text_y, line.strip())  # 加点 padding
@@ -331,17 +326,12 @@ def print_stored_file(request, order_id):
         return HttpResponse("❌ 当前记录没有 PDF 文件，请先上传。")
 
     # 构建PDF文件路径
-    pdf_path = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.STORED_FOLDER, order.invoice_pdfname)
-    
-    # 检查文件是否存在
-    if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
-    
-    # 打开并读取PDF文件
-    with open(pdf_path, 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{order.order_pdfname}"'
-        return response
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_order,
+        constants_address.STORED_FOLDER,
+        order.invoice_pdfname
+    )
+    return serve_pdf_file(pdf_path, order.invoice_pdfname)
 
 
 # Print forklift BOL
@@ -358,12 +348,11 @@ def print_forklift_bol(request):
     delivery_date = datetime.fromisoformat(delivery_date_str)
 
     # 输出路径
-    pdf_path = os.path.join(
-        settings.MEDIA_ROOT,
-        constants_address.UPLOAD_DIR_temp, 
-        constants_address.Forklift_FOLDER,
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_temp,
+        constants_address.Forklift_FOLDER
     )
-    os.makedirs(pdf_path, exist_ok=True)
+    ensure_dir_exists(pdf_path)
 
     file_path = os.path.join(
         pdf_path,
@@ -379,7 +368,7 @@ def print_forklift_bol(request):
         "Size": "N/A",
         "ShortName": "Forklift",
         "Name": "Forklift",
-        "Qty": "3",
+        "Qty": "4",
         "PLTS": "",
     })
 
@@ -388,7 +377,7 @@ def print_forklift_bol(request):
         "Ship From": constants_address.ssa_address,
         "Bill To": constants_address.ssa_address,
         "Ship To": ship_to,
-        "Total LBS": str(num_trucks * 8000),
+        "Total LBS": str(4 * 8000),
     }
 
     certification_notes = [

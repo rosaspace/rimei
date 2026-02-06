@@ -4,7 +4,6 @@ import os
 from datetime import datetime, date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
@@ -15,10 +14,12 @@ from django.views.decorators.http import require_http_methods
 
 from ..constants import constants_address, constants_view
 from ..models import RMOrder, RMCustomer, OrderImage, RMProduct, OrderItem, UserAndPermission
-from .utils.getPermission import get_user_permissions
-from .utils.pdfextract import get_product_qty_with_inventory_from_order, extract_order_info, extract_items_from_pdf, get_product_qty_with_inventory
-from .utils.pdfgenerate import extract_text_from_pdf, converter_metal_invoice
 
+from .utils.getPermission import get_user_permissions
+from .utils.invoice_utils import get_product_qty_with_inventory_from_order, extract_order_info, extract_items_from_pdf, get_product_qty_with_inventory
+from .utils.pdfgenerate import extract_text_from_pdf, converter_metal_invoice
+from .utils.date_utils import get_week_range, parse_date
+from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file, serve_pdf_file
 
 def add_order(request):
     if request.method == "POST":
@@ -185,14 +186,10 @@ def edit_order(request, so_num):
                     print(f"Uploaded PDF file name: {order.order_pdfname}")
 
                     # 构造保存路径
-                    order_dir = os.path.join(settings.MEDIA_ROOT, "orders", "ORDER")
-                    os.makedirs(order_dir, exist_ok=True)  # 确保目录存在
-                    file_path = os.path.join(order_dir, uploaded_file.name)
-
-                    # 保存文件
-                    with open(file_path, 'wb+') as destination:
-                        for chunk in uploaded_file.chunks():
-                            destination.write(chunk)
+                    order_dir = get_media_path("orders", "ORDER")
+                    # ensure_dir_exists(order_dir)
+                    # file_path = os.path.join(order_dir, uploaded_file.name)
+                    save_uploaded_file(uploaded_file, order_dir, uploaded_file.name)
                 
                 if 'invoice_pdf' in request.FILES:
                     uploaded_file = request.FILES['invoice_pdf']
@@ -202,14 +199,13 @@ def edit_order(request, so_num):
                     print(f"Uploaded Invoice PDF file name: {order.invoice_pdfname}")
 
                     # 构造保存路径
-                    order_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order, constants_address.STORED_FOLDER)
-                    os.makedirs(order_dir, exist_ok=True)  # 确保目录存在
+                    order_dir = get_media_path(
+                        constants_address.UPLOAD_DIR_order,
+                        constants_address.STORED_FOLDER
+                    )
+                    ensure_dir_exists(order_dir)
                     file_path = os.path.join(order_dir, uploaded_file.name)
-
-                    # 保存文件
-                    with open(file_path, 'wb+') as destination:
-                        for chunk in uploaded_file.chunks():
-                            destination.write(chunk)
+                    save_uploaded_file(uploaded_file, file_path, uploaded_file.name)
 
                 order.save()
 
@@ -260,18 +256,15 @@ def upload_orderpdf(request):
     if request.method == "POST" and request.FILES.get("pdf_file"):
         pdf_file = request.FILES["pdf_file"]
 
-        upload_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_order)  # 确保路径在 MEDIA_ROOT 目录下
+        upload_dir = get_media_path(constants_address.UPLOAD_DIR_order, constants_address.ORDER_FOLDER)
+        ensure_dir_exists(upload_dir)
 
-        # ✅ 如果目录不存在，则创建
-        if not os.path.exists(upload_dir):
-            os.makedirs(upload_dir)
-
-        file_path = os.path.join(constants_address.UPLOAD_DIR_order, constants_address.ORDER_FOLDER, pdf_file.name)
+        file_path = os.path.join(upload_dir, pdf_file.name)
 
         # 保存文件
         with default_storage.open(file_path, "wb+") as destination:
             for chunk in pdf_file.chunks():
-                destination.write(chunk)
+                destination.write(chunk) 
 
         # 解析 PDF
         extracted_text = extract_text_from_pdf(file_path)
@@ -282,13 +275,13 @@ def upload_orderpdf(request):
 
         # Convert to a datetime object
         if isinstance(order_date, str):
-            order_date = datetime.strptime(order_date, "%Y-%m-%d").date()  # Convert to date
+            order_date = parse_date(order_date) if order_date else date.today()
         elif isinstance(order_date, datetime):
             order_date = order_date.date()  # Convert datetime to date
         elif not isinstance(order_date, date):
             order_date = date.today()  # Default fallback if somehow not a date
         if isinstance(pickup_date, str):
-            pickup_date = datetime.strptime(pickup_date, "%Y-%m-%d").date()  # Convert to date
+            pickup_date = parse_date(pickup_date) if pickup_date else date.today()
         elif isinstance(pickup_date, datetime):
             pickup_date = pickup_date.date()  # Convert datetime to date
         elif not isinstance(pickup_date, date):
@@ -365,15 +358,15 @@ def print_metal_invoice(request, order_id, isInvoice=0, discount_percent=20):
 
     # 构造新的文件路径
     new_filename = f"{order.so_num}.pdf"
-    output_dir = os.path.join(settings.MEDIA_ROOT, constants_address.UPLOAD_DIR_invoice, constants_address.INVOICE_METAL_ORDER)
+    output_dir = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.INVOICE_METAL_ORDER
+    )
     output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
     converter_metal_invoice(order, amount_items, output_dir, new_filename, isInvoice, discount_percent)
     
     # 打开并读取PDF文件
-    with open(output_file_path , 'rb') as pdf:
-        response = HttpResponse(pdf.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{new_filename}"'
-        return response
+    return serve_pdf_file(output_file_path, new_filename)
 
 # order
 @login_required(login_url='/login/')
@@ -382,16 +375,14 @@ def rimeiorder_view(request):
     customers = RMCustomer.objects.all().order_by('name')
     user_permissions = get_user_permissions(request.user) 
 
-    today = date.today()
-    # 计算本周的周一和周日
-    start_of_week = today - timedelta(days=today.weekday())   # 本周一
-    end_of_week = start_of_week + timedelta(days=6)           # 本周日
-    # 下周的时间范围
-    next_start_of_week = start_of_week + timedelta(days=7)
-    next_end_of_week = next_start_of_week + timedelta(days=6)
-    # 下下周
-    next2_start_of_week = start_of_week + timedelta(days=14)
-    next2_end_of_week = next2_start_of_week + timedelta(days=6)
+    week_info = get_week_range()
+    today = week_info['start']
+    start_of_week = week_info['start']
+    end_of_week = week_info['end']
+    next_start_of_week = week_info['next_start']
+    next_end_of_week = week_info['next_end']
+    next2_start_of_week = week_info['next2_start']
+    next2_end_of_week = week_info['next2_end']
 
     customer_name = request.GET.get('customer_name')
     is_canceled = request.GET.get('is_canceled')

@@ -175,7 +175,7 @@
                 </div>
             </div>
 
-            <div class="row">
+            <div class="row mb-4">
                 <div class="col-md-1">
                     <label for="plts" class="form-label">PLTS</label>
                     <input type="number" class="form-control" id="plts" name="plts" 
@@ -205,7 +205,48 @@
                 </div>
             </div>
 
+            <hr class="my-2 border-2 opacity-100">
+            <h4>Edit Invoice</h4>
+
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <label for="clearance_id" class="form-label">Invoice ID</label>
+                    <input type="text" class="form-control" id="clearance_id" name="clearance_id" 
+                        value="{{ container.clearance_id }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="clearance_pdfname" class="form-label">Invoice PDF</label>
+                    <input type="file" class="form-control" id="clearance_pdfname" name="clearance_pdfname" accept="application/pdf">
+                    {% if container.clearance_pdfname %}
+                        <p class="text-muted mb-0">{{ container.clearance_pdfname }}</p>
+                    {% endif %}                    
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="clearance_price">Price</label>
+                    <input type="text" id="clearance_price" name="clearance_price" class="form-control" value="{{ container.clearance_price }}">
+                </div>
+
+                <div class="col-md-3">
+                    <label for="clearance_payment_date" class="form-label">Payment Date</label>
+                    <input type="date" class="form-control" id="clearance_payment_date" name="clearance_payment_date" 
+                        value="{{ container.clearance_payment_date|date:'Y-m-d' }}">
+                </div>                
+            </div>
+
             <div class="row mb-2 align-items-center">
+                <div class="col-md-3 d-flex">
+                    <div class="form-check">
+                        <input type="checkbox"
+                            class="form-check-input"
+                            id="clearance_ispay"
+                            name="clearance_ispay"
+                            {% if container.clearance_ispay %}checked{% endif %}>
+                        <label class="form-check-label ms-1" for="clearance_ispay">
+                            Clearance Ispay
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Update Inventory（居中） -->
                 <div class="col-md-3 d-flex">
                     <div class="form-check">
@@ -221,7 +262,7 @@
                 </div>
 
                 <!-- Description -->
-                <div class="col-md-9">
+                <div class="col-md-6">
                     <label for="description" class="form-label mb-1">Description</label>
                     <input type="text"
                         class="form-control"

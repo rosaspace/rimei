@@ -2,7 +2,7 @@ import calendar
 import datetime
 import pandas as pd
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from datetime import date, timedelta
 
 from django.db.models import Case, When, Value, FloatField, F, ExpressionWrapper, Sum, Q, Min, Max, Count
@@ -14,23 +14,9 @@ from ..models import Container, Employee, ClockRecord, ContainerItem, OrderItem,
 
 from .inventory_count import get_quality, get_product_qty
 from .utils.getPermission import get_user_permissions
+from .utils.date_utils import month_workdays
 
 def statistics_invoice(request):
-    # containers = Container.objects.filter(
-    #     Q(ispay=True, customer_ispay=True)
-    # ).exclude(
-    #     logistics=2
-    # ).annotate(
-    #     # 添加价格差字段
-    #     price_diff=Case(
-    #     When(customer_price__lt=F('price'), then=Value(0)),
-    #     default=ExpressionWrapper(
-    #         F('customer_price') - F('price'),
-    #         output_field=FloatField()
-    #     ),
-    #     output_field=FloatField()
-    #     )
-    # ).order_by('-payment_date')
 
     containers = Container.objects.exclude(
         customer=6
@@ -364,22 +350,6 @@ def statistics_outbound_metal(request):
         'chart_datasets': chart_datasets,  # for chart
         'user_permissions': user_permissions
     })
-
-def month_workdays(dt) -> int:
-    """
-    计算指定年月中，周一到周五的工作日数量（不含周末）
-    """
-    year = dt.year
-    month = dt.month
-
-    total_days = calendar.monthrange(year, month)[1]
-    workdays = 0
-    for day in range(1, total_days + 1):
-        weekday = date(year, month, day).weekday()
-        # weekday: 0=周一, ..., 6=周日，排除周六(5)和周日(6)
-        if weekday < 5:
-            workdays += 1
-    return workdays
 
 def statistics_mcd_trend(request):
 

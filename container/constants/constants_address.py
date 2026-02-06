@@ -125,6 +125,7 @@ UPLOAD_DIR_orderpallets = "orderpallets/"
 CHECKLIST_FOLDER = "checklist/"
 DO_FOLDER = "DO/"
 ORIGINAL_DO_FOUDER = "original"
+CLEARANCE_INVOICE_FOLDER = "clearence/"
 
 # INVOICE中的二级目录
 INVOICE_AP = "APInvoice"
@@ -151,8 +152,8 @@ Tax_rate = Decimal("0.0825")   # ← 税率，可自行调整
 Credit_rate = Decimal("1.03")
 
 # Font size
-FONT_SIZE = 60  # Larger font size
-FONT_SIZE_SMALL =  42  # Larger font size
+FONT_SIZE = 64  # Larger font size
+FONT_SIZE_SMALL =  46  # Larger font size
 # FONT_SIZE = 30  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size

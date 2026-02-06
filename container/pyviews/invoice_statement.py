@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, date, timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -13,7 +14,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import Image, Spacer, Table, TableStyle, Paragraph
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
-
+from ..constants import constants_address
 from ..constants import constants_view
 from ..models import Container, InvoiceCustomer, LogisticsCompany, ContainerStatement
 
@@ -91,6 +92,9 @@ def statement_selected_invoices(request):
 
         containers = [cs.container for cs in container_statements]
         total_price = sum(c.price or 0 for c in containers)
+        total_customer_price = sum(c.customer_price or 0 for c in containers)
+        total_clearance_price = sum(c.clearance_price or 0 for c in containers)
+        print("container number: ", len(containers))
 
         return render(
             request,
@@ -98,6 +102,8 @@ def statement_selected_invoices(request):
             {
                 "containers": containers,
                 "total_price": total_price,
+                "total_customer_price": total_customer_price,
+                "total_clearance_price": total_clearance_price,
                 "current_date": datetime.now(),
                 "statement_number": statement_number,
             }
@@ -167,7 +173,7 @@ def print_statement_invoice_pdf(request):
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, 0), constants_address.font_Helvetica_Bold),
         ("FONTSIZE", (0, 0), (-1, -1), 12),  # ✅ 设置字体大小为12
         ("LEADING", (0, 0), (-1, -1), 14),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),              # 增加下边距
@@ -240,11 +246,82 @@ def print_statement_customer_invoice_pdf(request):
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, 0), constants_address.font_Helvetica_Bold),
         ("FONTSIZE", (0, 0), (-1, -1), 12),  # ✅ 设置字体大小为12
         ("LEADING", (0, 0), (-1, -1), 14),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),              # 增加下边距
         ("TOPPADDING", (0, 0), (-1, -1), 6),                 # 增加上边距
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+
+    elements.append(table)
+
+    # ✅ 创建临时文件
+    temp_path = create_temp_pdf(elements)
+
+    # ✅ 读取 PDF 文件并返回
+    new_filename = "invoice_statement.pdf"
+    with open(temp_path, "rb") as pdf_file:
+        response = HttpResponse(pdf_file.read(), content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="{new_filename}"'
+
+    cleanup_temp_file(temp_path)
+    return response
+
+def print_statement_clearance_pdf(request):
+    if request.method == "POST":
+        selected_ids = request.POST.getlist("selected_ids")
+    elif request.method == "GET":
+        selected_ids = request.GET.getlist("selected_ids")
+    else:
+        return redirect("invoice_unpaid") 
+
+    if not selected_ids:
+        return HttpResponse("No container IDs provided.", status=400)
+
+    containers = Container.objects.filter(container_id__in=selected_ids)
+    total_price = sum([c.clearance_price or 0 for c in containers])
+
+    # 组织Table
+    elements = []
+
+    # 标题
+    large_title_style = ParagraphStyle(
+        name="LargeTitle",
+        fontSize=20,  # 设置大标题字体大小
+        leading=24
+    )
+    elements.append(Paragraph(f"Clearance Payment Statement - {datetime.now().strftime('%m/%d/%Y')}", large_title_style))
+    elements.append(Spacer(1, 12))
+
+    # 表格数据
+    index = 0
+    data = [["ID", "Container#", "Customer", "Clearance#", "Price", "Paid Date"]]
+    for c in containers:
+        index += 1
+        data.append([
+            index,
+            c.container_id,
+            c.customer.name,
+            c.clearance_id,
+            f"${c.clearance_price or 0:.2f}",
+            c.clearance_payment_date.strftime("%m/%d/%Y") if c.clearance_payment_date else "",
+        ])
+    # 合计行
+    data.append(["", "Total", "", "", f"${total_price:.2f}", ""])
+
+    table = Table(data, colWidths=[30, 100, 90, 110, 70, 70])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTNAME", (0, 0), (-1, 0), constants_address.font_Helvetica_Bold),
+        ("FONTSIZE", (0, 0), (-1, -1), 12),  # ✅ 设置字体大小为12
+        ("LEADING", (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),              # 增加下边距
+        ("TOPPADDING", (0, 0), (-1, -1), 6),                 # 增加上边距
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),   # 原来默认是 6
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
 
@@ -305,6 +382,39 @@ def paid_invoice_customer(request):
     )
     return redirect("invoice_statement")
 
+def statement_clearance(request):
+    containers = filter_containers(request)
+
+    if not containers.exists():
+        return HttpResponse("No data for statement")
+    
+    total_price = sum(
+        (c.price or Decimal("0.00")) for c in containers
+    )
+    statement_number = "CL" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+    # ✅ 用事务，防止部分写入
+    with transaction.atomic():
+        for container in containers:
+            ContainerStatement.objects.get_or_create(
+                container=container,
+                statement_number=statement_number,
+                defaults={
+                    "statement_date": timezone.now().date(),
+                    "created_at": timezone.now(),
+                    "created_user": request.user.username
+                    if hasattr(request.user, "username")
+                    else str(request.user),
+                }
+            )
+
+    return render(request, constants_view.template_statement_invoice_preview, {
+        "containers": containers, 
+        "total_price": total_price,
+        "current_date": datetime.now(),
+        "statement_number" : statement_number,
+        },)
+
 # generate statement
 def statement_by_filter(request):
     containers = filter_containers(request)
@@ -342,11 +452,13 @@ def statement_by_filter(request):
 # sub function
 def filter_containers(request):
     qs = Container.objects.select_related('customer', 'logistics')
-
+    print("Filtering containers: ", qs)
     customer_id = request.GET.get('customer')
     logistics_id = request.GET.get('logistics')
     ispay = request.GET.get('ispay')
     customer_ispay = request.GET.get('customer_ispay')
+    clearance_ispay = request.GET.get('clearance_ispay')
+    year = request.GET.get('year')
 
     if customer_id:
         qs = qs.filter(customer_id=customer_id)
@@ -355,8 +467,16 @@ def filter_containers(request):
         qs = qs.filter(logistics_id=logistics_id)
 
     if ispay == 'false':
+        print("Filtering ispay=False, invoice_id not empty")
         qs = qs.filter(
             ispay=False,
+            invoice_id__isnull=False
+        ).exclude(invoice_id='')
+
+    if ispay == 'true':
+        print("Filtering ispay=True, invoice_id not empty")
+        qs = qs.filter(
+            ispay=True,
             invoice_id__isnull=False
         ).exclude(invoice_id='')
 
@@ -365,6 +485,23 @@ def filter_containers(request):
             customer_ispay=False,
             customer_invoiceId__isnull=False
         ).exclude(customer_invoiceId='')
+
+    if clearance_ispay == 'false':
+        print("Filtering clearance_ispay=False, clearance_id not empty")
+        qs = qs.filter(
+            clearance_ispay=False,
+            
+        ).exclude(clearance_id='')
+
+    if clearance_ispay == 'true':
+        print("Filtering clearance_ispay=True, clearance_id not empty")
+        qs = qs.filter(
+            clearance_ispay=True,
+            clearance_id__isnull=False
+        ).exclude(clearance_id='')
+
+    if year:
+        qs = qs.filter(clearance_payment_date__year=year)
 
     return qs
 

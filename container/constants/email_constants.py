@@ -54,8 +54,8 @@ ORDER_EMAIL_TEMPLATES = {
 CONTAINER_EMAIL_TEMPLATES = {
     "do": lambda container, signature, is_rimei_user: {
         "recipient": RECIPIENT_ADVANCE,
-        "subject": f"New **  D/O **  {container.container_id} / OMAR- RIMEI",
-        "body": f"Hello,\n\nPlease see new DO for this container going to Lemont.\nContainer: {container.container_id}\nMBL: {container.mbl}\n\nThank you!\n{signature}"
+        "subject": f"New **  D/O **  {container.container_id} / OMAR- SSA",
+        "body": f"Hello,\n\nPlease see new DO for this container going to Lemont and kindly confirm receipt.\nContainer: {container.container_id}\nMBL: {container.mbl}\n\nPlease have your drivers toss the seals in the containers.\nPlease keep tracking it and send trucks accordingly before LFD.\nThank you!\n{signature}"
     },
     "received": lambda container, signature, is_rimei_user: {
         "recipient": RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa,
