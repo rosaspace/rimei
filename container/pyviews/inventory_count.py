@@ -20,24 +20,33 @@ from .utils.getPermission import get_user_permissions
 from .utils.date_utils import sort_by_date
 
 def inventory_view(request):
+    employee_id = request.GET.get('employee')
     inventory_items = RMProduct.objects.filter(type = "Rimei")
-    print("----------inventory_view------------",len(inventory_items))
-    inventory_items_converty = []
-
+    if employee_id:
+        inventory_items = inventory_items.filter(blongTo_id=employee_id)
+    
+    inventory_items_converty = []  
     for product in inventory_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = get_quality(product)
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
         inventory_items_converty.append(productTemp)
-        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
+    
+    # if employee_id:
+    #     employee_id = int(employee_id)
+    #     inventory_items_converty = [item for item in inventory_items_converty if item.blongTo_id == employee_id]
+
+    employees = Employee.objects.filter(belongTo = "CabinetsDepot")
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_inventory, {
         "inventory_items": inventory_items_converty,
+        'employees': employees,
         'user_permissions': user_permissions,
     })
-
+    
 def inventory_diff_view(request):
     inventory_items = RMProduct.objects.filter(type = "Rimei")
 

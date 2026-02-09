@@ -235,7 +235,7 @@ def print_clearence_invoice(request, container_id):
         constants_address.UPLOAD_DIR_container,
         constants_address.CLEARANCE_INVOICE_FOLDER,
         container.clearance_pdfname,
-        container.clearance_pdfname
+        # container.clearance_pdfname
     )
     print("pdf_path: ", pdf_path)
     return serve_pdf_file(pdf_path, container.clearance_pdfname)

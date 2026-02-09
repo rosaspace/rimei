@@ -503,9 +503,8 @@ def print_container_color_label(request, container_num):
                 c.showPage()
                 page_index = 0
 
-        if not continuous:
+        if not continuous and page_index != 0:
             c.showPage()
-            start_index = 0
             page_index = 0
 
     # 返回 PDF

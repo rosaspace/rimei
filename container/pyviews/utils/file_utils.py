@@ -17,7 +17,7 @@ def save_uploaded_file(uploaded_file, save_dir, filename=None):
     if filename is None:
         filename = uploaded_file.name
     
-    ensure_dir_exists(os.path.join(save_dir, filename))
+    ensure_dir_exists(save_dir)
     file_path = os.path.join(save_dir, filename)
     
     with open(file_path, 'wb+') as destination:
@@ -28,7 +28,7 @@ def save_uploaded_file(uploaded_file, save_dir, filename=None):
 def serve_pdf_file(pdf_path, filename=None, inline=True):
     """读取 PDF 文件并返回 HttpResponse"""
     if not os.path.exists(pdf_path):
-        return HttpResponse("PDF文件未找到", status=404)
+        return HttpResponse("PDF文件未找到", status=404) 
     
     if filename is None:
         filename = os.path.basename(pdf_path)

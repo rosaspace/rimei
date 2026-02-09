@@ -153,7 +153,7 @@ Credit_rate = Decimal("1.03")
 
 # Font size
 FONT_SIZE = 64  # Larger font size
-FONT_SIZE_SMALL =  46  # Larger font size
+FONT_SIZE_SMALL =  42  # Larger font size
 # FONT_SIZE = 30  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size
