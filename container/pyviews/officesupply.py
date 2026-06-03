@@ -63,7 +63,7 @@ def office_supply_edit(request, pk):
             )
             ensure_dir_exists(save_dir)
             file_path = os.path.join(save_dir, uploaded_file.name)
-            save_uploaded_file(uploaded_file, file_path, uploaded_file.name)
+            save_uploaded_file(uploaded_file, save_dir, uploaded_file.name)
 
         record.save()
 

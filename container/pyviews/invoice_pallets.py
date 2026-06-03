@@ -89,15 +89,19 @@ def export_pallet_invoice(request):
     # 获取请求中的月份和年份
     select_month = request.GET.get('month')
     select_year = request.GET.get('year')
+
+    totalNumber_str = request.GET.get('totalNumber')
     inboundNumber_str = request.GET.get('inboundNumber')
     outboundNumber_str = request.GET.get('outboundNumber')
     palletstoragenumber_str = request.GET.get('palletstoragenumber')
 
     try:
+        totalNumber = int(totalNumber_str)
         inboundNumber = int(inboundNumber_str)
         outboundNumber = int(outboundNumber_str)
         palletstoragenumber = int(palletstoragenumber_str)
     except (TypeError, ValueError):
+        totalNumber = 0
         inboundNumber = 0  # 或根据你的需求设为其他默认值
         outboundNumber = 0
         palletstoragenumber = 0
@@ -113,14 +117,17 @@ def export_pallet_invoice(request):
 
     # ✅ 出入库托盘数
     total_container,total_in_plts,total_out_plts, gloves_in_data,container_in_orders = get_month_pallet_number(select_month, select_year)
-
+    
     if inboundNumber > total_in_plts :
         total_in_plts = inboundNumber
     if outboundNumber > total_out_plts :
         total_out_plts = outboundNumber
     if palletstoragenumber > total_storage_pallets :
         total_storage_pallets = palletstoragenumber
-    total_plts = total_in_plts + total_out_plts
+        
+    # total_plts = total_in_plts + total_out_plts
+    # if(totalNumber > total_plts):
+    total_plts = totalNumber
 
     # ✅ 总价格
     total_price = total_container * 450 + total_in_plts * 4 + total_out_plts * 4 + total_plts * 12 + total_storage_pallets * 6
@@ -191,11 +198,13 @@ def invoice_template(title,wrapped_container, total_container, total_in_plts,tot
     # 发票信息
     today_str = datetime.today().strftime("%m%d%Y")
     today_display = datetime.today().strftime("%-m/%-d/%Y")
+    due_date_display = (datetime.today() + timedelta(days=30)).strftime("%-m/%-d/%Y")
     invoice_title = Paragraph("INVOICE", invoice_title_style)
     invoice_spacer = Spacer(1, 10)  # 加一个高度为6的空行
     invoice_data = [
         [Paragraph("<b>Invoice#</b>", invoice_cell_style), Paragraph(f"RM{today_str}", invoice_cell_style)],
         [Paragraph("<b>Date</b>", invoice_cell_style), Paragraph(today_display, invoice_cell_style)],
+        [Paragraph("<b>Due Date</b>", invoice_cell_style), Paragraph(due_date_display, invoice_cell_style)],
     ]
     invoice_table = Table(invoice_data, colWidths=[60, 100], hAlign='RIGHT')
     invoice_table.setStyle(TableStyle([

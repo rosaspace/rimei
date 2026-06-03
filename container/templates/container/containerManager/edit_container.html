@@ -28,11 +28,52 @@
             </div>
             <!-- 右侧按钮组，用 ms-auto 推到右边 -->
             <div class="d-flex ms-auto gap-2 flex-wrap">
-                <div class="ms-auto mb-2">
-                    <a href="{% url 'container_email' container.container_id%}?type=do" class="btn btn-primary">
+                <!-- DO 选项 + 提交 -->
+                <form method="get" action="{% url 'container_email' container.container_id %}?type=do"
+                    class="d-flex align-items-center gap-2 mb-2">
+
+                    <!-- 固定 type=do -->
+                    <input type="hidden" name="type" value="do">
+
+                    <!-- 单选按钮 -->
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input"
+                            type="radio"
+                            name="do_option"
+                            value="1"
+                            checked>
+                        <label class="form-check-label">Advance77</label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input"
+                            type="radio"
+                            name="do_option"
+                            value="2">
+                        <label class="form-check-label">LadingCargo</label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input"
+                            type="radio"
+                            name="do_option"
+                            value="3">
+                        <label class="form-check-label">DevenTransport</label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input"
+                            type="radio"
+                            name="do_option"
+                            value="4">
+                        <label class="form-check-label">FreighTech</label>
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <button type="submit" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Send DO Email
-                    </a>
-                </div>
+                    </button>
+                </form>
                 <div class="mb-2">
                     <a href="{% url 'container_email' container.container_id%}?type=empty" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Send Empty

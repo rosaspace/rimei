@@ -20,7 +20,7 @@ def invoice_ap_view(request):
 
     apRecord = InvoiceAPRecord.objects.select_related(
         'vendor', 'company', 'purposefor'
-    ).all().order_by('-due_date')
+    ).all().order_by('-payment_date')
 
     vendor_id = request.GET.get('vendor')
     company_id = request.GET.get('company')
@@ -35,7 +35,7 @@ def invoice_ap_view(request):
     if purpose_id:
         apRecord = apRecord.filter(purposefor_id=purpose_id)
 
-    vendors = InvoiceVendor.objects.all()
+    vendors = InvoiceVendor.objects.all().order_by('name')
     companies = Carrier.objects.all()
     purposefor = InvoicePurposeFor.objects.all()
     user_permissions = get_user_permissions(request.user)    
@@ -125,8 +125,8 @@ def add_ar_invoice(request):
                 )
                 ensure_dir_exists(save_dir)
 
-                file_path = os.path.join(save_dir, pdf_file.name)
-                save_uploaded_file(pdf_file, file_path, pdf_file.name)
+                # file_path = os.path.join(save_dir, pdf_file.name)
+                save_uploaded_file(pdf_file, save_dir, pdf_file.name)
 
             # 校验 + 保存
             ar_invoice.full_clean()  # 🔑 先校验字段
@@ -302,9 +302,9 @@ def add_ap_invoice(request):
     )
 
 # edit paidable invoice
-def edit_ap_invoice(request, invoice_id):
+def edit_ap_invoice(request, pk):
 
-    ap_record = InvoiceAPRecord.objects.get(invoice_id=invoice_id)
+    ap_record = get_object_or_404(InvoiceAPRecord, pk=pk)
     vendor = InvoiceVendor.objects.all()
     receivedcompany = Carrier.objects.all()
     purposefor = InvoicePurposeFor.objects.all()
@@ -344,7 +344,7 @@ def edit_ap_invoice(request, invoice_id):
 
                 # 保存文件
                 file_path = os.path.join(order_dir, uploaded_file.name)
-                save_uploaded_file(uploaded_file, file_path, uploaded_file.name)
+                save_uploaded_file(uploaded_file, order_dir, uploaded_file.name)
 
             ap_record.full_clean()
             ap_record.save()

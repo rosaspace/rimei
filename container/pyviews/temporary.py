@@ -12,7 +12,8 @@ from ..constants import constants_address, constants_view
 from ..constants import email_constants
 from ..models import (
     Container, RMProduct, AlineOrderRecord, RMOrder,
-    InvoiceAPRecord, InvoiceVendor, Carrier, InvoicePurposeFor
+    InvoiceAPRecord, InvoiceVendor, Carrier, InvoicePurposeFor,
+    CabinetProductType
 )
 
 from .utils.pdfgenerate import print_containerid_lot
@@ -292,6 +293,50 @@ def import_accounting(request):
     
     return JsonResponse({"error": "No file uploaded"}, status=400)
 
+def import_cabinettype(request):
+    if request.method == "POST" and request.FILES.get("excel_file"):
+        excel_file = request.FILES["excel_file"]
+
+        # Read the Excel file into a DataFrame
+        df = pd.read_excel(excel_file, engine='openpyxl')
+        df.columns = df.columns.str.strip()
+
+        required_columns = ["name", "pallet_usage"]
+        for col in required_columns:
+            if col not in df.columns:
+                return JsonResponse(
+                    {"error": f"Excel missing column: {col}"},
+                    status=400
+                )
+
+        created_count = 0
+        updated_count = 0
+
+        for _, row in df.iterrows():
+            name = str(row["name"]).strip()
+            pallet_usage = float(row["pallet_usage"])
+
+            # ⭐ 核心：存在就更新，不存在就创建
+            obj, created = CabinetProductType.objects.update_or_create(
+                name=name,
+                defaults={
+                    "pallet_usage": pallet_usage,
+                }
+            )
+
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
+
+        return JsonResponse({
+            "message": "Excel data imported successfully!",
+            "created": created_count,
+            "updated": updated_count
+        })
+    
+    return JsonResponse({"error": "No file uploaded"}, status=400)
+
 # export pallets
 def export_pallet(request):
     # 获取请求中的月份和年份
@@ -376,8 +421,14 @@ def preview_email(request):
     email_type = request.POST.get("action")
     officedepot_id = request.POST.get('officedepot_number')
 
-    is_rimei_user = request.user.username.lower() == "rimei"
-    signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
+    username  = request.user.username.lower()
+    SIGNATURE_MAP = {
+        "rosa": email_constants.SIGNATURE_JING,
+        "rimei": email_constants.SIGNATURE_AVA,
+        "david": email_constants.SIGNATURE_DAVID,
+    }
+    signature = SIGNATURE_MAP.get(username, email_constants.SIGNATURE_JING)
+    is_rimei_user = username in ["rimei", "david"]
 
     current_date = datetime.now().strftime("%m/%d/%Y")
     template_func = email_constants.INVENTORY_EMAIL_TEMPLATES.get(email_type, email_constants.INVENTORY_EMAIL_TEMPLATES["default"])
@@ -394,9 +445,15 @@ def preview_email(request):
 def order_email(request, so_num):
     order = get_object_or_404(RMOrder, so_num=so_num)
     email_type = request.GET.get("type", "shippeout")  # default to 'do' if not provided
-
-    is_rimei_user = request.user.username.lower() == "rimei"
-    signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
+    
+    username  = request.user.username.lower()
+    SIGNATURE_MAP = {
+        "rosa": email_constants.SIGNATURE_JING,
+        "rimei": email_constants.SIGNATURE_AVA,
+        "david": email_constants.SIGNATURE_DAVID,
+    }
+    signature = SIGNATURE_MAP.get(username, email_constants.SIGNATURE_JING)
+    is_rimei_user = username in ["rimei", "david"]
 
     # 获取模板（默认为 shippedout）
     template_func = email_constants.ORDER_EMAIL_TEMPLATES.get(email_type, email_constants.ORDER_EMAIL_TEMPLATES["shippedout"])
@@ -409,11 +466,37 @@ def container_email(request, container_id):
     container = get_object_or_404(Container, container_id=container_id)
     email_type = request.GET.get("type", "do")  # default to 'do' if not provided
 
-    is_rimei_user = request.user.username.lower() == "rimei"
-    signature = email_constants.SIGNATURE_AVA if is_rimei_user else email_constants.SIGNATURE_JING
+    carrier = 0
+    if email_type == "do":
+        try:
+            do_option = int(request.GET.get("do_option", 1))
+        except ValueError:
+            do_option = 1
+
+        if do_option == 1:
+            # A 逻辑
+            carrier = 1
+        elif do_option == 2:
+            # B 逻辑
+            carrier = 2
+        elif do_option == 3:
+            # C 逻辑
+            carrier = 3
+        elif do_option == 4:
+            # C 逻辑
+            carrier = 4
+
+    username  = request.user.username.lower()
+    SIGNATURE_MAP = {
+        "rosa": email_constants.SIGNATURE_JING,
+        "rimei": email_constants.SIGNATURE_AVA,
+        "david": email_constants.SIGNATURE_DAVID,
+    }
+    signature = SIGNATURE_MAP.get(username, email_constants.SIGNATURE_JING)
+    is_rimei_user = username in ["rimei", "david"]
 
     # 获取模板（默认使用 default）
     template_func = email_constants.CONTAINER_EMAIL_TEMPLATES.get(email_type, email_constants.CONTAINER_EMAIL_TEMPLATES["default"])
-    email_data = template_func(container, signature, is_rimei_user)
+    email_data = template_func(container, signature, is_rimei_user, carrier)
 
     return render(request, constants_view.template_temporary, email_data) 

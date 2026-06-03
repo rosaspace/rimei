@@ -16,13 +16,16 @@ template_edit_container = 'container/containerManager/edit_container.html'
 template_edit_simple_container = 'container/containerManager/edit_container_simple.html'
 
 # order
-template_add_order = 'container/rmorder/add_order.html'
-template_edit_simple_order = 'container/rmorder/edit_order_simple.html'
-template_edit_order = 'container/rmorder/edit_order.html'
 template_rmorder = "container/rmorder/rmorder2.html"
+template_rmorder3 = "container/rmorder/rmorder3.html"
 template_simplified_container = 'container/rmorder/simplified_container.html'
 template_simplified_inventory = 'container/rmorder/simplified_inventory.html'
 template_simplified_order = 'container/rmorder/simplified_order.html'
+
+template_add_order = 'container/rmorder/add_order.html'
+template_edit_simple_order = 'container/rmorder/edit_order_simple.html'
+template_edit_order = 'container/rmorder/edit_order.html'
+template_edit_order_noprice = 'container/rmorder/edit_order_noprice.html'
 
 # weekrecord
 template_add_record = 'container/weekrecord/add_record.html'
@@ -61,8 +64,14 @@ template_statistics_outbound = 'container/statistics/outbound_Statistics.html'
 template_statistics_outbound_metal = 'container/statistics/outbound_Statistics_metal.html'
 template_statistics_warehouse = 'container/statistics/statistics_warehouse.html'
 template_statistics_weekrecord = 'container/statistics/weekrecord_Statistics.html'
+template_statistics_aparInvoice = 'container/statistics/aparInvoice_Statistics.html'
+template_statistics_metalCustomerTrend ='container/statistics/metalcustomer_trend.html'
 
 # office supply
 template_officesupply_list = 'container/officesupply/officesupply_list.html'
 template_officesupply_add = 'container/officesupply/officesupply_add.html'
 template_officesupply_edit = 'container/officesupply/officesupply_edit.html'
+
+# cabinets
+template_cabinets_list = 'container/cabinets/cabinets.html'
+template_cabinets_add = 'container/cabinets/add_cabinets.html'

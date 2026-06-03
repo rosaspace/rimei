@@ -20,7 +20,7 @@ from .utils.getPermission import get_user_permissions
 from .utils.date_utils import sort_by_date
 
 def inventory_view(request):
-    employee_id = request.GET.get('employee')
+    employee_id = request.GET.get('employee')    
     inventory_items = RMProduct.objects.filter(type = "Rimei")
     if employee_id:
         inventory_items = inventory_items.filter(blongTo_id=employee_id)
@@ -33,11 +33,6 @@ def inventory_view(request):
 
         inventory_items_converty.append(productTemp)
     inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
-
-    
-    # if employee_id:
-    #     employee_id = int(employee_id)
-    #     inventory_items_converty = [item for item in inventory_items_converty if item.blongTo_id == employee_id]
 
     employees = Employee.objects.filter(belongTo = "CabinetsDepot")
     user_permissions = get_user_permissions(request.user)
@@ -54,19 +49,22 @@ def inventory_diff_view(request):
     for product in inventory_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
-
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
         if productTemp.quantity != productTemp.quantity_for_neworder:
             diff_items.append(productTemp)
 
-        diff_items = sorted(diff_items, key=lambda x: x.quantity_for_neworder)
+    diff_items = sorted(diff_items, key=lambda x: x.quantity_for_neworder)
 
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_inventory, {"inventory_items": diff_items,'user_permissions': user_permissions})
 
 def inventory_metal(request):
+    employee_id = request.GET.get('employee')
     inventory_items = RMProduct.objects.filter(type = "Metal")
+    
+    if employee_id:
+        inventory_items = inventory_items.filter(blongTo_id=employee_id)
 
     inventory_items_converty = []  # 用来存储有差异的库存记录
     for product in inventory_items:
@@ -76,10 +74,40 @@ def inventory_metal(request):
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
         inventory_items_converty.append(productTemp)
-        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
+    employees = Employee.objects.filter(belongTo = "CabinetsDepot")
     user_permissions = get_user_permissions(request.user)
-    return render(request, constants_view.template_inventory, {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {
+        "inventory_items": inventory_items_converty,
+        'employees': employees,
+        'user_permissions': user_permissions})
+
+def inventory_diff_metal(request):
+    employee_id = request.GET.get('employee')
+    inventory_items = RMProduct.objects.filter(type = "Metal")
+    
+    if employee_id:
+        inventory_items = inventory_items.filter(blongTo_id=employee_id)
+
+    inventory_items_converty = []  # 用来存储有差异的库存记录
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
+
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        # if productTemp.quantity != productTemp.quantity_for_neworder:
+        if productTemp.status == 'Short':
+            inventory_items_converty.append(productTemp)
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
+
+    employees = Employee.objects.filter(belongTo = "CabinetsDepot")
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_inventory, {
+        "inventory_items": inventory_items_converty,
+        'employees': employees,
+        'user_permissions': user_permissions})
+
 
 def inventory_mcd(request):
     inventory_items = RMProduct.objects.filter(Q(type="Mcdonalds") | Q(type="Other") | Q(type="MCD"))
@@ -120,6 +148,31 @@ def export_stock(request):
         "inventory_items": inventory_items_converty,
         "user_permissions": user_permissions
     })
+
+def export_metal_stock(request):
+    inventory_items = RMProduct.objects.all()
+    print("----------export_metal_stock------------", len(inventory_items))
+    inventory_items_converty = []
+
+    for product in inventory_items:
+        inbound_list, outbound_list, outbound_actual_list, outbound_stock_list, inbound_actual_list = get_quality(product)
+
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+
+        inventory_items_converty.append(productTemp)
+
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: (x.type, x.name))
+    user_permissions = get_user_permissions(request.user)
+
+    # 🔽 Export to Excel if requested
+    if request.GET.get("export") == "1":
+        return export_metal_inventory_to_excel(inventory_items_converty)
+
+    return render(request, constants_view.template_inventory, {
+        "inventory_items": inventory_items_converty,
+        "user_permissions": user_permissions
+    })
+    
 
 def order_history(request,product_id):
     product = get_object_or_404(RMProduct, id=product_id)
@@ -272,6 +325,7 @@ def edit_product(request,product_id):
         product.type = request.POST.get('type')
         product.price = request.POST.get('price') or 0
         product.blongTo = Employee.objects.get(id=request.POST.get('blongTo'))
+        product.status = request.POST.get('status')
 
         product.save()
 
@@ -361,6 +415,7 @@ def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,o
     product.quantity_for_neworder = total_inbound_actual_quantity - total_outbound_quantity
     product.quantity = total_inbound_actual_quantity - total_outbound_actual_quantity
     product.quantity_to_stock = product.quantity - total_outbound_stock_quantity
+    product.quantity_outbound_stock = total_outbound_stock_quantity
     product.shownumber  = product.quantity_to_stock + product.quantity_diff
     product.availableQTY = product.quantity_for_neworder + product.quantity_diff
     product.pallet = product.Pallet
@@ -398,7 +453,7 @@ def get_quality(product):
     # 插入初始记录到入库列表最前
     inbound_list.insert(0, initial_log)    
 
-    # 出库记录：OrderItem + RMOrder 的 outbound_date
+    # 所有出库记录：OrderItem + RMOrder 的 outbound_date
     outbound_logs = OrderItem.objects.filter(
         product=product,
         order__is_canceled=False  # 排除已取消订单
@@ -512,5 +567,47 @@ def export_inventory_to_excel(items):
     filename = f"Inventory_{today_str}.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+def export_metal_inventory_to_excel(items):
+    today_str = datetime.now().strftime("%Y_%m_%d")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active    
+    ws.title = f"Metal_Inventory_{today_str}"
+
+    # ⭐ 只保留 Metal
+    metal_items = [item for item in items if item.type == "Metal"]
+
+    # Define headers
+    headers = ["Product", "QTY", "QTY removing order", "ShelfRecord"]
+    ws.append(headers)
+
+    for item in metal_items:
+        ws.append([
+            str(item),
+            item.quantity,
+            item.quantity_for_neworder,
+            item.ShelfRecord,
+        ])
+
+    # 自动列宽
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        ws.column_dimensions[get_column_letter(col[0].column)].width = max_len + 2
+
+    # Save to in-memory file
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Create HTTP response
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"Metal_Inventory_{today_str}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
 
 

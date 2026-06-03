@@ -23,7 +23,7 @@
 
     <hr class="my-3 border-2 opacity-100">
 
-    <form id="edit-order-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_order' order.so_num %}" class="needs-validation" novalidate>
+    <form id="edit-order-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_order_full' order.so_num %}" class="needs-validation" novalidate>
         {% csrf_token %}
         
         <div class="row mb-2" >

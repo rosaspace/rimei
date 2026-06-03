@@ -149,7 +149,8 @@ def print_weekly_pickuplist_on_one_page(start_date):
 
             pickup_orders = RMOrder.objects.filter(
                 pickup_date=current_date.date()
-            ).exclude(Q(customer_name="4") | Q(customer_name="19") | Q(is_canceled=True))
+            ).filter(Q(customer_name__classification="Rimei") | Q(is_canceled=True))
+            # ).exclude(Q(customer_name="4") | Q(customer_name="19") | Q(is_canceled=True))
 
             if pickup_orders.exists():
                 pickup_list = [f"{o.so_num} / {o.plts} plts / {o.customer_name}" for o in pickup_orders]
@@ -336,7 +337,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
 
     # --- Invoice Box ---
     # c.rect(350, height - 160 - y_offset, 160, 70)
-    invoice_date = datetime.today()
+    invoice_date = container.invoice_date
     due_date = invoice_date + timedelta(days=30)
     draw_section_header(c, "INVOICE:", 360, height - 75 - y_offset)
     c.drawString(360, height - 90 - y_offset, f"INVOICE NO.: {full_invoice_no}")
@@ -367,6 +368,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
         ["Drayage (FSC all included)", "", "", ""],
         ["Chassis", "", "", ""],
         ["Chassis split", "", "", ""],
+        ["Lift Fee", "", "", ""],
         ["OW TICKET", "", "", ""],
         ["Overweight", "", "", ""],
         ["Pre-pull", "", "", ""],
@@ -376,7 +378,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
         ["Rail storage", "", "", ""],
         ["Detention", "", "", ""],
         ["Drop Off", "", "", ""],
-        ["Dry Run", "", "", ""],
+        ["Dry Run", "", "", ""],        
         ["", "", "TOTAL", ""]
     ]    
 
@@ -517,7 +519,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
 
     # 绘制表格
     table.wrapOn(c, width, height)
-    table.drawOn(c, 40, height - 690 - y_offset)
+    table.drawOn(c, 40, height - 710 - y_offset)
 
 
 
@@ -821,7 +823,7 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
             c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
 
     # ---- Center Title (Invoice / Order) ----
-    title_text = "Invoice" if isInvoice == 1 else "Order"
+    title_text = "Invoice" if isInvoice == 1 else "Delivery Order"
 
     c.setFont(constants_address.font_Helvetica_Bold, 20)
     c.drawCentredString(width / 2, height - 101, title_text)
@@ -844,16 +846,55 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
         # --- Invoice Box ---
         invoice_date = datetime.today()
         due_date = invoice_date + timedelta(days=30)
+        date_expected = (container.pickup_date.strftime('%m/%d/%Y') if container.pickup_date else "N/A")
 
-        invoicenum_x_pos = 390
-        draw_section_header(c, "INVOICE:", invoicenum_x_pos, height - 130 - y_offset)        
-        c.drawString(invoicenum_x_pos, height - 145 - y_offset, f"INVOICE NO.: {full_invoice_no}")
-        c.drawString(invoicenum_x_pos, height - 160 - y_offset, f"INVOICE DATE: {invoice_date.strftime('%m/%d/%Y')}")
-        c.drawString(invoicenum_x_pos, height - 175 - y_offset, f"DUE DATE: {due_date.strftime('%m/%d/%Y')}")
+        label_font = "Helvetica-Bold"
+        value_font = "Helvetica"
+
+        def draw_label_value(c, x, y, label, value):
+            c.setFont(label_font, 10)
+            c.drawString(x, y, label)
+            c.setFont(value_font, 10)
+            c.drawString(x + 80, y, value)   # 95 是标签与值的间距，可自行调
+
+        if isInvoice:
+            invoicenum_x_pos = 390
+            draw_section_header(c, "INVOICE:", invoicenum_x_pos, height - 130 - y_offset)        
+
+            draw_label_value(c, invoicenum_x_pos, height - 145 - y_offset,
+                            "INVOICE NO.: ", full_invoice_no)
+
+            draw_label_value(c, invoicenum_x_pos, height - 160 - y_offset,
+                            "INVOICE DATE: ", invoice_date.strftime('%m/%d/%Y'))
+
+            draw_label_value(c, invoicenum_x_pos, height - 175 - y_offset,
+                            "DUE DATE: ", due_date.strftime('%m/%d/%Y'))
+
+        else:
+            invoicenum_x_pos = 390
+
+            draw_label_value(c, invoicenum_x_pos, height - 130 - y_offset,
+                            "Order Date: ", container.order_date.strftime('%m/%d/%Y'))
+
+            draw_label_value(c, invoicenum_x_pos, height - 145 - y_offset,
+                            "PO#: ", container.po_num)
+
+            draw_label_value(c, invoicenum_x_pos, height - 160 - y_offset,
+                            "SO#: ", container.so_num)
+
+            # draw_label_value(c, invoicenum_x_pos, height - 175 - y_offset,
+            #                 "Ship Via: ", "Warehouse Ship")
+
+            draw_label_value(c, invoicenum_x_pos, height - 175 - y_offset,
+                            "Expected Date: ", date_expected)
 
         # --- Bill To ---
-        bill_to_address = container.bill_to
-        draw_address_block2(c, "BILL TO:", container.bill_to, 40, height - 220 - y_offset)
+        if isInvoice:
+            bill_to_address = container.bill_to
+            draw_address_block2(c, "BILL TO:", container.bill_to, 40, height - 220 - y_offset)
+        else:
+            bill_to_address = container.bill_to
+            draw_address_block2(c, "Customer:", container.bill_to, 40, height - 220 - y_offset)
 
         # --- Consignee ---
         draw_address_block2(c, "SHIP TO:", container.ship_to, invoicenum_x_pos, height - 220 - y_offset)
@@ -874,9 +915,9 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
     # --- Table Data (Dynamic Version) ---
     # table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "CHARGES"]]
     if isInvoice == 1:
-        table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "CHARGES"]]
+        table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "Charges"]]
     else:
-        table_data = [["ITEM", "DESCRIPTION", "QTY", "Price"]]
+        table_data = [["ITEM", "DESCRIPTION", "QTY"]]
     total = Decimal("0.00")
 
     for item, desc, units, rate, charge in amount_items:
@@ -902,14 +943,13 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
             table_data.append([
                 display_item,
                 display_desc,
-                display_units,
-                ""
+                display_units
             ])
 
 
     # --- Build Table ---
     if isInvoice == 1:
-        table = Table(table_data, colWidths=[80, 290, 35, 55, 60])
+        table = Table(table_data, colWidths=[80, 300, 35, 55, 50])
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
@@ -923,7 +963,7 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
         ]))
     else:
         
-        table = Table(table_data, colWidths=[100, 300, 60, 60])
+        table = Table(table_data, colWidths=[100, 360, 60])
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.black),  # 显示边框
@@ -938,7 +978,7 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
 
     table.wrapOn(c, width, height)
 
-    TABLE_TOP_GAP = -10 # 值越大，越靠上
+    TABLE_TOP_GAP = -40 # 值越大，越靠上
     table_top_y = table_start_y + TABLE_TOP_GAP   # 表头位置固定
     table_height = table._height  # 表格真实高度
     table.drawOn(c, 40, table_top_y - table_height)

@@ -4,7 +4,7 @@
 <div class="table-container">
     <div class="row"> 
         <!-- 表格区域 -->
-        <div class="col-md-6">
+        <div class="col-md-4">
             <h2>Outbound Amount List</h2>
             <!-- 表格 -->
             <table class="table table-bordered mt-4">
@@ -27,11 +27,19 @@
             </table>
         </div>
 
-        <!-- 图标 -->
-        <div class="col-md-6">
-            <h2>Outbound Amount Chart</h2>
-            <div style="height: 1150px; width: 100%; max-width: 900px; margin: auto;">
-            <canvas id="outboundChart"></canvas>
+        <!-- 图表 -->
+        <div class="col-md-8">
+            <!-- 标题 + 按钮 同一行 -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="mb-0">Outbound Amount Chart</h2>
+
+                <a href="{% url 'export_metal_stock' %}?export=1" class="btn btn-primary">
+                    Export Metal Inventory
+                </a>
+            </div>
+            <!-- 图表放下面 -->
+            <div style="height: 1150px; width: 100%; max-width: 1500px; margin: auto;">
+              <canvas id="outboundChart"></canvas>
             </div>
         </div>
     </div>

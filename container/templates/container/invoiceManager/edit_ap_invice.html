@@ -17,7 +17,7 @@
     <hr class="my-3 border-2 opacity-100">
 
     <h4>Edit Payable Invoice</h4>
-    <form method="POST" class="needs-validation" enctype="multipart/form-data" action="{% url 'edit_ap_invoice' record.invoice_id %}" novalidate>
+    <form method="POST" class="needs-validation" enctype="multipart/form-data" action="{% url 'edit_ap_invoice' record.id %}" novalidate>
         {% csrf_token %}
         
         <div class="row mb-3">

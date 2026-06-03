@@ -5,6 +5,7 @@ from . import views
 from .pyviews import container, rmorder, pdfprocess, inventory_count, statistics, officesupply
 from .pyviews import user, login, temporary, aline_payment, weekrecord
 from .pyviews import invoice_pallets, invoice_statement, invoice_container, invoice_apar
+from .pyviews import cabinets
 
 urlpatterns = [
     # login
@@ -16,12 +17,14 @@ urlpatterns = [
 
     # inventory count
     path("inventory/", inventory_count.inventory_view, name="inventory"),
-    path("inventory_diff/", inventory_count.inventory_diff_view, name="inventory_diff"), 
+    path("inventory_diff_glove/", inventory_count.inventory_diff_view, name="inventory_diff_glove"), 
     path("inventory_metal/", inventory_count.inventory_metal, name="inventory_metal"), 
+    path("inventory_diff_metal/", inventory_count.inventory_diff_metal, name="inventory_diff_metal"),
     path("inventory_mcd/", inventory_count.inventory_mcd, name="inventory_mcd"), 
 
     path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),# 查看产品历史记录
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    # 导出库存
+    path("export_metal_stock/", inventory_count.export_metal_stock, name="export_metal_stock"),    # 导出库存
     path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),    # 库存总结
     path('edit_product/<int:product_id>/',inventory_count.edit_product,name='edit_product'), # 编辑产品条目
 
@@ -79,7 +82,7 @@ urlpatterns = [
     path("edit_ar_invoice/<int:id>/", invoice_apar.edit_ar_invoice, name="edit_ar_invoice"),
     path("delete_ar_invoice/<str:invoice_id>/", invoice_apar.delete_ar_invoice, name="delete_ar_invoice"),
     path("add_ap_invoice/", invoice_apar.add_ap_invoice, name="add_ap_invoice"),
-    path("edit_ap_invoice/<str:invoice_id>/", invoice_apar.edit_ap_invoice, name="edit_ap_invoice"),
+    path("edit_ap_invoice/<int:pk>/", invoice_apar.edit_ap_invoice, name="edit_ap_invoice"),
     path("delete_ap_invoice/<int:invoice_id>/", invoice_apar.delete_ap_invoice, name="delete_ap_invoice"),
     path("print_original_ap_invoice/<int:so_num>/", invoice_apar.print_original_ap_invoice, name="print_original_ap_invoice"),
     path("print_original_ar_invoice/<int:so_num>/", invoice_apar.print_original_ar_invoice, name="print_original_ar_invoice"),
@@ -96,23 +99,27 @@ urlpatterns = [
     path('update_user_permissions/<str:user_id>/', user.update_user_permissions, name='update_user_permissions'),
     
     # rimei order
-    path("rimeiorder/", rmorder.rimeiorder_view, name="rimeiorder"),
-    path("rimeiorder_metal/", rmorder.rimeiorder_metal, name="rimeiorder_metal"),
+    path("rimeiorder_omar/", rmorder.rimeiorder_view, name="rimeiorder_omar"),
+    path("rimeiorder_metal_full/", rmorder.rimeiorder_metal_full, name="rimeiorder_metal_full"),
     path("rimeiorder_officedepot/", rmorder.rimeiorder_officedepot, name="rimeiorder_officedepot"), 
     path("simplified_view/", rmorder.simplified_view, name="simplified_view"),    
+    path("rimeiorder_metal_simple/", rmorder.rimeiorder_metal_simple, name="rimeiorder_metal_simple"),
 
-    path('add_order/', rmorder.add_order, name='add_order'),
-    path("edit_order/<str:so_num>/", rmorder.edit_order, name="edit_order"), 
+    path('add_order/', rmorder.add_order, name='add_order'),    
     path("upload_orderpdf/", rmorder.upload_orderpdf, name="upload_orderpdf"),
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
     path('print_metal_invoice/<str:order_id>/<int:isInvoice>/',rmorder.print_metal_invoice,name='print_metal_invoice'),
-    
+    path("edit_order_full/<str:so_num>/", rmorder.edit_order_full, name="edit_order_full"), 
+    path("edit_order_simple/<str:so_num>/", rmorder.edit_order_simple, name="edit_order_simple"), 
+
     # Temporary
     path("temporary/", temporary.temporary_view, name="temporary"),
     path("import_inventory/", temporary.import_inventory, name="import_inventory"), 
     path("import_aline/", temporary.import_aline, name="import_aline"), 
     path("import_accounting/", temporary.import_accounting, name="import_accounting"),
+    path("import_cabinettype/", temporary.import_cabinettype, name ="import_cabinettype"),
+
     path('export_pallet/',temporary.export_pallet,name='export_pallet'),    
     path("preview_email/", temporary.preview_email,name="preview_email"), 
     path('order_email/<str:so_num>/', temporary.order_email, name='order_email'),
@@ -141,13 +148,15 @@ urlpatterns = [
     path("export_week_records", weekrecord.export_week_records,name="export_week_records"),
 
     # 统计表
-    path("statistics_invoice", statistics.statistics_invoice,name="statistics_invoice"),
+    path("statistics_invoice_container", statistics.statistics_invoice_container,name="statistics_invoice_container"),
+    path("statistics_invoice_summary", statistics.statistics_invoice_summary,name="statistics_invoice_summary"),
     path("statistics_weekreord", statistics.statistics_weekreord,name="statistics_weekreord"),
     path("statistics_inbound", statistics.statistics_inbound,name="statistics_inbound"),
     path("statistics_outbound", statistics.statistics_outbound,name="statistics_outbound"),
     path("statistics_warehouse", statistics.statistics_warehouse,name="statistics_warehouse"),
     path("statistics_mcd_trend", statistics.statistics_mcd_trend,name="statistics_mcd_trend"),
     path("statistics_outbound_metal", statistics.statistics_outbound_metal,name="statistics_outbound_metal"),
+    path("statistics_metal_customer_trend", statistics.statistics_metal_customer_trend, name="statistics_metal_customer_trend"),
 
     # office supply
     path("office_supply_add", officesupply.office_supply_add,name="office_supply_add"),
@@ -155,4 +164,9 @@ urlpatterns = [
     path("office_supply_edit/<int:pk>/", officesupply.office_supply_edit, name="office_supply_edit"),
     path("print_original_officesupply_invoice/<int:so_num>/", officesupply.print_original_officesupply_invoice, name="print_original_officesupply_invoice"),
     path("delete_officesupply_invoice/<int:so_num>/", officesupply.delete_officesupply_invoice, name="delete_officesupply_invoice"),
+
+    # Cabinets
+    path("cabinets/", cabinets.cabinets_list, name="cabinets"),
+    path("add_cabinets/", cabinets.cabinets_add, name="add_cabinets"),
+    path("upload_cabinetspdf/", cabinets.upload_cabinetspdf, name="upload_cabinetspdf"),
 ]

@@ -8,6 +8,20 @@
             <div class="me-2 mb-2">
                 <button class="btn btn-primary  w-100" id="printDetail">Print Detail</a>
             </div>
+            <div class="me-2 mb-2 d-flex align-items-center gap-2">
+                <div class="form-check mb-0">
+                    <input
+                        type="checkbox"
+                        class="form-check-input"
+                        id="smallFont"
+                        name="smallFont"
+                    >
+                    <label class="form-check-label" for="smallFont">
+                        SmallFont
+                    </label>
+                </div>
+                <button class="btn btn-primary  w-100" id="printColorLabel">Print Color Label</a>
+            </div>
             <div class="me-2 mb-2">
                 <button class="btn btn-primary  w-100" id="printDeliveryOrder">Delivery Order</a>
             </div>
@@ -179,6 +193,14 @@
         // 打印详单
         document.getElementById('printDetail').addEventListener('click', function() {
             window.open(`/print_container_detail/${containerID}/`, '_blank');
+        });
+
+        // 打印标签
+        document.getElementById('printColorLabel').addEventListener('click', function() {
+            const smallFont = document.getElementById("smallFont").checked;
+            const url = `/print_container_color_label/${containerID}/?small_font=${smallFont ? 1 : 0}`;
+
+            window.open(url, '_blank');
         });
 
         // 打印标签

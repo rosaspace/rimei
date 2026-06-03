@@ -331,7 +331,7 @@ def edit_container(request, container_id):
                 # 打印 PDF 文件名
                 print(f"Uploaded PDF file name: {container.container_pdfname}")
 
-                file_path = get_media_path("containers", "original", filename)
+                file_path = get_media_path("containers", "original")
                 save_uploaded_file(
                     container.container_pdfname,
                     file_path,
@@ -350,7 +350,7 @@ def edit_container(request, container_id):
                 # 打印 PDF 文件名
                 print(f"Uploaded PDF file name: {container.clearance_pdfname}")
 
-                file_path = get_media_path("containers", "clearence", filename)
+                file_path = get_media_path("containers", "clearence")
                 save_uploaded_file(
                     container.clearance_pdfname,
                     file_path,

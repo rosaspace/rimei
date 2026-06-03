@@ -83,9 +83,13 @@
             </div>            
         </div>
         <div class="row mb-2" >
-            <div class="col-md-9">
+            <div class="col-md-6">
                 <label for="plts" class="form-label required-label">ShelfRecord</label>
                 <input type="text" class="form-control" id="so_num" name="ShelfRecord" value="{{ product.ShelfRecord|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="po_num" class="form-label required-label">Status</label>
+                <input type="text" class="form-control" id="so_num" name="status" value="{{ product.status|default:'' }}" required>
             </div>
             <div class="col-md-3">
                 <label for="plts" class="form-label required-label">Belong To</label>

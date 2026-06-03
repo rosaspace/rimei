@@ -37,6 +37,7 @@
                 <th>Diff</th>
                 <th>Each</th>
                 <th>Color</th>
+                <th>Stock</th>
                 <th>ShowQTY</th>
                 <!-- <th>Avail.Qty</th> -->
                 <th>Pallet</th> 
@@ -44,6 +45,7 @@
                 <th>Loca</th>
                 <th>BlongTo</th>
                 <th>Shelf</th>
+                <th>Desc</th>
                 <!-- <th>Type</th> -->
                 <th>Price</th>
                 <th>His</th>
@@ -60,6 +62,7 @@
                                
                 <td>{{ item.pallet }}</td>
                 <td>{{ item.color }}</td>
+                <td>{{ item.quantity_outbound_stock }}</td> 
                 <td>{{ item.shownumber }}</td> 
                 <!-- <td>{{ item.availableQTY }}</td>  -->
                 <td>{{ item.palletnumber }}</td>
@@ -67,6 +70,7 @@
                 <td>{{ item.Location }}</td>
                 <td>{{ item.blongTo.name }}</td>
                 <td>{{ item.ShelfRecord }}</td>
+                <td>{{ item.description }}</td>
                 <!-- <td>{{ item.type }}</td> -->
                 <td>{{ item.price }}</td>
                 <td style="height: 23px;">
@@ -77,7 +81,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5">No inventory items available.</td>
+                <td colspan="16">No inventory items available.</td>
             </tr>
             {% endfor %}
         </tbody>

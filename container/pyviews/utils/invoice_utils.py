@@ -181,7 +181,7 @@ def extract_customer_invoice_data(text):
     lines = text.strip().splitlines()
     
     # 提取 invoice_id（假设以 OS 开头）
-    invoice_id_match = re.search(r'\b(O[ST]\d{6,})\b', text)
+    invoice_id_match = re.search(r'\b(O[ST]\d{5,})\b', text)
     invoice_id = invoice_id_match.group(1) if invoice_id_match else None
 
     # 提取所有日期（格式：M/D/YYYY 或 MM/DD/YYYY）
@@ -245,6 +245,7 @@ def get_product_qty_with_inventory_from_order(order_items):
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = inventory_count.get_quality(item.product)
         inventory = RMProduct.objects.filter(name=item.product).first()
+        actualproduct = RMProduct.objects.filter(name=item.product_actual).first()
         product = inventory_count.get_product_qty(inventory, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
 
         item.so_num = product.name
@@ -255,6 +256,10 @@ def get_product_qty_with_inventory_from_order(order_items):
         item.price = product.price
         item.totalprice = product.price * item.quantity
         item.shortage = item.inventory_qty - item.case_qty
+
+        item.so_num_actual = actualproduct.name
+        item.description_actual = actualproduct.description
+
 
         if(product.shortname == "20HBC"):
             item.weight = item.quantity * 17.5

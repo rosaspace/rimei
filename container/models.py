@@ -25,30 +25,40 @@ class RMOrder(models.Model):
     po_num = models.CharField(max_length=255)  # 采购订单号
     plts = models.IntegerField()  # 托盘数量
     customer_name = models.ForeignKey('RMCustomer', on_delete=models.CASCADE)  # 关联客户表
+
     order_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Order的PDF文件名
     invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Invoice的PDF文件名
     bol_pdfname = models.CharField(max_length=255, blank=True, null=True)  # BOL的PDF文件名
+
     bill_to = models.CharField(max_length=255, blank=True, null=True) # 账单地址
     ship_to = models.CharField(max_length=255, blank=True, null=True) # 邮寄地址
+
     order_date = models.DateField(blank=True, null=True)  # 订单日期
     pickup_date = models.DateField(blank=True, null=True)  # 提货日期
     outbound_date = models.DateField(blank=True, null=True)  # 出库日期
+
     is_sendemail = models.BooleanField(default=False) # 是否发送邮件
     is_allocated_to_stock = models.BooleanField(default=False) # 是否放入备货区
     is_updateInventory = models.BooleanField(default=False) # 是否更新库存
     is_canceled = models.BooleanField(default=False) # 是否被取消
+
     created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
     created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
 
     customer_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     customer_payment_date = models.DateField(blank=True, null=True)  # 付款日期
     customer_ispay = models.BooleanField(default=False) # 是否付款
+    content = models.TextField(blank=True, null=True)  # 解析出的内容
+
+    carrier_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    carrier_payment_date = models.DateField(blank=True, null=True)  # 付款日期
 
     def __str__(self):
         return f"{self.so_num} - {self.customer_name}"
 
 class RMCustomer(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
+    classification = models.TextField(blank=True, null=True)  # 解析出的内容
     description = models.TextField(blank=True, null=True)  # 客户描述
 
     def __str__(self):
@@ -90,14 +100,34 @@ class RMProduct(models.Model):
     quantity_diff =  models.IntegerField(default=0)  # 初始差异
     type = models.CharField(max_length=255, default='Rimei') # 类型
     price = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 价格
+    status = models.CharField(max_length=255, default='Common') # 库存状态
 
     def __str__(self):
         return self.name
 
 class OrderItem(models.Model):
     order = models.ForeignKey(RMOrder, related_name='order_items', on_delete=models.CASCADE)  # 关联到 RMOrder
-    product = models.ForeignKey(RMProduct, on_delete=models.CASCADE)  # 关联到 RMProduct
+    # 客户订的商品
+    product = models.ForeignKey(
+        RMProduct,
+        related_name='ordered_items',
+        on_delete=models.CASCADE
+    )
+
+    # 实际使用/发货的商品
+    product_actual = models.ForeignKey(
+        RMProduct,
+        related_name='+',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
     quantity = models.IntegerField()  # 产品数量
+
+    def save(self, *args, **kwargs):
+        if not self.product_actual:
+            self.product_actual = self.product
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.product.name} - {self.quantity} pcs"
@@ -458,3 +488,59 @@ class OfficeSupplyRecord(models.Model):
 
     def __str__(self):
         return f"{self.supply_item.name} - {self.quantity}"
+
+
+class CabinetProductType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    pallet_usage = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        help_text="该类型产品占用托盘"
+    )
+
+    def __str__(self):
+        return self.name
+
+class CabinetProduct(models.Model):
+    sku = models.CharField(max_length=50, unique=True)  # SW-BT09
+    sku_short = models.CharField(max_length=50)         # BT09
+    product_code = models.CharField(max_length=50, blank=True, null=True)
+
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    product_type = models.ForeignKey(
+        CabinetProductType,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.sku
+
+class CabinetSalesOrder(models.Model):
+    order_no = models.CharField(max_length=50, unique=True)
+    po_no = models.CharField(max_length=50)
+
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    order_pdfname = models.CharField(max_length=255, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.order_no
+
+class CabinetSalesOrderItem(models.Model):
+    order = models.ForeignKey(
+        CabinetSalesOrder,
+        on_delete=models.CASCADE,
+        related_name="items"
+    )
+
+    product = models.ForeignKey(CabinetProduct, on_delete=models.PROTECT)
+
+    qty = models.IntegerField()
+
+    def __str__(self):
+        return f"{self.order.order_no} - {self.product.sku}"

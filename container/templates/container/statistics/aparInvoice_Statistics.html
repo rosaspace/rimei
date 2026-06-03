@@ -1,0 +1,125 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+    <h2>2025 AR Summary</h2>
+
+    <table border="1">
+        <tr>
+            <th>Customer</th>
+            <th>Invoice Num</th>
+            <th>Total Amount</th>
+        </tr>
+        {% for row in ar_data %}
+        <tr>
+            <td>{{ row.customer__name }}</td>
+            <td>{{ row.total_count }}</td>
+            <td>${{ row.total_amount }}</td>
+        </tr>
+        {% endfor %}
+
+        <!-- 年度合计行 -->
+        <tr style="font-weight:bold; background:#f0f0f0;">
+            <td colspan="2">AR Grand Total 2025</td>
+            <td>${{ ar_total_year }}</td>
+        </tr>
+    </table>
+
+    <h2>2025 AP Summary (By Purpose)</h2>
+
+    <table border="1">
+        <tr>
+            <th>Purpose</th>
+            <th>Record Count</th>
+            <th>Total Amount</th>
+        </tr>
+
+        {% for row in ap_purpose_data %}
+        <tr>
+            <td>{{ row.purposefor__name }}</td>
+            <td>{{ row.record_count }}</td>
+            <td>${{ row.total_amount }}</td>
+        </tr>
+        {% endfor %}
+
+        <tr style="font-weight:bold; background:#f0f0f0;">
+            <td colspan="2">AP Purpose Grand Total 2025</td>
+            <td>${{ ap_purpose_total_year }}</td>
+        </tr>
+    </table>
+
+
+    <h2>2025 AP Summary (By Vendor)</h2>
+
+    <table border="1">
+        <tr>
+            <th>Vendor</th>
+            <th>Invoice Num</th>
+            <th>Total Amount</th>
+        </tr>
+        {% for row in ap_data %}
+        <tr>
+            <td>{{ row.vendor__name }}</td>
+            <td>{{ row.total_count }}</td>
+            <td>${{ row.total_amount }}</td>
+        </tr>
+        {% endfor %}
+
+        <!-- 年度合计行 -->
+        <tr style="font-weight:bold; background:#f0f0f0;">
+            <td colspan="2">AP Grand Total 2025</td>
+            <td>${{ ap_total_year }}</td>
+        </tr>
+    </table>
+
+    <h2>2025 Office Supply Expense (By Item)</h2>
+
+    <table border="1">
+        <tr>
+            <th>Supply Item</th>
+            <th>Number</th>
+            <th>Total Quantity</th>
+            <th>Total Expense</th>
+        </tr>
+
+        {% for row in office_data %}
+        <tr>
+            <td>{{ row.supply_item__name }}</td>
+            <td>{{ row.record_count }}</td>
+            <td>{{ row.total_quantity }}</td>
+            <td>${{ row.total_amount }}</td>
+        </tr>
+        {% endfor %}
+
+        <!-- 年度总计 -->
+        <tr style="font-weight:bold; background:#f0f0f0;">
+            <td colspan="3">Office Supply Grand Total 2025</td>
+            <td>${{ office_total_year }}</td>
+        </tr>
+    </table>
+
+    <h2>Container Revenue Summary</h2>
+
+    <table border="1">
+        <tr>
+            <th>Total Containers</th>
+            <th>Total Income</th>
+            <th>Total Cost</th>
+            <th>Total Profit</th>
+        </tr>
+
+        <tr style="font-weight:bold; background:#f5f5f5;">
+            <td>{{ container_summary.total_count }}</td>
+            <td>${{ container_summary.total_income|floatformat:2 }}</td>
+            <td>${{ container_summary.total_cost|floatformat:2 }}</td>
+            <td>${{ container_summary.total_profit|floatformat:2 }}</td>
+        </tr>
+    </table>
+
+
+    <br><br>
+    <a href="?export=1">
+        <button>Download Excel</button>
+    </a>
+</div>
+{% endblock %}

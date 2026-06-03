@@ -34,6 +34,16 @@
             </div>
         </form>
     </div>
+    <div class="col-md-3">
+        <h4>Import CabinetType</h4>
+        <form action="/import_cabinettype/" method="post" enctype="multipart/form-data">
+            <div class="input-group">
+                {% csrf_token %}
+                <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
+                <button type="submit" class="btn btn-primary">Upload Excel</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <hr class="my-4" style="border-color: #FF0000; border-width: 2px;">

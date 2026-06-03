@@ -1,22 +1,175 @@
 import calendar
 import datetime
 import pandas as pd
+import json
 
 from collections import defaultdict
 from datetime import date, timedelta
 
-from django.db.models import Case, When, Value, FloatField, F, ExpressionWrapper, Sum, Q, Min, Max, Count
-from django.db.models.functions import TruncMonth, TruncWeek
+from django.db.models import Case, When, Value, FloatField, F, ExpressionWrapper, Sum, Q, Min, Max, Count, DecimalField
+from django.db.models.functions import TruncMonth, TruncWeek, Coalesce
 from django.shortcuts import render, redirect
 
 from ..constants import constants_address, constants_view
-from ..models import Container, Employee, ClockRecord, ContainerItem, OrderItem, RMProduct
+from ..models import Container, Employee, ClockRecord, ContainerItem, OrderItem, RMProduct, RMOrder
+from ..models import InvoiceAPRecord, InvoiceARRecord, OfficeSupplyRecord
 
 from .inventory_count import get_quality, get_product_qty
 from .utils.getPermission import get_user_permissions
 from .utils.date_utils import month_workdays
 
-def statistics_invoice(request):
+def statistics_invoice_summary(request):
+    start_date = date(2025, 1, 1)
+    end_date = date(2025, 12, 31)
+
+    ap_data = (
+        InvoiceAPRecord.objects
+        .filter(payment_date__range=(start_date, end_date))
+        .values('vendor__id', 'vendor__name')
+        .annotate(
+            total_count=Count('id'),
+            total_amount=Sum('invoice_price')
+        )
+        .order_by('vendor__name')
+    )
+    ar_data = (
+        InvoiceARRecord.objects
+        .filter(payment_date__range=(start_date, end_date))
+        .values('customer__id', 'customer__name')
+        .annotate(
+            total_count=Count('id'),
+            total_amount=Sum('invoice_price')
+        )
+        .order_by('customer__name')
+    )
+
+    # ===== 按 supply_item 分类 =====
+    office_data = (
+        OfficeSupplyRecord.objects
+        .filter(purchase_date__year=2025)
+        .values('supply_item__name')
+        .annotate(
+            record_count=Count('id'),
+            total_quantity=Coalesce(              # 总数量
+                Sum('quantity'),
+                Value(0)
+            ),
+            total_amount=Coalesce(
+                Sum('unit_price'),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            )
+        )
+        .order_by('supply_item__name')
+    )
+
+    # ===== 年度总金额 =====
+    ar_total_year = InvoiceARRecord.objects.filter(
+        payment_date__range=(start_date, end_date)
+    ).aggregate(total=Sum('invoice_price'))
+
+    ap_total_year = InvoiceAPRecord.objects.filter(
+        payment_date__range=(start_date, end_date)
+    ).aggregate(total=Sum('invoice_price'))
+
+    # ===== 年度总花费 =====    
+    office_total_year = OfficeSupplyRecord.objects.filter(
+        purchase_date__year=2025
+    ).aggregate(
+        total=Coalesce(
+            Sum('unit_price'),
+            Value(0),
+            output_field=DecimalField(max_digits=12, decimal_places=2)
+        )
+    )
+
+    # ===== AP 按 purposefor 分类 =====
+    ap_purpose_data = (
+        InvoiceAPRecord.objects
+        .filter(payment_date__year=2025)
+        .values('purposefor__name')
+        .annotate(
+            record_count=Count('id'),
+            total_amount=Coalesce(
+                Sum('invoice_price'),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            )
+        )
+        .order_by('purposefor__name')
+    )
+
+    ap_purpose_total_year = InvoiceAPRecord.objects.filter(
+        payment_date__year=2025
+    ).aggregate(
+        total=Coalesce(
+            Sum('invoice_price'),
+            Value(0),
+            output_field=DecimalField(max_digits=12, decimal_places=2)
+        )
+    )
+
+    # ===== Container 盈利汇总 =====
+    containers = (
+        Container.objects
+        .exclude(customer=6)
+        .exclude(empty_date__isnull=True)
+        .exclude(container_id__icontains='pack')
+        .exclude(container_id__icontains='self')
+        .annotate(
+            price_diff=Case(
+                When(customer_price__lt=F('price'), then=Value(0)),
+                default=ExpressionWrapper(
+                    F('customer_price') - F('price'),
+                    output_field=DecimalField(max_digits=12, decimal_places=2)
+                ),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            )
+        )
+        .order_by('-delivery_date')
+    )
+
+    container_summary = containers.aggregate(
+        total_income=Coalesce(
+            Sum('customer_price'),
+            Value(0),
+            output_field=DecimalField(max_digits=12, decimal_places=2)
+        ),
+        total_cost=Coalesce(
+            Sum('price'),
+            Value(0),
+            output_field=DecimalField(max_digits=12, decimal_places=2)
+        ),
+        total_profit=Coalesce(
+            Sum('price_diff'),
+            Value(0),
+            output_field=DecimalField(max_digits=12, decimal_places=2)
+        ),
+        total_count=Count('id')
+    )
+
+    print("AP num:", len(ap_data), "AR num:", len(ar_data))
+    print("AP num:", len(ap_total_year), "AR num:", len(ar_total_year))
+    print("AP num:", len(office_data), "AR num:", len(office_total_year))
+
+    # ===== 正常页面显示 =====
+    user_permissions = get_user_permissions(request.user)
+    context = {
+        "ar_data": ar_data,
+        "ap_data": ap_data,
+        "ar_total_year": ar_total_year["total"],
+        "ap_total_year": ap_total_year["total"],
+        "office_data": office_data,
+        "office_total_year": office_total_year["total"],
+        "ap_purpose_data": ap_purpose_data,
+        "ap_purpose_total_year": ap_purpose_total_year["total"],
+        'container_summary': container_summary,
+        'user_permissions': user_permissions,
+    }
+    
+    return render(request, constants_view.template_statistics_aparInvoice, context) 
+
+def statistics_invoice_container(request):
 
     containers = Container.objects.exclude(
         customer=6
@@ -35,7 +188,7 @@ def statistics_invoice(request):
             ),
             output_field=FloatField()
         )
-    )
+    ).order_by('-delivery_date') 
 
     # 获取实际的最早和最晚 due_date（按月截断）
     date_range = containers.aggregate(
@@ -89,7 +242,7 @@ def statistics_invoice(request):
 
     # 拆分 labels 和 data（给图表用）
     chart_labels = [item['month'] for item in full_data]
-    chart_data = [item['total_diff'] for item in full_data]
+    chart_data = [item['total_diff'] for item in full_data] 
 
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_statistics_invoice,{
@@ -297,9 +450,9 @@ def statistics_outbound_metal(request):
         product__type='Metal'  # ✅ 仅保留 Rimei 产品
     )
 
-     # 按产品+月份分组统计数量
+    # 按产品+月份分组统计数量
     grouped = order_items.annotate(month=TruncMonth('order__outbound_date')) \
-        .values('product__name', 'month') \
+        .values('product_actual__name', 'month') \
         .annotate(total_qty=Sum('quantity')) \
         .order_by('-month')
 
@@ -309,7 +462,7 @@ def statistics_outbound_metal(request):
     data_map = defaultdict(lambda: defaultdict(int))
 
     for row in grouped:
-        product = row['product__name']
+        product = row['product_actual__name']
         month = row['month'].strftime('%Y-%m')
         qty = row['total_qty']
         data_map[product][month] = qty
@@ -330,7 +483,7 @@ def statistics_outbound_metal(request):
     table_data = []
     chart_data_map = {}
     for row in grouped:
-        product = row['product__name']
+        product = row['product_actual__name']
         month = row['month'].strftime('%Y-%m')
         qty = row['total_qty']
         table_data.append({
@@ -356,7 +509,7 @@ def statistics_mcd_trend(request):
     # ✅ ORM 查询
     order_items = OrderItem.objects.filter(
         order__pickup_date__isnull=False,
-        product__type='Mcdonalds'
+        product__type='MCD'
     )
 
    # ---------- 转换为 DataFrame ----------
@@ -436,6 +589,162 @@ def statistics_mcd_trend(request):
     user_permissions = get_user_permissions(request.user)
     return render(request, constants_view.template_statistics_mcdTrend, {
         'result': result,
+        'user_permissions': user_permissions
+    })
+
+def statistics_metal_customer_trend(request):
+    # 订单明细
+    order_items = OrderItem.objects.filter(
+        order__pickup_date__isnull=False,
+        order__customer_name__classification='Metal'
+    )
+    # 统计按数量金额
+    amount_expr = ExpressionWrapper(
+        F('quantity') * F('product__price'),
+        output_field=DecimalField(max_digits=12, decimal_places=2)
+    )
+
+    order_items = OrderItem.objects.filter(
+        order__pickup_date__isnull=False,
+        order__customer_name__classification='Metal',
+        order__is_canceled=False
+    )
+
+    item_df = pd.DataFrame(list(
+        order_items
+        .annotate(month=TruncMonth('order__pickup_date'))
+        .annotate(item_amount=amount_expr)
+        .values('order__customer_name__name', 'month')
+        .annotate(product_amount=Sum('item_amount'))
+    ))
+    #客户消费
+    orders = RMOrder.objects.filter(
+        pickup_date__isnull=False,
+        customer_name__classification='Metal',
+        is_canceled=False
+    )
+
+    order_df = pd.DataFrame(list(
+        orders
+        .annotate(month=TruncMonth('pickup_date'))
+        .values('customer_name__name', 'month')
+        .annotate(order_amount=Sum('customer_price'))
+    ))
+
+    monthly_df = pd.merge(
+        order_df,
+        item_df,
+        left_on=['customer_name__name', 'month'],
+        right_on=['order__customer_name__name', 'month'],
+        how='outer'
+    )
+
+    # ⭐ 统一客户名称
+    monthly_df['customer'] = (
+        monthly_df['customer_name__name']
+        .combine_first(monthly_df['order__customer_name__name'])
+    )
+
+    # 删除旧字段（非常关键）
+    monthly_df = monthly_df.drop(
+        columns=['customer_name__name', 'order__customer_name__name'],
+        errors='ignore'
+    )
+
+    # 空值补0
+    monthly_df['order_amount'] = monthly_df['order_amount'].fillna(0)
+    monthly_df['product_amount'] = monthly_df['product_amount'].fillna(0)
+
+    # 日期格式
+    monthly_df['month'] = pd.to_datetime(monthly_df['month'])
+
+    monthly_df = monthly_df.groupby(
+        ['customer', 'month'],
+        as_index=False
+    ).agg({
+        'order_amount': 'sum',
+        'product_amount': 'sum'
+    })
+
+    # ---------- chart data ----------
+    def build_chart_data(df):
+
+        if df.empty:
+            return {"labels": [], "datasets": []}
+
+        labels = sorted(df['month'].dt.strftime("%Y-%m").unique())
+        customers = df['customer'].unique()
+
+        datasets = []
+
+        for customer in customers:
+
+            order_data = []
+            product_data = []
+
+            for label in labels:
+                row = df[
+                    (df['customer'] == customer) &
+                    (df['month'].dt.strftime("%Y-%m") == label)
+                ]
+
+                if not row.empty:
+                    order_data.append(float(row['order_amount'].values[0]))
+                    product_data.append(float(row['product_amount'].values[0]))
+                else:
+                    order_data.append(0)
+                    product_data.append(0)
+
+            # 客户真实消费
+            datasets.append({
+                "label": f"{customer} - Order Amount",
+                "data": order_data
+            })
+
+            # 按数量计算金额
+            datasets.append({
+                "label": f"{customer} - Product Amount",
+                "data": product_data
+            })
+
+        return {"labels": labels, "datasets": datasets}
+
+    # ---------- table ----------
+    table_data = []
+
+    if not monthly_df.empty:
+
+        monthly_df = monthly_df.sort_values(
+            ['month','customer'],
+            ascending=[False, True]
+        )
+
+        for _, row in monthly_df.iterrows():
+
+            table_data.append({
+                "customer": row['customer'],
+                "month": row['month'].strftime("%Y-%m"),
+
+                # 客户真实消费
+                "order_amount": float(row['order_amount']),
+
+                # 按数量金额
+                "product_amount": float(row['product_amount']),
+
+                # ⭐ 差额（非常有用）
+                "difference": float(row['order_amount'] - row['product_amount'])
+            })
+
+    result = {
+        "table": table_data,
+        "monthly": build_chart_data(monthly_df)
+    }
+
+    user_permissions = get_user_permissions(request.user)
+
+    return render(request, constants_view.template_statistics_metalCustomerTrend, {
+        'result': result,   # 给 table 用
+        'result_json': json.dumps(result), # 给 chart 用
         'user_permissions': user_permissions
     })
 

@@ -107,7 +107,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
     # ============================
     # ✅ NEW CASE: logistics.id == 3
     # ============================
-    if container.logistics and container.logistics.id == 3:
+    if container.logistics and container.logistics.id in [3, 4, 5]:
         print("✅ logistics.id == 3, using fixed invoice pricing")
 
         # 计算天数（包含 delivery_date 和 empty_date）
@@ -117,10 +117,12 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
         days = (empty_date - delivery_date).days + 1  # ✅ 两头都包括
         rate = 40.00
         chassis_total = days * rate
+        liftfee = 120
 
         amount_items = [
             ("Drayage (FSC all included)", 1, 450.00, 450.00),
             ("Chassis", days, rate, chassis_total),
+            # ("Flip", 1, liftfee, liftfee*1)
         ]
         total_original = 560.00
 
@@ -313,7 +315,6 @@ def edit_ladingcargo_invoice_file(request, container_id):
         full_path = get_media_path(
             constants_address.UPLOAD_DIR_invoice,
             constants_address.INVOICE_FOLDER,
-            invoice_file.name
         )
         save_uploaded_file(invoice_file, full_path, invoice_file.name)
 
@@ -351,7 +352,7 @@ def edit_customer_invoice_file(request, container_id):
         save_uploaded_file(invoice_file, full_path, invoice_file.name)
 
         # 解析 PDF 内容
-        new_file_path = os.path.join(file_path, invoice_file.name)
+        new_file_path = os.path.join(full_path, invoice_file.name)
         text = extract_text_from_pdf(new_file_path)
         data = extract_customer_invoice_data(text)
 

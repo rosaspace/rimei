@@ -97,6 +97,7 @@ description_mapping = {
     "flip":"Flip",
     "Dry run":"Dry Run",
     "Drop Off":"Drop Off",
+    "Lift Fee":"Lift Fee",
     # 可继续扩展其他映射项
 }
 
@@ -106,6 +107,7 @@ UPLOAD_DIR_invoice = "invoices/"
 UPLOAD_DIR_order = "orders/"
 UPLOAD_DIR_temp = "temp/"
 UPLOAD_DIR_workrecord = "workrecord/"
+UPDATE_DIR_cabinets = "cabinets/"
 
 # Order中的二级目录
 BOL_FOLDER = "BOL/"
@@ -153,7 +155,7 @@ Credit_rate = Decimal("1.03")
 
 # Font size
 FONT_SIZE = 64  # Larger font size
-FONT_SIZE_SMALL =  42  # Larger font size
+FONT_SIZE_SMALL =  50  # Larger font size
 # FONT_SIZE = 30  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size

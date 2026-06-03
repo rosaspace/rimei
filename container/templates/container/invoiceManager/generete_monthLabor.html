@@ -29,15 +29,19 @@
         </div>
         <div class="col-md-6">
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label for="inbound_number" class="form-label">Total Number</label>
+                    <input type="text" class="form-control" id="total_number" name="total_number" value="{{ total_plts }}">
+                </div>
+                <div class="col-md-2">
                     <label for="inbound_number" class="form-label">Inbound Number</label>
                     <input type="text" class="form-control" id="inbound_number" name="inbound_number" value="{{ total_in_plts }}">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="outbound_number" class="form-label">Outbound Number</label>
                     <input type="text" class="form-control" id="outbound_number" name="outbound_number" value="{{ total_out_plts }}">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="pallet_storage_number" class="form-label">Pallet Storage</label>
                     <input type="text" class="form-control" id="pallet_storage_number" name="pallet_storage_number" value="{{ total_pallets }}">
                 </div>
@@ -118,6 +122,8 @@
     document.getElementById("monthlyInvoiceBtn").addEventListener("click", function (event) {
         const year = document.getElementById("selectYear").value;
         const month = document.getElementById("selectMonth").value;
+
+        const totalNumber = document.getElementById("total_number").value;
         const inboundNumber = document.getElementById("inbound_number").value;
         const outboundNumber = document.getElementById("outbound_number").value;
         const palletstoragenumber = document.getElementById("pallet_storage_number").value;
@@ -128,7 +134,7 @@
             return;
         }
         console.log('year: ', year)
-        const url = `{% url 'export_pallet_invoice' %}?year=${year}&month=${month}&inboundNumber=${inboundNumber}&outboundNumber=${outboundNumber}&palletstoragenumber=${palletstoragenumber}`;
+        const url = `{% url 'export_pallet_invoice' %}?year=${year}&month=${month}&totalNumber=${totalNumber}&inboundNumber=${inboundNumber}&outboundNumber=${outboundNumber}&palletstoragenumber=${palletstoragenumber}`;
         window.location.href = url;
     });
 </script>

@@ -53,7 +53,7 @@
         <div>
             <a href="{% url 'print_pickup_week' %}" class="btn btn-primary">PICKUP LIST Week</a>
         </div>
-    </div> 
+    </div>
 </div>
 
 <!-- 订单列表 -->
@@ -72,13 +72,8 @@
                 <th>OutDate</th>
                 <th>InPrepa</th>
                 
-                <th>Price</th>
-                <th>CustPaid</th>
-                <th>IsPaid</th>
-
                 <th>Carrier</th>
                 <th>CarrierPaid</th>
-                
                 <th>Canceled</th>
                 <th>Shipped</th>
             </tr>
@@ -97,7 +92,7 @@
                 <!-- <td>{{ order.id }}</td> -->
                 <td>
                     {% if order.so_num %}
-                        <a href="{% url 'edit_order_full' order.so_num %}">{{ order.so_num }}</a>
+                        <a href="{% url 'edit_order_simple' order.so_num %}">{{ order.so_num }}</a>
                     {% else %}
                         <span class="text-muted">No SO#</span>
                     {% endif %}
@@ -122,19 +117,8 @@
                     </form>
                 </td>
                 
-                <td>{{ order.customer_price }}</td>
-                <td>{{ order.customer_payment_date |date:"m/d/Y" }}</td>
-                <td class="text-center">
-                    {% if order.customer_ispay %}
-                    <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>
-                    {% else %}
-                    <i class="far fa-circle text-muted" style="font-size: 1.2em;"></i>
-                    {% endif %}
-                </td>
-
                 <td>{{ order.carrier_price }}</td>
                 <td>{{ order.carrier_payment_date |date:"m/d/Y" }}</td>
-                
                 <td class="text-center">
                     {% if order.is_canceled %}
                     <i class="fas fa-check-circle text-success" style="font-size: 1.2em;"></i>

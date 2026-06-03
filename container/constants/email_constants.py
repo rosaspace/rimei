@@ -5,9 +5,20 @@ from datetime import datetime, date, time
 # 收件人
 SIGNATURE_AVA = "Ava"
 SIGNATURE_JING = "Jing"
+SIGNATURE_DAVID = "David"
 RECIPIENT_OMAR_rosa = "omarorders@omarllc.com;omarwarehouse@rimeius.com"
 RECIPIENT_OMAR_rimei ="omarorders@omarllc.com;order@rimeius.com"
 RECIPIENT_ADVANCE = "jovana@advance77.com;tijana@advance77.com;raluca@advance77.com;intermodal@advance77.com"
+RECIPIENT_LadingCargo = "brandon@ladingcargo.com;Rajinder@ladingcargo.com;prabnek@ladingcargo.com"
+RECIPIENT_DevenTransport = "anthony@deventransport.com"
+RECIPIENT_FreighTech = "Jeff@ftcartage.com;Dispatch@ftcartage.com"
+
+CARRIER_RECIPIENTS = {
+    1: RECIPIENT_ADVANCE,
+    2: RECIPIENT_LadingCargo,
+    3: RECIPIENT_DevenTransport,
+    4: RECIPIENT_FreighTech,
+}
 
 # container_email 的邮件模板（按类型）
 INVENTORY_EMAIL_TEMPLATES = {
@@ -52,22 +63,22 @@ ORDER_EMAIL_TEMPLATES = {
 
 # container_email 的邮件模板（按类型）
 CONTAINER_EMAIL_TEMPLATES = {
-    "do": lambda container, signature, is_rimei_user: {
-        "recipient": RECIPIENT_ADVANCE,
+    "do": lambda container, signature, is_rimei_user, carrier: {
+        "recipient": CARRIER_RECIPIENTS.get(carrier, RECIPIENT_ADVANCE),
         "subject": f"New **  D/O **  {container.container_id} / OMAR- SSA",
         "body": f"Hello,\n\nPlease see new DO for this container going to Lemont and kindly confirm receipt.\nContainer: {container.container_id}\nMBL: {container.mbl}\n\nPlease have your drivers toss the seals in the containers.\nPlease keep tracking it and send trucks accordingly before LFD.\nThank you!\n{signature}"
     },
-    "received": lambda container, signature, is_rimei_user: {
+    "received": lambda container, signature, is_rimei_user, carrier: {
         "recipient": RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa,
         "subject": f"{container.container_id} RECEIVED IN Notification",
         "body": f"Hello,\n\n{container.container_id} has been received in.\nPaperwork is attached.\n\nThank you!\n{signature}"
     },
-    "empty": lambda container, signature, is_rimei_user: {
+    "empty": lambda container, signature, is_rimei_user, carrier: {
         "recipient": RECIPIENT_ADVANCE,
         "subject": f"{container.container_id} Empty Container Notification",
         "body": f"Hello,\n\nContainer {container.container_id} is now empty and ready for pickup.\n\nThank you!\n{signature}"
     },
-    "default": lambda container, signature, is_rimei_user: {
+    "default": lambda container, signature, is_rimei_user, carrier: {
         "recipient": RECIPIENT_OMAR_rimei if is_rimei_user else RECIPIENT_OMAR_rosa,
         "subject": f"Notification - {container.container_id}",
         "body": f"Hello,\n\nThis is a notification regarding container {container.container_id}.\n\nThank you!\n{signature}"

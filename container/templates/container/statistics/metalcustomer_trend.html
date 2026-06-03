@@ -1,0 +1,139 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+
+    <div class="row">
+
+        <!-- 表格区域 -->
+        <div class="col-md-5">
+
+            <h2>Customer Monthly Amount</h2>
+
+            <table class="table table-bordered mt-4">
+
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Product Price</th>
+                        <th>Customer Price</th>
+                        <th>Month</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in result.table %}
+                    <tr>
+                        <td>{{ row.customer }}</td>
+                        <td>${{ row.product_amount }}</td>
+                        <td>
+                            ${{ row.order_amount }}
+                        </td>
+                        <td>{{ row.month }}</td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        
+        <div class="col-md-7">
+            <!-- 图表1：Product 金额 -->
+            <h2>Product Monthly Sales Trend</h2>
+
+            <div style="height:550px; width:100%; max-width:1500px; margin:auto;">
+                <canvas id="productChart"></canvas>
+            </div>
+            <!-- 图表2：Customer 实际消费 -->
+            <h2>Customer Monthly Sales Trend</h2>
+
+            <div style="height:550px; width:100%; max-width:1500px; margin:auto;">
+                <canvas id="orderChart"></canvas>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    // ⭐ 把 Django dict 转成 JS object（关键一步）
+    const result = JSON.parse('{{ result_json|escapejs }}');
+
+    const labels = result.monthly.labels;
+
+    const productDatasets = [];
+    const orderDatasets = [];
+
+    result.monthly.datasets.forEach(item => {
+
+        const datasetObj = {
+            label: item.label,
+            data: item.data,
+            borderWidth: 2,
+            fill: false,
+            tension: 0.3,
+            borderColor: '#' + Math.floor(Math.random()*16777215).toString(16)
+        };
+
+        if (item.label.includes("Product Amount")){
+            productDatasets.push(datasetObj);
+        }else{
+            orderDatasets.push(datasetObj);
+        }
+    });
+
+    // Product Chart
+    new Chart(
+        document.getElementById('productChart').getContext('2d'),
+        {
+            type: 'line',
+            data: { labels: labels, datasets: productDatasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: 'Product Value Trend (Qty × Price)' },
+                    legend: { position: 'right', align: 'start' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => '$' + v.toLocaleString() }
+                    }
+                }
+            }
+        }
+    );
+
+    // Order Chart
+    new Chart(
+        document.getElementById('orderChart').getContext('2d'),
+        {
+            type: 'line',
+            data: { labels: labels, datasets: orderDatasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: 'Customer Payment Trend' },
+                    legend: { position: 'right', align: 'start' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => '$' + v.toLocaleString() }
+                    }
+                }
+            }
+        }
+    );
+</script>
+
+{% endblock %}

@@ -237,10 +237,10 @@ def print_order_mcd(request, so_num):
 
     LOT_MAPPING = {
         "07604-034": "GF041124-S",
-        "07605-039": "GF041124-M",
+        "07605-039": "GF100524-M",
         "07606-039": "GF052015-L",
         "07607-024": "GF082625-XL",
-        "07326-024": "GF101025-B",
+        "07326-024": "GF030126-B",
         # Add more mappings if needed
     }
 
@@ -364,11 +364,12 @@ def print_forklift_bol(request):
     width, height = pagesize
 
     order_details = []
+    forklift_num = 3
     order_details.append({
         "Size": "N/A",
         "ShortName": "Forklift",
         "Name": "Forklift",
-        "Qty": "4",
+        "Qty": forklift_num,
         "PLTS": "",
     })
 
@@ -377,7 +378,7 @@ def print_forklift_bol(request):
         "Ship From": constants_address.ssa_address,
         "Bill To": constants_address.ssa_address,
         "Ship To": ship_to,
-        "Total LBS": str(4 * 8000),
+        "Total LBS": str(forklift_num * 8000),
     }
 
     certification_notes = [
@@ -393,7 +394,7 @@ def print_forklift_bol(request):
         container_info = container_info_template.copy()
         container_info["BOL Number"] = bol_number
         container_info["Ship Date"] = pick_date.strftime("%m/%d/%Y")
-        container_info["Ship Time"] = "9 am"
+        container_info["Ship Time"] = "8 am"
 
         # 调用模板生成单页 BOL
         print_bol_template(
@@ -419,7 +420,7 @@ def print_forklift_bol(request):
 
         container_info["BOL Number"] = bol_number
         container_info["Ship Date"] = delivery_date.strftime("%m/%d/%Y")
-        container_info["Ship Time"] = "12 pm"
+        container_info["Ship Time"] = "11 am"
 
         print_bol_template(
             title=f"Forklift BOL - {bol_number} Return",

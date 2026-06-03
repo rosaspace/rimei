@@ -1,0 +1,128 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="container">
+    <h4>Add Order</h4>
+
+    <form method="POST" enctype="multipart/form-data" action="{% url 'upload_cabinetspdf' %}" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <div class="row">            
+            <div class="col-md-8">
+                <input type="file" class="form-control" id="pdf_file" name="pdf_file" accept=".pdf">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary  w-100" id="uploadPdf">Upload PDF</a>
+            </div>
+            <div class="col-md-2 ms-auto text-end">                
+                <a href="{% url 'cabinets' %}" class="btn btn-secondary">Back</a>
+            </div>
+        </div>
+    </form>  
+
+    <hr class="my-3 border-2 opacity-100">
+
+    <h4>Order Detail</h4>
+
+    <form method="POST" class="needs-validation" action="{% url 'add_cabinets' %}" novalidate>
+        {% csrf_token %}
+        
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label for="so_num" class="form-label required-label">Order Number</label>
+                <input type="text" class="form-control" id="so_num" name="so_num" 
+                    value="{{ order_no|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="po_num" class="form-label required-label">PO Number</label>
+                <input type="text" class="form-control" id="po_num" name="po_num" 
+                    value="{{ po_no|default:'' }}" required>
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label for="order_pdf" class="form-label">Order PDF</label>
+                <!-- <input type="file" class="form-control" id="order_pdf" name="order_pdf" accept="application/pdf"> -->
+                {% if order_pdfname %}
+                    <p class="text-muted mb-0">Current file: {{ order_pdfname }}</p>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label for="order_pdf" class="form-label">Total Amount: ${{ total_amount }}</label>
+            </div>
+        </div>
+                
+        <h4>Order List</h4>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>QTY</th>
+                    <th>Unit Price</th>
+                    <th>Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in items %}
+                <tr>
+                    <td>{{ i.sku }}</td>
+                    <td>{{ i.qty }}</td>
+                    <td>${{ i.price }}</td>
+                    <td>${{ i.line_total }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td style="height: 23px;" colspan="4">No items found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>         
+        
+        <div class="mt-2">            
+            <button type="submit" class="btn btn-primary" id="saveOrder">
+                Add Order
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 处理上传 PDF 的表单提交
+    document.getElementById('uploadPdf').addEventListener('submit', function(e) {
+        e.preventDefault(); // 阻止表单默认提交
+
+        const formData = new FormData(this); // 获取表单数据
+
+        // 发送数据到后端
+        fetch('/upload_cabinetspdf/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.text(); // 返回 HTML 文本
+            } else {
+                throw new Error('Failed to upload PDF!');
+            }
+        })
+        .then(html => {
+            // 将返回的 HTML 插入到页面中
+            document.open();
+            document.write(html);
+            document.close();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while uploading the PDF');
+        });
+    });
+
+</script>
+{% endblock %}

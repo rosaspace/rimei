@@ -7,7 +7,8 @@ from .models import (
     Employee, LogisticsCompany, OrderItem, ClockRecord, ContainerItem,
     AlineOrderRecord, Carrier, InboundCategory, RailwayStation, ContainerStatement, Manufacturer,
     InvoicePurposeFor, InvoicePaidCustomer, InvoiceVendor, InvoiceARRecord, InvoiceAPRecord,
-    OfficeSupplyItem, OfficeSupplyPurpose, OfficeSupplyPlatform, OfficeSupplyRecord
+    OfficeSupplyItem, OfficeSupplyPurpose, OfficeSupplyPlatform, OfficeSupplyRecord,
+    CabinetProductType, CabinetProduct, CabinetSalesOrder, CabinetSalesOrderItem
 )
 
 class ContainerAdmin(admin.ModelAdmin):
@@ -30,13 +31,13 @@ class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'id', 'belongTo')
 
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ('order', 'product','quantity')
+    list_display = ('order', 'product','product_actual','quantity')
 
 class ContainerItemAdmin(admin.ModelAdmin):
     list_display = ('container', 'product','quantity')
 
 class RMCustomerAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name','description')
+    list_display = ('id', 'name', 'classification', 'description')
 
 class InvoiceCustomerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name','description')
@@ -49,6 +50,9 @@ class InvoiceARRecordAdmin(admin.ModelAdmin):
 
 class InvoiceAPRecordAdmin(admin.ModelAdmin):
     list_display = ('vendor', 'invoice_id', 'invoice_price', 'company', 'due_date', 'givetoboss_date', 'purposefor', 'note')
+
+class CabinetProductTypeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name','pallet_usage')
 
 @admin.register(OfficeSupplyItem)
 class OfficeSupplyItemAdmin(admin.ModelAdmin):
@@ -72,6 +76,8 @@ class OfficeSupplyRecordAdmin(admin.ModelAdmin):
         "id", "supply_item", "purpose", "platform",
         "quantity", "purchase_date", "delivered_date"
     )
+
+
 
 # Register your models here.
 admin.site.register(Container, ContainerAdmin)
@@ -98,3 +104,8 @@ admin.site.register(InvoiceVendor)
 admin.site.register(InvoicePurposeFor)
 admin.site.register(InvoiceARRecord, InvoiceARRecordAdmin)
 admin.site.register(InvoiceAPRecord, InvoiceAPRecordAdmin)
+admin.site.register(CabinetProductType, CabinetProductTypeAdmin)
+admin.site.register(CabinetProduct)
+admin.site.register(CabinetSalesOrder)
+admin.site.register(CabinetSalesOrderItem)
+

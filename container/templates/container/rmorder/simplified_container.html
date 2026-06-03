@@ -17,11 +17,12 @@
                 <!-- <th>ID</th> -->
                 <th>Container#</th>
                 <th>Customer</th>
-                <!-- <th>Logistics</th> -->
+                <th>Logistics</th>
                 <!-- <th>Carrier</th> -->
                 <th>Container Type</th>
                 <th>PLTS</th>
                 <!-- <th>PickupDate</th>  -->
+                <th>PU#</th>
                 <th>DeliveryDate</th>
                 <th>EmptyDate</th>  
                 <th>Stocked</th> 
@@ -39,11 +40,12 @@
                     <a href="{% url 'edit_container' container.container_id %}?mode=simple">{{ container.container_id }}</a>
                 </td>
                 <td>{{ container.customer.name }}</td>
-                <!-- <td>{{ container.logistics.name }}</td> -->
+                <td>{{ container.logistics.name }}</td>
                 <!-- <td>{{ container.Carrier.name }}</td> -->
                 <td>{{ container.inboundCategory.Type }}</td>
                 <td>{{ container.plts }}</td>
                 <!-- <td>{{ container.pickup_date |date:"m/d/Y" }}</td> -->
+                <td>{{ container.pickup_number }}</td>
                 <td>{{ container.delivery_date |date:"m/d/Y" }}</td>
                 <td>{{ container.empty_date |date:"m/d/Y" }}</td>
                 <td class="text-center">

@@ -16,14 +16,14 @@
                 <button type="submit" class="btn btn-primary  w-100" id="uploadPdf">Upload PDF</a>
             </div>
             <div class="col-md-2 ms-auto text-end">                
-                <a href="{% url 'rimeiorder' %}" class="btn btn-secondary">Back</a>
+                <a href="{% url 'rimeiorder_omar' %}" class="btn btn-secondary">Back</a>
             </div>
         </div>
     </form>  
 
     <hr class="my-3 border-2 opacity-100">
 
-    <h4>Order Detail</h4>    
+    <h4>Order Detail</h4>
 
     <form method="POST" class="needs-validation" action="{% url 'add_order' %}" novalidate>
         {% csrf_token %}

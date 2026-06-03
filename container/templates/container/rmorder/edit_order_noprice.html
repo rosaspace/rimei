@@ -50,8 +50,8 @@
             <h4 class="mr-3">Edit Order</h4>
         </div>
         <div class="ml-auto">
-            {% if order.customer_name.id in METAL_SIMPLE_CUSTOMERS %}
-                <a href="{% url 'rimeiorder_metal_full' %}" class="btn btn-secondary">Back</a>
+            {% if order.customer_name.id in METAL_SIMPLE_CUSTOMERS  %}
+                <a href="{% url 'rimeiorder_metal_simple' %}" class="btn btn-secondary">Back</a>
             {% elif order.customer_name.id == 4 %}
                 <a href="{% url 'rimeiorder_officedepot' %}" class="btn btn-secondary">Back</a>
             {% else %}
@@ -60,7 +60,7 @@
         </div>
     </div>
 
-    <form id="edit-order-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_order_full' order.so_num %}" class="needs-validation" novalidate>
+    <form id="edit-order-form" method="POST" enctype="multipart/form-data" action="{% url 'edit_order_simple' order.so_num %}" class="needs-validation" novalidate>
         {% csrf_token %}
         
         <div class="row mb-2" >
@@ -171,39 +171,6 @@
             </div>
         </div>
         <hr/>
-
-        <!--style="border: 1px solid red; border-radius: 1px;"-->
-        <div class="row mb-2 align-items-center" >   
-            <div class="col-md-3">
-                <label class="form-label" for="customer_price">Order Price</label>
-                <input type="text" id="customer_price" name="customer_price" class="form-control" value="{{ order.customer_price }}">
-            </div>
-
-            <div class="col-md-3">
-                <label for="payment_date" class="form-label">Customer Payment Date</label>
-                <input type="date" class="form-control" id="payment_date" name="payment_date"
-                    value="{{ order.customer_payment_date|date:'Y-m-d' }}">
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label" for="is_paid">Pay State</label>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="is_paid" name="is_paid"
-                        {% if order.customer_ispay %} checked {% endif %}>
-                    <label class="form-check-label" for="is_paid_label">Is Pay</label>
-                </div>
-            </div>
-            
-            <!-- Description -->
-            <div class="col-md-3">
-                <label for="description" class="form-label mb-1">Description</label>
-                <input type="text"
-                    class="form-control"
-                    id="description"
-                    name="description"
-                    value="{{ order.content }}">
-            </div>
-        </div>
 
         <div class="row mb-2 align-items-center" > 
             <div class="col-md-3">
