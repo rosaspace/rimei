@@ -31,9 +31,16 @@ GF_ADDRESS = [
 
 SSA_ADDRESS = [
     "Secure Source America LLC",
-    "1285 101 st Street, Lemont, IL 60439",
-    "TEL: 708-882-1188",
-    "accounting@securesourceamerica.com"
+    "1215 101 st Street",
+    "Lemont, IL 60439",
+    "Phone: 708-882-1188",
+]
+
+SSA_ADDRESSADAM = [
+    "Secure Source America LLC",
+    "1215 101 st Street",
+    "Lemont, IL 60439",
+    "Phone: 708-888-8810",
 ]
 
 CONSIGNEE = [
@@ -55,6 +62,9 @@ address_mapping = {
         "CITY OF INDUSTRY, CA 91748"
     ]
 }
+
+# Invoice
+Invoice_terms = 15
 
 labor_left_text = """
 Rimei International Inc<br/>
@@ -136,6 +146,7 @@ CUSTOMER_INVOICE_FOLDER = "CustomerInvoice"
 INVOICE_FOLDER = "INVOICE/"
 INVOICE_METAL_ORDER = "metalInvoice"
 INVOICE_OFFICE_SUPPLY = "office_supply"
+INVOICR_COMMISION = "Commission"
 
 # logo
 Rimei_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/remei.jpg')
@@ -155,7 +166,7 @@ Credit_rate = Decimal("1.03")
 
 # Font size
 FONT_SIZE = 64  # Larger font size
-FONT_SIZE_SMALL =  50  # Larger font size
+FONT_SIZE_SMALL =  40  # Larger font size
 # FONT_SIZE = 30  # Larger font size
 FONT_SIZE_Lot = 20
 FONT_SIZE_Container = 36  # Larger font size

@@ -341,7 +341,8 @@ def print_forklift_bol(request):
     ship_to = request.POST.get("ship_to", "").strip()
     pick_date_str = request.POST.get("shipout_date", "").strip()
     delivery_date_str = request.POST.get("delivery_date", "").strip()
-    num_trucks = int(request.POST.get("forklift_number", 1))
+    num_trucks = int(request.POST.get("truck_number", 1))
+    forklift_num = int(request.POST.get("forklift_number", 1))
 
     # 转换字符串为日期对象
     pick_date = datetime.fromisoformat(pick_date_str)
@@ -364,7 +365,7 @@ def print_forklift_bol(request):
     width, height = pagesize
 
     order_details = []
-    forklift_num = 3
+    # forklift_num = 3
     order_details.append({
         "Size": "N/A",
         "ShortName": "Forklift",

@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 
 from datetime import datetime, date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
@@ -16,7 +17,9 @@ from ..constants import constants_address, constants_view
 from ..models import RMOrder, RMCustomer, OrderImage, RMProduct, OrderItem, UserAndPermission
 
 from .utils.getPermission import get_user_permissions
-from .utils.invoice_utils import get_product_qty_with_inventory_from_order, extract_order_info, extract_items_from_pdf, get_product_qty_with_inventory
+from .utils.invoice_utils import get_product_qty_with_inventory_from_order, extract_items_from_pdf, get_product_qty_with_inventory
+
+from .utils.invoice_utils import extract_order_info, extract_metal_order_info
 from .utils.pdfgenerate import extract_text_from_pdf, converter_metal_invoice
 from .utils.date_utils import get_week_range, parse_date
 from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file, serve_pdf_file
@@ -100,11 +103,91 @@ def add_order(request):
     customers = RMCustomer.objects.filter(classification__iexact='Metal')
     return render(request, constants_view.template_add_order, {'customers': customers})
 
+def add_metal(request):
+    if request.method == "POST":
+        try:
+            # 检查SO号是否已存在
+            so_num = request.POST.get('so_num')
+            if RMOrder.objects.filter(so_num=so_num).exists():
+                messages.error(request, f'创建订单失败：SO号 {so_num} 已存在')
+
+                customers = RMCustomer.objects.all()
+                return render(request, constants_view.template_add_order, {
+                    'so_no': so_num,
+                    'po_no': request.POST.get('po_num'),
+                    'plts': request.POST.get('plts'),
+                    'bill_to': request.POST.get('bill_to'),
+                    'ship_to': request.POST.get('ship_to'),
+                    "order_date": request.POST.get('order_date'),
+                    'pickup_date': request.POST.get('pickup_date'),
+                    'outbound_date': request.POST.get('outbound_date'),
+                    'customers':customers,
+                    'customer_name': RMCustomer.objects.get(id=request.POST.get('customer_name')),
+                    'is_sendemail': request.POST.get('is_sendemail') == 'on',
+                    'is_updateInventory': request.POST.get('is_updateInventory') == 'on',
+                    'is_canceled': request.POST.get('is_canceled') == 'on',
+                    'is_allocated_to_stock': request.POST.get('is_allocated_to_stock') == 'on',
+                    'order_pdfname':request.POST.get('order_pdfname')  # 添加这一行
+                })
+            
+            print("------add_order-----")
+            customer = RMCustomer.objects.get(id=request.POST.get('customer_name'))            
+            order = RMOrder(
+                so_num=request.POST.get('so_num'),
+                po_num=request.POST.get('po_num'),
+                plts=request.POST.get('plts'),
+                customer_name=customer,
+                bill_to=request.POST.get('bill_to'),
+                ship_to=request.POST.get('ship_to'),
+                order_pdfname = request.POST.get('order_pdfname'),
+                order_date = request.POST.get('order_date') or None,
+                pickup_date=request.POST.get('pickup_date') or None,
+                outbound_date=request.POST.get('outbound_date') or None,
+                is_sendemail=request.POST.get('is_sendemail') == 'on',
+                is_updateInventory=request.POST.get('is_updateInventory') == 'on',
+                is_canceled=request.POST.get('is_canceled') == 'on',
+                is_allocated_to_stock=request.POST.get('is_allocated_to_stock') == 'on',  
+                created_user=request.user,  # ✅ 保存创建人           
+            )
+            order.save()
+
+            # 假设您从 PDF 中提取的产品信息存储在一个字典中
+            order_items_json = request.POST.get('orderitems')  # 获取产品信息
+            if order_items_json:
+                order_items = json.loads(order_items_json)  # 解析JSON
+                for item in order_items:
+                    product_name = item['item']
+                    quantity = item['qty']                    
+                    print(f"处理商品: {product_name}, 数量: {quantity}")
+
+                    products = RMProduct.objects.all()
+                    product = None
+                    for p in products:
+                        if (p.shortname and p.shortname.strip() in product_name) or (p.name in product_name):
+                            product = p
+                            break
+                    if product:
+                        # 创建订单明细
+                        OrderItem.objects.create(order=order, product=product, quantity=int(quantity))
+                    else:
+                        print(f"警告: 未找到匹配的产品 '{product_name}'")
+            
+            return redirect('rimeiorder_omar')
+        except Exception as e:
+            print("ADD ERROR:", str(e))
+            messages.error(request, f'创建订单失败：{str(e)}')
+    
+    # GET请求处理
+    # customers = RMCustomer.objects.all()
+    customers = RMCustomer.objects.filter(classification__iexact='Metal')
+    return render(request, constants_view.template_add_metal, {'customers': customers})
+
 @require_http_methods(["GET", "POST"]) 
 def edit_order_full(request, so_num):
     METAL_SIMPLE_CUSTOMERS = [19,29,30,31,32,33,34,35,36,37,38,39]
     try:
         if request.method == "GET":
+            print("------------------------edit_order_full POST-----------------------")
             order = RMOrder.objects.get(so_num=so_num)
 
             mode = request.GET.get("mode", "full")  # full / simple
@@ -117,6 +200,11 @@ def edit_order_full(request, so_num):
             total_weight = sum(float(item.weight) for item in orderitems_new if item.weight)
             total_quantity = sum(int(item.quantity) for item in orderitems_new)
             total_pallet = sum(int(item.pallet_qty) for item in orderitems_new)
+
+            # 计算销售金额
+            total_sales_price = sum((Decimal(item.salesprice * item.quantity) for item in orderitems_new), Decimal('0.00'))
+            total_sales_tax = (total_sales_price * Decimal('0.0825')).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
+            total_sales_grand = total_sales_price + total_sales_tax
 
             # price
             total_price = sum((Decimal(item.totalprice) for item in orderitems_new), Decimal('0.00'))
@@ -155,8 +243,12 @@ def edit_order_full(request, so_num):
                 'total_grand':total_grand,
                 'total_credit_price':total_credit_price,
                 'METAL_SIMPLE_CUSTOMERS':METAL_SIMPLE_CUSTOMERS,
+                'total_sales_price':total_sales_price,
+                'total_sales_tax':total_sales_tax,
+                'total_sales_grand':total_sales_grand
             })
         elif request.method == "POST":
+            print("------------------------edit_order_full POST-----------------------")
             try:
                 order = RMOrder.objects.get(so_num=so_num)
                 new_so_num = request.POST.get('so_num')
@@ -233,6 +325,8 @@ def edit_order_full(request, so_num):
                     for item in items:
                         product = RMProduct.objects.get(id=item['product_id'])
                         quantity = int(item['quantity'])
+                        print("---:",product.name,quantity)
+                        salesprice = float(item['salesprice'])
                         
                         product_actual = None
                         if item.get('product_actual_id'):
@@ -242,7 +336,8 @@ def edit_order_full(request, so_num):
                             order=order,
                             product=product,
                             product_actual=product_actual,
-                            quantity=int(quantity)
+                            quantity=int(quantity),
+                            price = salesprice
                         )                            
 
                 if customer.classification == 'Metal':
@@ -251,6 +346,7 @@ def edit_order_full(request, so_num):
                     return redirect('rimeiorder_officedepot')
                 return redirect('rimeiorder_omar')
             except Exception as e:
+                print(traceback.format_exc())
                 messages.error(request, f'更新订单失败：{str(e)}')
                 customers = RMCustomer.objects.all()
                 order_items = OrderItem.objects.filter(order=order)
@@ -325,6 +421,49 @@ def upload_orderpdf(request):
 
     return render(request, constants_view.template_rmorder)
 
+def upload_metal_orderpdf(request):
+    print("------upload_orderpdf--------\n")
+    if request.method == "POST" and request.FILES.get("pdf_file"):
+        pdf_file = request.FILES["pdf_file"]
+
+        upload_dir = get_media_path(constants_address.UPLOAD_DIR_order, constants_address.ORDER_FOLDER)
+        ensure_dir_exists(upload_dir)
+
+        file_path = os.path.join(upload_dir, pdf_file.name)
+
+        # 保存文件
+        with default_storage.open(file_path, "wb+") as destination:
+            for chunk in pdf_file.chunks():
+                destination.write(chunk) 
+
+        
+
+        # 解析 PDF
+        extracted_text = extract_text_from_pdf(file_path)
+        so_no, order_date, po_no, pickup_date, bill_to, ship_to, items = extract_metal_order_info(extracted_text)
+        # so_no, order_date, po_no, pickup_date, bill_to, ship_to, items, quantities = extract_order_info(extracted_text)
+        # orderitems = extract_items_from_pdf(extracted_text)
+
+        all_customer = RMCustomer.objects.all()
+        rimei_customer = RMCustomer.objects.filter(classification__iexact='Metal')
+        context = {
+            "so_no": so_no,
+            "order_date": order_date,
+            "po_no": po_no,
+            "pickup_date":pickup_date,
+            "bill_to":bill_to,
+            "ship_to":ship_to,
+            "orderitems":items,
+            # "quantities":quantities,
+            # "orderitems":orderitems_new,
+            'customers': rimei_customer,
+            'order_pdfname': pdf_file.name,
+            'extracted_text':extracted_text
+        }
+        return render(request, constants_view.template_add_metal,context)
+
+    return render(request, constants_view.template_rmorder)
+
 @require_http_methods(["POST"])
 def order_images(request, order_id):
     try:
@@ -347,11 +486,12 @@ def order_is_allocated_to_stock(request, so_num):
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     return redirect(next_url)
 
-def print_metal_invoice(request, order_id, isInvoice=0, discount_percent=20):
+def print_metal_invoice(request, order_id, isInvoice=0, discount_percent=20, no_tax=False):
     print("----------print_metal_invoice----------")
     print("isInvoice: ", isInvoice)
 
     discount_percent = int(request.GET.get("discount", 0))
+    no_tax = request.GET.get("no_tax", "false").lower() == "true"
     
     order = get_object_or_404(RMOrder, so_num=order_id)
     order_items = OrderItem.objects.filter(order=order)
@@ -364,7 +504,7 @@ def print_metal_invoice(request, order_id, isInvoice=0, discount_percent=20):
 
         desc = (getattr(obj, "description_actual", "") or "").strip()
         units = Decimal(str(getattr(obj, "quantity", 0) or 0))
-        rate = Decimal(str(getattr(obj, "price", 0) or 0))
+        rate = Decimal(str(getattr(obj, "salesprice", 0) or 0))
 
         # totalprice 优先
         if hasattr(item, "totalprice") and item.totalprice:
@@ -383,7 +523,49 @@ def print_metal_invoice(request, order_id, isInvoice=0, discount_percent=20):
         constants_address.INVOICE_METAL_ORDER
     )
     output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
-    converter_metal_invoice(order, amount_items, output_dir, new_filename, isInvoice, discount_percent)
+    converter_metal_invoice(order, amount_items, output_dir, new_filename, isInvoice, discount_percent, no_tax)
+    
+    # 打开并读取PDF文件
+    return serve_pdf_file(output_file_path, new_filename)
+
+def print_metal_salesorder(request, order_id, isInvoice=0, discount_percent=20, no_tax=False):
+    print("----------print_metal_sales_order----------")
+    print("isInvoice: ", isInvoice)
+
+    discount_percent = int(request.GET.get("discount", 0))
+    no_tax = request.GET.get("no_tax", "false").lower() == "true"
+    
+    order = get_object_or_404(RMOrder, so_num=order_id)
+    order_items = OrderItem.objects.filter(order=order)
+    orderitems_new = get_product_qty_with_inventory_from_order(order_items)
+
+    # 填充发票条目
+    amount_items = []
+    for obj in orderitems_new:
+        item = obj.so_num_actual  # 保留原始 item 对象（不是字符串）
+
+        desc = (getattr(obj, "description_actual", "") or "").strip()
+        units = Decimal(str(getattr(obj, "quantity", 0) or 0))
+        rate = Decimal(str(getattr(obj, "salesprice", 0) or 0))
+
+        # totalprice 优先
+        if hasattr(item, "totalprice") and item.totalprice:
+            amount = Decimal(item.totalprice)
+        else:
+            amount = Decimal(units) * Decimal(rate)
+
+        amount_items.append((item, desc, units, rate, amount))
+        print("desc: ",desc)
+
+
+    # 构造新的文件路径
+    new_filename = f"{order.so_num}.pdf"
+    output_dir = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.INVOICE_METAL_ORDER
+    )
+    output_file_path = os.path.join(output_dir, new_filename)  # ✅ 拼接完整路径
+    converter_metal_invoice(order, amount_items, output_dir, new_filename, isInvoice, discount_percent, no_tax)
     
     # 打开并读取PDF文件
     return serve_pdf_file(output_file_path, new_filename)
@@ -473,7 +655,6 @@ def rimeiorder_metal_simple(request):
         'user_permissions': user_permissions,
         'customers': customers,
         })
-
 
 @login_required(login_url='/login/')
 def rimeiorder_officedepot(request):

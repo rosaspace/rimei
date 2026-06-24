@@ -22,10 +22,22 @@
                 <button class="btn btn-primary" id="printMcdOrder">Mcd Order</button>
             </div>
             <div class="me-2">
-                <button class="btn btn-success" id="printMetalOrder">Metal Order</button>
+                <button class="btn btn-success" id="printMetalOrder">Packing List</button>
+            </div>            
+            <div class="me-2">
+                <button class="btn btn-success" id="printMetalSalesOrder">Sales Order</button>
             </div>
+
             <div class="me-2">
                 <button class="btn btn-success" id="printMetalInvoice">Metal Invoice</button>
+            </div>
+            <div class="form-check me-3 d-flex align-items-center">
+                <input class="form-check-input me-2"
+                    type="checkbox"
+                    id="noTax">
+                <label class="form-check-label" for="noTax">
+                    No Tax
+                </label>
             </div>
             <div class="me-2">
                 <input type="number" id="discount" name="discount" class="form-control" placeholder="Discount %" min="0" max="100" step="1" style="width: 120px;">
@@ -236,6 +248,7 @@
                             <th>Product Name</th>
                             <th>Product SKU</th>
                             <th>Quantity</th>
+                            <th>SalesPrice</th>
                             <th>Pallet</th>
                             <th>Case</th>
                             <th>Weight</th>
@@ -274,6 +287,14 @@
                                 <input type="number" class="form-control quantity-input" value="{{ item.quantity }}" min="1">
                             </td>
                             <td class="align-middle">
+                                <input
+                                    type="number"
+                                    class="form-control salesprice-input"
+                                    value="{{ item.salesprice|floatformat:2 }}"
+                                    min="0"
+                                    step="0.01">
+                            </td>
+                            <td class="align-middle">
                                 <div class="d-flex align-items-center" ><span>{{ item.pallet_qty }}</span></div>
                             </td>
                             <td class="align-middle">
@@ -293,7 +314,7 @@
                                 </div>
                             </td>
                             <td class="align-middle">
-                                <div class="d-flex align-items-center" ><span>{{ item.price }}</span></div>
+                                <div class="d-flex align-items-center" ><span>{{ item.costprice }}</span></div>
                             </td>
                             <td class="align-middle">
                                 <div class="d-flex align-items-center" ><span>{{ item.totalprice }}</span></div>
@@ -312,6 +333,13 @@
                         <p class="mb-0">Total Weight: <strong>{{ total_weight|floatformat:0 }}</strong> LBS</p>
                         <p class="mb-0">Total Quantity: <strong>{{ total_quantity }}</strong> cases</p>
                         <p class="mb-0">Total Pallet: <strong>{{ total_pallet }}</strong> plts</p>
+                    </div>
+
+                    <!-- Middle Column -->
+                    <div>
+                        <p class="mb-0">Sales Price: <strong>$ {{ total_sales_price }}</strong></p>
+                        <p class="mb-0">Sales Tax: <strong>$ {{ total_sales_tax }}</strong></p>
+                        <p class="mb-0">Sales Total Grand: <strong>$ {{ total_sales_grand }}</strong></p>
                     </div>
 
                     <!-- Right Column -->
@@ -374,17 +402,23 @@ document.addEventListener('DOMContentLoaded', function() {
         window.open(`/print_stored_file/${soNum}/`, '_blank');
     });
 
+    // 打印Metal Sales Order
+    document.getElementById('printMetalSalesOrder').addEventListener('click', function() {
+        window.open(`/print_metal_salesorder/${soNum}/${2}`, '_blank');
+    });
+
     // 打印Metal Invoice
     document.getElementById('printMetalInvoice').addEventListener('click', function() {
         const discountInput = document.getElementById('discount');
         let discount = discountInput ? discountInput.value : '';
+        const noTax = $("#noTax").is(":checked");
 
         // 防止空值或非法输入
         if (discount === '' || isNaN(discount)) {
             discount = 0;
         }
 
-        const url = `/print_metal_invoice/${soNum}/${isInvoice}?discount=${encodeURIComponent(discount)}`;
+        const url = `/print_metal_invoice/${soNum}/${isInvoice}?discount=${encodeURIComponent(discount)}&no_tax=${noTax}`;
         window.open(url, '_blank');
     });
 
@@ -400,13 +434,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const productId = row.querySelector('.product-main').value;
             const productActualId = row.querySelector('.product-actual').value;
             const quantity = row.querySelector('.quantity-input').value;
-            console.log("---:",productId,productActualId, quantity)
+            const salesprice = row.querySelector('.salesprice-input').value;
+            console.log("---:",productId,productActualId, quantity,salesprice)
 
             if (productId && quantity) {
                 items.push({
                     product_id: productId,
                     product_actual_id: productActualId || null,
-                    quantity: quantity
+                    quantity: quantity,
+                    salesprice: salesprice
                 });
             }
         });
@@ -437,6 +473,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
                 <td>
                     <input type="number" class="form-control quantity-input" value="1" min="1">
+                </td>
+                <td>
+                    <input type="number"
+                        class="form-control salesprice-input"
+                        value="0"
+                        min="0"
+                        step="0.01"
+                        placeholder="销售价格">
                 </td>
                 <td>
                     <button type="button" class="btn btn-danger btn-sm remove-row">Remove</button>

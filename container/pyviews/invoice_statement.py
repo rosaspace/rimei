@@ -10,7 +10,6 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from reportlab.lib.pagesizes import A4
 from reportlab.platypus import Image, Spacer, Table, TableStyle, Paragraph
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
@@ -146,7 +145,7 @@ def print_statement_invoice_pdf(request):
         fontSize=20,  # 设置大标题字体大小
         leading=24
     )
-    elements.append(Paragraph(f"Advance77 Payment Statement - {datetime.now().strftime('%m/%d/%Y')}", large_title_style))
+    elements.append(Paragraph(f"Carrier Payment Statement - {datetime.now().strftime('%m/%d/%Y')}", large_title_style))
     elements.append(Spacer(1, 12))
 
     # 表格数据

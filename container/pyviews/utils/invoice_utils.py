@@ -4,7 +4,7 @@ from container.models import RMOrder,Container,RMProduct,ContainerItem,OrderItem
 from container.pyviews import inventory_count
 
 
-# 提取订单信息
+# 提取Gloves订单信息
 def extract_order_info(text):
     so_no = None
     order_date = None
@@ -79,6 +79,98 @@ def extract_order_info(text):
                 quantities.append(int(qty_match.group(1).strip())) 
 
     return so_no, order_date, po_no, pickup_date, bill_to, ship_to, items, quantities
+
+# 提取Metal订单信息
+def extract_metal_order_info(text):
+    so_no = None
+    order_date = None
+    po_no = None
+    pickup_date = None
+    bill_to = None
+    ship_to = None
+
+    items = []
+
+    # 先切掉尾部无用信息
+    # text = re.split(
+    # r'OTHER SPECIAL INSTRUCTIONS',
+    #     text,
+    #     flags=re.I
+    # )[0]
+    
+    # ------------------------
+    # SO Number
+    # ------------------------
+    m = re.search(
+        r'QUOTE#:\s*([A-Z0-9]+)\s*-\s*([A-Z0-9]+)',
+        text,
+        re.I
+    )
+
+    if m:
+        so_no = f"{m.group(1)}-{m.group(2)}"
+
+    # ------------------------
+    # Date
+    # ------------------------
+    m = re.search(
+        r'DATE:\s*([\d/]+)',
+        text,
+        re.I
+    )
+
+    if m:
+        order_date = convert_to_yyyy_mm_dd(m.group(1))
+
+    # ------------------------
+    # PO Number
+    # ------------------------
+    m = re.search(
+        r'PO#\s*([A-Z0-9\-]+)',
+        text,
+        re.I
+    )
+
+    if m:
+        po_no = m.group(1)
+
+    # ------------------------
+    # Bill To
+    # ------------------------
+    m = re.search(
+        r'Matrix Basement Finishing.*?Batavia,\s*IL\s*60510',
+        text,
+        re.S
+    )
+
+    if m:
+        bill_to = m.group(0)
+
+    # ------------------------
+    # Ship To
+    # ------------------------
+    ship_to = "N/A"
+
+    # ------------------------
+    # 数量价格金额
+    # ------------------------
+    qty_price_pattern = re.findall(
+        r'(\d+)\s+([\d.]+)\s+\$\s*\$\s*([\d.]+)',
+        text
+    )
+
+    qty_price_rows = []
+
+    for qty, price, amount in qty_price_pattern:
+        qty_price_rows.append({
+            "qty": int(qty),
+            "price": float(price),
+            "amount": float(amount),
+        })
+
+    items = extract_items_fixed(text)
+
+    return so_no, order_date, po_no, pickup_date, bill_to, ship_to, items
 
 # 提取订单条目
 def extract_items_from_pdf(text):
@@ -253,9 +345,10 @@ def get_product_qty_with_inventory_from_order(order_items):
         item.inventory_qty = product.quantity
         item.pallet_qty = 0 if product.Pallet == 0 else item.quantity //product.Pallet
         item.case_qty = 0 if product.Pallet == 0 else item.quantity % product.Pallet
-        item.price = product.price
+        item.costprice = product.price
         item.totalprice = product.price * item.quantity
         item.shortage = item.inventory_qty - item.case_qty
+        item.salesprice = item.price
 
         item.so_num_actual = actualproduct.name
         item.description_actual = actualproduct.description
@@ -280,3 +373,61 @@ def get_product_qty_with_inventory_from_container(container_items):
         item.pallet_qty = 0 if product.Pallet == 0 else item.quantity //product.Pallet
         item.case_qty = 0 if product.Pallet == 0 else item.quantity % product.Pallet
     return container_items
+
+
+def extract_items_fixed(text):
+
+    # 🔥 1. 先放宽 SKU 匹配（关键修复点）
+    sku_pattern = r'\b\d{2,}[A-Z]{1,3}\d{2,}(?:-\d+)*\b'
+
+    sku_matches = list(re.finditer(sku_pattern, text))
+
+    if not sku_matches:
+        print("❌ NO SKU FOUND - check OCR/text")
+        return []
+
+    items = []
+
+    # 🔥 2. qty pattern（保持你原来的 OK）
+    qty_pattern = re.findall(
+        r'(\d+)\s+([\d.]+)\s+\$\s*\$\s*([\d.]+)',
+        text
+    )
+
+    print("QTY ROWS:", len(qty_pattern))
+    print("SKU ROWS:", len(sku_matches))
+
+    # 🔥 3. 核心：逐 SKU 切片
+    for i, m in enumerate(sku_matches):
+
+        sku = m.group()
+        start = m.end()
+        end = sku_matches[i+1].start() if i+1 < len(sku_matches) else len(text)
+
+        chunk = text[start:end]
+
+        chunk = re.sub(r'\s+', ' ', chunk)
+
+        # description cleanup
+        desc = re.split(
+            r'OTHER SPECIAL INSTRUCTIONS|ADAM C|SHIP VIA|FOB POINT|PAYMENT TERM',
+            chunk,
+            flags=re.I
+        )[0].strip()
+
+        # 🔥 4. 关键：用 index 对齐 qty
+        if i >= len(qty_pattern):
+            print(f"⚠️ qty missing for SKU {sku}")
+            continue
+
+        qty, price, amount = qty_pattern[i]
+
+        items.append({
+            "sku": sku,
+            "description": desc,
+            "qty": int(qty),
+            "price": float(price),
+            "amount": float(amount),
+        })
+
+    return items

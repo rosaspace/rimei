@@ -2,9 +2,12 @@ import calendar
 import datetime
 import pandas as pd
 import json
+import os
+
+from decimal import Decimal, ROUND_HALF_UP
 
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 from django.db.models import Case, When, Value, FloatField, F, ExpressionWrapper, Sum, Q, Min, Max, Count, DecimalField
 from django.db.models.functions import TruncMonth, TruncWeek, Coalesce
@@ -13,10 +16,14 @@ from django.shortcuts import render, redirect
 from ..constants import constants_address, constants_view
 from ..models import Container, Employee, ClockRecord, ContainerItem, OrderItem, RMProduct, RMOrder
 from ..models import InvoiceAPRecord, InvoiceARRecord, OfficeSupplyRecord
+from ..models import RMCustomer
 
 from .inventory_count import get_quality, get_product_qty
+from .utils.pdfgenerate import converter_commision_pdf
 from .utils.getPermission import get_user_permissions
 from .utils.date_utils import month_workdays
+from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
+from .utils.file_utils import get_media_path, ensure_dir_exists
 
 def statistics_invoice_summary(request):
     start_date = date(2025, 1, 1)
@@ -748,6 +755,108 @@ def statistics_metal_customer_trend(request):
         'user_permissions': user_permissions
     })
 
+def statistics_metal_commission(request):
+
+    customer_id = request.GET.get("customer")
+    month = request.GET.get("month")
+    orders = get_metal_commission_orders(customer_id, month)
+
+    # 组织汇总后的数据
+    report = {}
+    grand_amount = 0
+    grand_amount_tax = 0
+    invoice_amount = 0
+    ground_profit_amount = 0
+    cost_amount = 0
+    customer_amount = 0
+
+    for order in orders:
+
+        customer = order.customer_name.name
+        month = order.month.strftime("%Y-%m") if order.month else "No Date"
+
+        report.setdefault(customer, {})
+        report[customer].setdefault(month, {
+            "orders": [],
+            "grand_amount": 0,
+            "grand_amount_tax":0,
+            "invoice_amount":0,
+            "profit_amount":0,
+            "cost_amount":0,
+            "customer_amount":0,
+        })
+
+        amount = order.total_amount or 0
+        profit = amount * Decimal(constants_address.Tax_rate)
+
+        # 月份汇总
+        report[customer][month]["orders"].append(order)
+        report[customer][month]["grand_amount"] += amount
+        report[customer][month]["grand_amount_tax"] += profit
+        report[customer][month]["invoice_amount"] += amount + profit
+        report[customer][month]["profit_amount"] += order.total_profit
+        report[customer][month]["cost_amount"] += order.total_cost
+        report[customer][month]["customer_amount"] += order.customer_price
+
+        # 客户汇总
+        grand_amount += amount
+        grand_amount_tax += amount * Decimal(constants_address.Tax_rate)
+        invoice_amount += order.invoice_price
+        ground_profit_amount += order.total_profit
+        cost_amount += order.total_cost
+        customer_amount + order.customer_price
+
+    customers = RMCustomer.objects.filter(
+        classification="Metal"
+    ).order_by("name")
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_statistics_metalCommission, {
+
+        'user_permissions': user_permissions,
+        "orders": orders,
+        "customers": customers,
+        "selected_customer": customer_id,
+        "selected_month": month,
+        "report": report,
+        "grand_amount": grand_amount,
+        "grand_amount_tax":grand_amount_tax,
+        "invoice_amount":invoice_amount,
+        "ground_profit_amount": ground_profit_amount,
+        "cost_amount": cost_amount,
+        "customer_amount": customer_amount,
+    })
+
+def export_commission(request):
+    customer_id = request.GET.get("customer")
+    month = request.GET.get("month")
+    orders = get_metal_commission_orders(customer_id, month)
+
+    output_dir = "media/temp"
+    os.makedirs(output_dir, exist_ok=True)
+
+    filename = "Metal_Commission_Report.pdf"
+    filepath = os.path.join(output_dir, filename)
+
+    # c = canvas.Canvas(filepath, pagesize=landscape(letter))
+    # PDF 保存路径（和 detail 一致）
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_invoice,
+        constants_address.INVOICR_COMMISION
+    )
+    ensure_dir_exists(pdf_path)
+
+    today = datetime.now().strftime("%Y%m%d")
+    filename = os.path.join(pdf_path, f"Commission_{today}.pdf")
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    width, height = pagesize
+
+    converter_commision_pdf(c, orders, width, height)
+
+    return finalize_pdf_and_response(
+        c,
+        filename
+    )
+
 # sub function - 每月入 / 出库统计（通用方法）
 def get_monthly_in_out(type_name):
     in_items = ContainerItem.objects.filter(
@@ -880,3 +989,68 @@ def get_dead_products(type_name, days=180):
             dead.append({'name': name, 'quantity': qty})
 
     return sorted(dead, key=lambda x: x['name'].lower())
+
+def get_metal_commission_orders(customer_id, month):
+    orders = (
+        RMOrder.objects
+        .filter(
+            customer_name__classification="Metal",
+            is_canceled=False,          # 可选：排除取消订单
+        )
+        .select_related("customer_name")
+        .annotate(
+            month=TruncMonth("pickup_date"),
+            total_amount=Sum(# 销售金额
+                ExpressionWrapper(
+                    F("order_items__quantity") * F("order_items__price"),
+                    output_field=DecimalField(max_digits=15, decimal_places=2)
+                )
+            ),
+            # 成本金额
+            total_cost=Sum(
+                ExpressionWrapper(
+                    F("order_items__quantity") * F("order_items__product_actual__price"),
+                    output_field=DecimalField(max_digits=15, decimal_places=2)
+                )
+            ),
+        )
+        .order_by(
+            "customer_name__name",
+            "month",
+            "pickup_date",
+            "so_num"
+        )
+    )
+
+    if customer_id:
+        orders = orders.filter(customer_name_id=customer_id)
+    if month:
+        year, mon = month.split("-")
+        orders = orders.filter(
+            pickup_date__year=year,
+            pickup_date__month=mon,
+        )
+
+    # 组织实际订单的数据
+    for order in orders:
+        amount = order.total_amount or Decimal("0.00") # 不含税金额
+        cost = order.total_cost or Decimal("0.00") # 成本价
+        carrier = order.carrier_price or Decimal("0.00") # 运费
+        # if carrier == 0.0:
+        #     carrier = 150
+        profit = cost * Decimal("0.05") # 5% profit
+        total_tax = amount * Decimal(constants_address.Tax_rate) #税费
+        invoice_price = amount * (Decimal(constants_address.Tax_rate)+1)
+
+        order.total_tax = total_tax
+        order.invoice_price = invoice_price
+        order.carrier_price = carrier
+        order.total_cost = cost
+        order.profit = profit
+
+        if carrier == 0.0:
+            order.total_profit = amount - 150 - order.total_cost + profit # 不含税金额 - 运费 - 成本价 + 5% profit
+        else:
+            order.total_profit = amount - order.total_cost + profit # 不含税金额 - 运费 - 成本价 + 5% profit
+
+    return orders

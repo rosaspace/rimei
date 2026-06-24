@@ -1,37 +1,22 @@
 version: "3.9"
 
 services:
-  # db:
-  #   image: postgres:14
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data/
-  #   environment:
-  #     POSTGRES_DB: ljdb
-  #     POSTGRES_USER: lj
-  #     POSTGRES_PASSWORD: mengxiang0425
 
   web:
     build: .
-    container_name: django_app
-    env_file:
-      - ./nginx/.env
+    container_name: django_prod
+    command: python manage.py runserver 0.0.0.0:8888
+    expose:
+      - "8888"
     ports:
       - "8888:8888"
     volumes:
       - .:/app
-    # depends_on:
-    #   - db
-    environment:
-      - PYTHONUNBUFFERED=1
-      # - DB_NAME=ljdb
-      # - DB_USER=lj
-      # - DB_PASSWORD=mengxiang0425
-      # - DB_HOST=db
-    command: python manage.py runserver 0.0.0.0:8888
+    
 
   nginx:
     image: nginx:latest
-    container_name: nginx_proxy
+    container_name: nginx_prod
     ports:
       - "80:80"
       - "443:443"
@@ -42,6 +27,3 @@ services:
       - ./nginx/.env
     depends_on:
       - web
-
-# volumes:
-#   postgres_data:

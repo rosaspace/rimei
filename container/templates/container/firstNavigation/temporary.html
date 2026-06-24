@@ -112,14 +112,26 @@
             <div class="mb-2">
                 <textarea class="form-control" id="ship_to" name="ship_to" rows="4" required></textarea>
             </div>
-            <div class="mb-2">
-                <input type="date" name="shipout_date" id="shipout_date" class="form-control" required>
+            <!-- 日期同一行 -->
+            <div class="row mb-2">
+                <div class="col-6">
+                    <input type="date" name="shipout_date" id="shipout_date" class="form-control" required>
+                </div>
+                <div class="col-6">
+                    <input type="date" name="delivery_date" id="delivery_date" class="form-control" required>
+                </div>
             </div>
-            <div class="mb-2">
-                <input type="date" name="delivery_date" id="delivery_date" class="form-control" required>
-            </div>
-            <div class="mb-2">
-                <input type="number" name="forklift_number" id="forklift_number" class="form-control" placeholder="Forklift Number" required>
+
+            <!-- Number 同一行 -->
+            <div class="row mb-2">
+                <div class="col-6">
+                    <input type="number" name="truck_number" id="truck_number" class="form-control"
+                        placeholder="Truck Number" required>
+                </div>
+                <div class="col-6">
+                    <input type="number" name="forklift_number" id="forklift_number" class="form-control"
+                        placeholder="Forklift Number" required>
+                </div>
             </div>
             <button type="submit" class="btn btn-success" id="printMcdLabel">
                 Print Forklift BOL

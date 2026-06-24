@@ -116,6 +116,48 @@ def container_omar(request):
         })
 
 @login_required(login_url='/login/')
+def container_carrier(request):
+    containers = Container.objects.select_related(
+        'customer', 'logistics', 'Carrier', 'inboundCategory'
+    ).exclude(Q(logistics = 2)).order_by('-delivery_date') # logistics: Customer, 排除Mcdonalds和Metal
+
+    # 今天，计算本周的周一和周日
+    today = date.today()    
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+
+    # GET 参数
+    customer_id = request.GET.get('customer')
+    logistics_id = request.GET.get('logistics')
+    carrier_id = request.GET.get('carrier')
+    category_id = request.GET.get('category')
+
+    if customer_id:
+        containers = containers.filter(customer_id=customer_id)
+
+    if logistics_id:
+        containers = containers.filter(logistics_id=logistics_id)
+
+    if carrier_id:
+        containers = containers.filter(Carrier_id=carrier_id)
+
+    if category_id:
+        containers = containers.filter(inboundCategory_id=category_id)
+
+    user_permissions = get_user_permissions(request.user) 
+    return render(request, constants_view.template_container, {
+        'containers': containers,'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        'customers': InvoiceCustomer.objects.exclude(Q(id = 1) | Q(id=2) | Q(id=3)| Q(id=12)),
+        'logistics_list': LogisticsCompany.objects.all(),
+        'carriers': Carrier.objects.filter(Q(id = 1) | Q(id=5) ),
+        'inbound_categories': InboundCategory.objects.all(),
+        })
+
+
+@login_required(login_url='/login/')
 def simplified_container_view(request):
     containers = Container.objects.filter(Q(is_updateInventory = False)).order_by('delivery_date')
 

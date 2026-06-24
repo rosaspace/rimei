@@ -2,7 +2,7 @@ import os
 import re
 import textwrap
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 import fitz  # PyMuPDF 解析 PDF
 
@@ -10,7 +10,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
 
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import letter
 from reportlab.platypus import Image, Spacer, Table, TableStyle, Paragraph
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -311,7 +311,7 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
     output_path = os.path.join(output_dir, new_filename)
     c, (width, height), inch, ImageReader = create_pdf_canvas(
         file_path=output_path,
-        pagesize=A4
+        pagesize=letter
     )
 
     y = height - 80
@@ -803,34 +803,42 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
         c.drawString(x_pos, signature_y - 30, "Date:")
         c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
 
-def converter_metal_invoice(container, amount_items, output_dir, new_filename, isInvoice, discount_percent=0):
+def converter_metal_invoice(container, amount_items, output_dir, new_filename, isInvoice, discount_percent=0, no_tax=False):
     
     ensure_dir_exists(output_dir)
     output_path = os.path.join(output_dir, new_filename)
     c, (width, height), inch, ImageReader = create_pdf_canvas(
         file_path=output_path,
-        pagesize=A4
+        pagesize=letter
     )
 
-    y = height - 80
-    y_offset = 30  # ✅ 向下移动整体内容高度
+    y = height - 50
+    y_offset = 60  # ✅ 向下移动整体内容高度
+    
 
     isJustTableOrder = False # True, just print order table
 
-    # ✅ Logo 和标题
+    # ✅ Logo
     if not isJustTableOrder:
         if os.path.exists(constants_address.SSA_LOGO_PATH):
-            c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - 60, width=140, height=80, preserveAspectRatio=True, mask='auto')
+            c.drawImage(constants_address.SSA_LOGO_PATH, 40, y - y_offset, width=140, height=80, preserveAspectRatio=True, mask='auto')
 
-    # ---- Center Title (Invoice / Order) ----
-    title_text = "Invoice" if isInvoice == 1 else "Delivery Order"
-
+    #  Invoice/Delivery Order
+    title_text = "Packing List" 
+    if isInvoice == 1 :
+        title_text = "Invoice"
+    elif isInvoice == 2:
+        title_text = "Sales Order"
     c.setFont(constants_address.font_Helvetica_Bold, 20)
-    c.drawCentredString(width / 2, height - 101, title_text)
+    c.drawCentredString(width / 2, y - 30, title_text)
 
+    # SHIPPER,INVOICE,BILL TO,SHIP TO
+    y_shipper_diff = 60 #和上方的间距
+    y_diff = 15
     ADDRESS_MAPPING = {
         "SHIPPER": constants_address.SSA_ADDRESS,
-        "CONSIGNEE": constants_address.CONSIGNEE
+        "CONSIGNEE": constants_address.CONSIGNEE,
+        "SHIPPERADAM": constants_address.SSA_ADDRESSADAM,
     }
 
     invoice_prefix = {
@@ -839,13 +847,20 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
     }.get(container.so_num, "")  # 默认为空字符串
     full_invoice_no = f"{invoice_prefix}{container.so_num}"
 
+    # term_days = timedelta(days=constants_address.Invoice_terms)
+    term_days = container.customer_name.term
     if not isJustTableOrder:
         # --- Shipper Info ---
-        draw_address_block(c, "SHIPPER:", ADDRESS_MAPPING["SHIPPER"], 40, height - 130 - y_offset)
+        if isInvoice == 1:
+            draw_address_block(c, "SHIPPER:", ADDRESS_MAPPING["SHIPPER"], 40, height - y_shipper_diff - y_offset)
+        elif isInvoice == 2:
+            draw_address_block(c, "SHIPPER:", ADDRESS_MAPPING["SHIPPERADAM"], 40, height - y_shipper_diff - y_offset)
+        else:
+            draw_address_block3(c, constants_address.SSA_ADDRESSADAM, 40, height - y_shipper_diff - y_offset + 15)
 
         # --- Invoice Box ---
         invoice_date = datetime.today()
-        due_date = invoice_date + timedelta(days=30)
+        due_date = invoice_date + timedelta(days=term_days)
         date_expected = (container.pickup_date.strftime('%m/%d/%Y') if container.pickup_date else "N/A")
 
         label_font = "Helvetica-Bold"
@@ -857,135 +872,92 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
             c.setFont(value_font, 10)
             c.drawString(x + 80, y, value)   # 95 是标签与值的间距，可自行调
 
-        if isInvoice:
-            invoicenum_x_pos = 390
-            draw_section_header(c, "INVOICE:", invoicenum_x_pos, height - 130 - y_offset)        
+        invoicenum_x_pos = 350
+        if isInvoice == 1:
+            
+            draw_section_header(c, "INVOICE:", invoicenum_x_pos, height - y_shipper_diff - y_offset)        
 
-            draw_label_value(c, invoicenum_x_pos, height - 145 - y_offset,
+            draw_label_value(c, invoicenum_x_pos, height - y_shipper_diff - y_diff - y_offset,
                             "INVOICE NO.: ", full_invoice_no)
 
-            draw_label_value(c, invoicenum_x_pos, height - 160 - y_offset,
+            draw_label_value(c, invoicenum_x_pos, height - y_shipper_diff - y_diff * 2 - y_offset,
                             "INVOICE DATE: ", invoice_date.strftime('%m/%d/%Y'))
 
-            draw_label_value(c, invoicenum_x_pos, height - 175 - y_offset,
+            draw_label_value(c, invoicenum_x_pos, height - y_shipper_diff - y_diff * 3 - y_offset,
                             "DUE DATE: ", due_date.strftime('%m/%d/%Y'))
+        elif isInvoice == 2:
+            draw_section_header(c, "Order:", invoicenum_x_pos, height - y_shipper_diff - y_offset)
+            draw_label_value(c, invoicenum_x_pos, height - y_shipper_diff - y_diff - y_offset,
+                            "Date: ", container.order_date.strftime('%m/%d/%Y'))
 
-        else:
-            invoicenum_x_pos = 390
-
-            draw_label_value(c, invoicenum_x_pos, height - 130 - y_offset,
-                            "Order Date: ", container.order_date.strftime('%m/%d/%Y'))
-
-            draw_label_value(c, invoicenum_x_pos, height - 145 - y_offset,
+            draw_label_value(c, invoicenum_x_pos, height - y_shipper_diff - y_diff *3 - y_offset,
                             "PO#: ", container.po_num)
 
-            draw_label_value(c, invoicenum_x_pos, height - 160 - y_offset,
-                            "SO#: ", container.so_num)
+            draw_label_value(c, invoicenum_x_pos, height - y_shipper_diff - y_diff *2 - y_offset,
+                            "Quote#: ", container.so_num)
 
             # draw_label_value(c, invoicenum_x_pos, height - 175 - y_offset,
             #                 "Ship Via: ", "Warehouse Ship")
 
-            draw_label_value(c, invoicenum_x_pos, height - 175 - y_offset,
+            draw_label_value(c, invoicenum_x_pos, height - y_shipper_diff - y_diff*4 - y_offset,
                             "Expected Date: ", date_expected)
+        else:
+            print("blank")
 
         # --- Bill To ---
-        if isInvoice:
+        y_shipper_interval = 140
+        if isInvoice == 1 or isInvoice == 2:
             bill_to_address = container.bill_to
-            draw_address_block2(c, "BILL TO:", container.bill_to, 40, height - 220 - y_offset)
+            draw_address_block2(c, "BILL TO:", container.bill_to, 40, height - y_shipper_interval - y_offset)
         else:
-            bill_to_address = container.bill_to
-            draw_address_block2(c, "Customer:", container.bill_to, 40, height - 220 - y_offset)
+            draw_section_header(c, "Order:", 40, height - y_shipper_interval - y_offset)
+            draw_label_value(c, 40, height - y_shipper_interval - y_diff - y_offset,
+                            "Date: ", container.order_date.strftime('%m/%d/%Y'))
+
+            draw_label_value(c, 40, height - y_shipper_interval - y_diff *3 - y_offset,
+                            "PO#: ", container.po_num)
+
+            draw_label_value(c, 40, height - y_shipper_interval - y_diff *2 - y_offset,
+                            "Order#: ", container.so_num)
+
+            draw_label_value(c, 40, height - y_shipper_interval - y_diff*4 - y_offset,
+                            "Delivery Date: ", date_expected)
 
         # --- Consignee ---
-        draw_address_block2(c, "SHIP TO:", container.ship_to, invoicenum_x_pos, height - 220 - y_offset)
+        draw_address_block2(c, "SHIP TO:", container.ship_to, invoicenum_x_pos, height - y_shipper_interval - y_offset)
 
-    # 预估地址块高度（每行约 14，高度预留更安全）
+
+    # 设置表格高度（每行约 14，高度预留更安全）
     address_block_height = 100
     if isJustTableOrder:
-        # ✅ Order：没有地址块，直接靠近标题
-        table_start_y = height - 140
+        # Order：没有地址块，直接靠近标题
+        table_start_y = height - 130
     else:
         # Invoice：有地址块，稍微往下
-        table_start_y = height - 160 - y_offset - address_block_height
+        table_start_y = height - 110 - y_offset - address_block_height
 
-    # --- Table Data ---
-    # 初始化总金额
-    total = Decimal("0.00")
+    # Payment Term Table
+    if isInvoice == 1 or isInvoice == 2:
+        packing_table_bottom_y = draw_packing_table(
+            c=c,
+            terms=term_days,
+            start_y=table_start_y,
+            width=width,
+            height=height
+        )
 
-    # --- Table Data (Dynamic Version) ---
-    # table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "CHARGES"]]
-    if isInvoice == 1:
-        table_data = [["ITEM", "DESCRIPTION", "QTY", "Unit Cost", "Charges"]]
-    else:
-        table_data = [["ITEM", "DESCRIPTION", "QTY"]]
-    total = Decimal("0.00")
+    # Product Table
+    table_bottom_y, total = draw_product_table(
+        c=c,
+        amount_items=amount_items,
+        isInvoice=isInvoice,
+        table_start_y=table_start_y - 20,
+        width=width,
+        height=height
+    )
 
-    for item, desc, units, rate, charge in amount_items:
-        display_item = str(item) if item else ""
-        display_desc = desc
-        display_units = f"{units:.0f}" if units else ""
-        
-        if isInvoice == 1:
-            display_rate = f"${rate:,.2f}" if rate else ""
-            display_charge = f"${charge:,.2f}" if charge else ""
-
-            table_data.append([
-                display_item,
-                display_desc,
-                display_units,
-                display_rate,
-                display_charge
-            ])
-
-            total += Decimal(str(charge or 0))
-        else:
-            # ✅ Order：Price 列存在，但永远空
-            table_data.append([
-                display_item,
-                display_desc,
-                display_units
-            ])
-
-
-    # --- Build Table ---
-    if isInvoice == 1:
-        table = Table(table_data, colWidths=[80, 300, 35, 55, 50])
-        table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-            ("ALIGN", (1, 0), (-1, -1), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("FONTSIZE", (0, 0), (-1, -1), 11),
-
-            # ✅ 行高关键
-            ("TOPPADDING", (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ]))
-    else:
-        
-        table = Table(table_data, colWidths=[100, 360, 60])
-        table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),  # 显示边框
-            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("FONTSIZE", (0, 0), (-1, -1), 11),
-
-            # ✅ 行高关键
-            ("TOPPADDING", (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ]))
-
-    table.wrapOn(c, width, height)
-
-    TABLE_TOP_GAP = -40 # 值越大，越靠上
-    table_top_y = table_start_y + TABLE_TOP_GAP   # 表头位置固定
-    table_height = table._height  # 表格真实高度
-    table.drawOn(c, 40, table_top_y - table_height)
-    table_bottom_y = table_top_y  - table_height
-
-    # Amount summary block
-    if isInvoice == 1:
+    # Product Amount summary block
+    if isInvoice == 1 or isInvoice == 2:
         summary_x = 360   # 靠右
         line_height = 16
         
@@ -999,9 +971,13 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
         discounted_subtotal = (total - discount_amount).quantize(Decimal("0.01"))
 
         # 准备数值
-        tax_amount = (discounted_subtotal  * constants_address.Tax_rate).quantize(Decimal("0.01"))
-        grand_total = (discounted_subtotal  + tax_amount).quantize(Decimal("0.01"))
+        carrier_amount = container.carrier_price
+        tax_amount = (discounted_subtotal  * constants_address.Tax_rate).quantize(Decimal("0.01"),rounding=ROUND_HALF_UP)
+        if no_tax == True:
+            tax_amount = 0
+        grand_total = (discounted_subtotal  + tax_amount + carrier_amount).quantize(Decimal("0.01"))
         credit_total = (grand_total * constants_address.Credit_rate).quantize(Decimal("0.01"))
+        
 
         # Subtotal
         subtotal_x_pos = 200
@@ -1025,39 +1001,75 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
             summary_y -= line_height * 1.3
 
         # Tax
-        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Tax (8.25%):   ${tax_amount:,.2f}")
+        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Sales Tax:   ${tax_amount:,.2f}")
+        summary_y -= line_height
+
+        # Carrier Cost
+        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Delivery:   ${carrier_amount:,.2f}")
         summary_y -= line_height* 1.3
 
         # Total
-        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Total:   ${grand_total:,.2f}")
+        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Grand Total:   ${grand_total:,.2f}")
         summary_y -= line_height
 
         # Credit card total 3%
-        c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Credit Card (3%):   ${credit_total:,.2f}")
-        summary_y -= line_height
+        # c.drawRightString(summary_x + subtotal_x_pos, summary_y, f"Credit Card (3%):   ${credit_total:,.2f}")
+        # summary_y -= line_height
 
-    # --- 在表格之后插入说明文字 ---
-    # y_text = 180   # 根据表格位置调整，越大越靠上
-    # ===== 表格底部基准 =====
-    left_text_y = table_bottom_y - 20
-
+    # 付款信息
+    left_text_y = table_bottom_y - 100
+    interval = 15
+    c.setFont(constants_address.font_Helvetica, 10)
     if not isJustTableOrder:
-        # 2 行：靠左显示
-        c.setFont(constants_address.font_Helvetica, 10)
-        c.drawString(40, left_text_y, "*Products availability and lead time may change")
-        c.drawString(40, left_text_y - 15, "*SSA reserve the right to change pricing and terms without notice")
 
-        # 3 行：靠左显示（电话、邮箱、公司名）
-        c.drawString(40, left_text_y - 45, "If you have questions concerning this invoice, contact us")
-        c.drawString(40, left_text_y - 60, "Phone: (708) 882-1188")
-        c.drawString(40, left_text_y - 75, "Email: info@securesourceamerica.com")
+        if isInvoice == 1:
+            # 1 行：靠左显示            
+            c.drawString(40, left_text_y, "Accepted forms of payment: Check and ACH transfer.")
+            c.drawString(40, left_text_y - interval, "Please send all the checks to:")
+            c.drawString(40, left_text_y - interval * 2, "Secure Source America LLC")
+            c.drawString(40, left_text_y - interval * 3, "1215 101st Street")
+            c.drawString(40, left_text_y - interval * 4, "Lemont, IL 60439")
 
-        # 3 行：居中显示（电话、邮箱、公司名）
-        # center_x = width / 2
-        # c.drawCentredString(center_x, y_text - 45, "If you have questions concerning this invoice, contact us")
-        # c.drawCentredString(center_x, y_text - 60, "Phone: (708) 882-1188")
-        # c.drawCentredString(center_x, y_text - 75, "Email: info@securesourceamerica.com")
+            # 1 行：靠右显示
+            c.drawString(320, left_text_y, "Bank information for ACH payment:")
+            c.drawString(320, left_text_y - interval, "BMO Harris Bank")
+            c.drawString(320, left_text_y - interval * 2, "Routing# 071025661")
+            c.drawString(320, left_text_y - interval * 3, "Account# 4834963144")
+            c.drawString(320, left_text_y - interval * 4, "Account Name: Secure Source America LLC")
 
+            # 2 行：靠左显示（电话、邮箱、公司名）
+            c.drawString(40, left_text_y - interval * 6, "*Products availability and lead time may change")
+            c.drawString(40, left_text_y - interval * 7, "*SSA reserve the right to change pricing and terms without notice")
+            c.drawString(40, left_text_y - interval * 8, "If you have questions concerning this invoice, contact us at 708-882-1188      info@ssametal.com")
+
+        if isInvoice == 2:
+            # 2 行：靠左显示（电话、邮箱、公司名）
+            c.drawString(40, left_text_y - interval * 6, "*Products availability and lead time may change")
+            c.drawString(40, left_text_y - interval * 7, "*SSA reserve the right to change pricing and terms without notice")
+
+            # 3 行：居中显示（电话、邮箱、公司名）
+            center_x = width / 2
+            c.drawCentredString(center_x, left_text_y - interval * 9, "If you have any questions concerning this order, ")
+            c.drawCentredString(center_x, left_text_y - interval * 10, "contact us at: 708-888-8810")
+            c.drawCentredString(center_x, left_text_y - interval * 11, "info@ssametal.com")
+
+        if isInvoice == 0:
+            # 1 行：靠左显示            
+            c.drawString(40, left_text_y, "Received by:")
+            c.drawString(40, left_text_y - interval * 2, "Signature:")
+            c.drawString(40, left_text_y - interval * 4, "Date:")
+
+            # 1 行：居中显示
+            c.drawString(100, left_text_y, "_____________________________________________________")
+            c.drawString(100, left_text_y - interval * 2, "_____________________________________________________")
+            c.drawString(100, left_text_y - interval * 4, "_____________________________________________________")
+
+            # 1 行：靠右显示
+            c.drawString(400, left_text_y, "(Please print)") 
+            c.drawString(400, left_text_y - interval * 2, "(Quality verified for all items above)")
+            c.drawString(400, left_text_y - interval * 4, "(mm/dd/yyyy)") 
+    else:
+        print("Just Table")
 
     # ✅ 统一交给 finalize_pdf_and_response
     return finalize_pdf_and_response(
@@ -1065,6 +1077,334 @@ def converter_metal_invoice(container, amount_items, output_dir, new_filename, i
         file_path=output_path,
         filename=new_filename
     )
+
+def converter_commision_pdf(c, orders, width, height):
+
+    if os.path.exists(constants_address.SSA_LOGO_PATH):
+        c.drawImage(constants_address.SSA_LOGO_PATH, 40, height - 110, width=140, height=80, preserveAspectRatio=True, mask='auto')
+
+    # c.setFont("Helvetica-Bold", 18)
+    # c.drawString(40, height - 40, "Metal Commission Report")
+
+    title_text = "Metal Commission Report" 
+    c.setFont(constants_address.font_Helvetica_Bold, 18)
+    c.drawCentredString(width / 2, height - 110 + 40, title_text)
+
+    total_customer = Decimal("0")
+    total_cost = Decimal("0")
+    total_profit_ground = Decimal("0")
+
+    table_data = [[
+        "SO#",
+        "Pickup",
+        "Customer AMT",
+        "W/O Tax AMT",
+        "Sales AMT",
+        "Comm%",
+        "TotalComm",
+        "Carrier"
+    ]]
+
+    for order in orders:
+
+        customer = order.customer_price or Decimal("0")
+        sales = order.total_amount or Decimal("0")
+        cost = order.total_cost or Decimal("0")
+        profit = order.profit or Decimal("0")
+        total_profit = order.total_profit or Decimal("0")
+        carrier = order.carrier_price or Decimal("0")
+
+        table_data.append([
+            order.so_num,
+            order.pickup_date.strftime("%m/%d/%Y"),
+            f"{customer:,.2f}",
+            f"{sales:,.2f}",
+            f"{cost:,.2f}",
+            f"{profit:,.2f}",
+            f"{total_profit:,.2f}",
+            f"{carrier:,.2f}",
+        ])
+
+        total_customer += customer
+        total_cost += cost
+        total_profit_ground += total_profit
+
+    table = Table(
+        table_data,
+        colWidths=[95, 60, 75, 70, 60, 50, 60, 50]
+    )
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+        # 日期和SO左对齐
+        ("ALIGN", (0, 0), (1, -1), "LEFT"),
+
+        # 金额右对齐
+        ("ALIGN", (2, 1), (-1, -1), "RIGHT"),
+
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
+    table.wrapOn(c, width, height)
+
+    table_top_y = height - 120
+
+    table.drawOn(
+        c,
+        40,
+        table_top_y - table._height
+    )
+
+    y = table_top_y - table._height - 30
+
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(40, y, "Summary")
+
+    y -= 25
+    c.drawString(60, y, f"Total Customer : ${total_customer:,.2f}")
+
+    y -= 18
+    c.drawString(60, y, f"Total Sales : ${total_cost:,.2f}")
+
+    y -= 18
+    c.drawString(60, y, f"Total Commission : ${total_profit_ground:,.2f}")
+
+def converter_commision_pdf_2(c, orders, width, height):
+    y = height - 40
+
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(40, y, "Metal Commission Report")
+
+    y -= 30
+
+    c.setFont("Helvetica-Bold", 10)
+
+    headers = [
+        "SO#",
+        "Pickup",
+        "Customer AMT",
+        "W/O Tax AMT",
+        "Sales AMT",
+        "Comm%",
+        "TotalComm",
+        "Carrier"
+    ]
+
+    col_widths = [110, 55, 75,75, 55, 50, 60, 50]
+    left_margin = 40
+
+    xs = [left_margin]
+    for w in col_widths[:-1]:
+        xs.append(xs[-1] + w)
+
+    # ===== 表头 =====
+    c.setFont("Helvetica-Bold", 10)
+
+    for x, h in zip(xs, headers):
+        c.drawString(x, y, h)
+
+    y -= 20
+
+    total_sales = Decimal("0")
+    total_cost = Decimal("0")
+    total_profit_ground = Decimal("0")
+
+    c.setFont("Helvetica", 10)
+
+    for order in orders:
+
+        invoice = order.invoice_price or Decimal("0")
+        customer = order.customer_price or Decimal("0")
+        sales = order.total_amount or Decimal("0")
+        cost = order.total_cost or Decimal("0")
+        profit = order.profit or Decimal("0")
+        total_profit = order.total_profit or Decimal("0")
+        carrier = order.carrier_price or Decimal("0")
+
+        c.drawString(xs[0], y, order.so_num)
+        c.drawString(xs[1], y, order.pickup_date.strftime("%Y-%m-%d"))
+
+        c.drawRightString(xs[2] + col_widths[2] - 5, y, f"{customer:,.2f}")
+        c.drawRightString(xs[3] + col_widths[3] - 5, y, f"{sales:,.2f}")
+        c.drawRightString(xs[4] + col_widths[4] - 5, y, f"{cost:,.2f}")
+        c.drawRightString(xs[5] + col_widths[5] - 5, y, f"{profit:,.2f}")
+        c.drawRightString(xs[6] + col_widths[6] - 5, y, f"{total_profit:,.2f}")
+        c.drawRightString(xs[7] + col_widths[7] - 5, y, f"{carrier:.2f}")
+
+        total_sales += sales
+        total_cost += cost
+        total_profit_ground += total_profit
+
+        y -= 18
+
+        if y < 40:
+            c.showPage()
+
+            c.setFont("Helvetica-Bold", 10)
+
+            # 新页重新画表头
+            for x, h in zip(xs, headers):
+                c.drawString(x, height - 40, h)
+
+            c.setFont("Helvetica", 10)
+            y = height - 40
+
+    y -= 20
+
+    ground_total_profit = total_profit_ground
+
+    c.setFont("Helvetica-Bold", 12)
+
+    c.drawString(40, y, "Summary")
+
+    y -= 25
+
+    c.drawString(60, y, f"Total Sales : ${total_sales:,.2f}")
+    y -= 18
+    c.drawString(60, y, f"Total Cost : ${total_cost:,.2f}")
+    y -= 18
+    c.drawString(60, y, f"Total Profit : ${ground_total_profit:,.2f}")
+
+def draw_product_table(c, amount_items, isInvoice, table_start_y, width, height):
+    total = Decimal("0.00")
+
+    # 表头
+    if isInvoice:
+        table_data = [["ITEM", "DESCRIPTION", "QTY(PC)", "Price Per Piece", "Total"]]
+    else:
+        table_data = [["ITEM", "DESCRIPTION", "QTY"]]
+
+    # 数据
+    for item, desc, units, rate, charge in amount_items:
+
+        display_item = str(item) if item else ""
+        display_desc = desc
+        display_units = f"{units:.0f}" if units else ""
+
+        if isInvoice:
+
+            display_rate = f"${rate:,.2f}" if rate else ""
+            display_charge = f"${charge:,.2f}" if charge else ""
+
+            table_data.append([
+                display_item,
+                display_desc,
+                display_units,
+                display_rate,
+                display_charge
+            ])
+
+            total += Decimal(str(charge or 0))
+
+        else:
+
+            table_data.append([
+                display_item,
+                display_desc,
+                display_units
+            ])
+
+    # 创建表格
+    if isInvoice:
+
+        table = Table(
+            table_data,
+            colWidths=[80, 250, 50, 80, 60]
+        )
+
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("ALIGN", (1, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+
+    else:
+
+        table = Table(
+            table_data,
+            colWidths=[100, 360, 60]
+        )
+
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+
+    table.wrapOn(c, width, height)
+
+    TABLE_TOP_GAP = -40
+
+    table_top_y = table_start_y + TABLE_TOP_GAP
+
+    table_height = table._height
+
+    table.drawOn(
+        c,
+        40,
+        table_top_y - table_height
+    )
+
+    table_bottom_y = table_top_y - table_height
+
+    return table_bottom_y, total
+
+def draw_packing_table(c, terms, start_y, width, height):
+    table_data = [["OFFERED BY", "SHIP VIA", "FOB Point","PAYMENT TERM"],
+        ["ADAM C", "N/A", "LEMONT, IL", f"{terms} Days" if terms else ""]]
+
+    table = Table(
+        table_data,
+        colWidths=[80, 80, 220, 140]
+    )
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+
+    table.wrapOn(c, width, height)
+
+    table_height = table._height
+
+    table.drawOn(
+        c,
+        40,
+        start_y - table_height
+    )
+
+    return start_y - table_height
+    
 
 # === Helper function to draw section headers ===
 def draw_section_header(c, title, x, y):
@@ -1074,6 +1414,7 @@ def draw_section_header(c, title, x, y):
     c.line(x, y - 2, x + 150, y - 2)
     c.setFont(constants_address.font_Helvetica, 11)
 
+# 换行的地址格式
 def draw_address_block(c, label, address_lines, x, y_start):
     draw_section_header(c, label, x, y_start)
 
@@ -1083,6 +1424,7 @@ def draw_address_block(c, label, address_lines, x, y_start):
         c.drawString(x, y, line)
         y -= line_height
 
+# 字符串的地址格式
 def draw_address_block2(c, title, text, x, y):
     draw_section_header(c, title, x, y)
 
@@ -1107,3 +1449,14 @@ def draw_address_block2(c, title, text, x, y):
     for line in lines:
         c.drawString(x, y - offset, line)
         offset += 15
+
+# 无Header的地址格式
+def draw_address_block3(c, address_lines, x, y_start):
+    #draw_section_header(c, title, x, y)
+
+    c.setFont(constants_address.font_Helvetica, 10)
+    line_height = 15
+    y = y_start - line_height
+    for line in address_lines:
+        c.drawString(x, y, line)
+        y -= line_height

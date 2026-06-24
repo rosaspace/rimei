@@ -31,13 +31,13 @@ class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'id', 'belongTo')
 
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ('order', 'product','product_actual','quantity')
+    list_display = ('order', 'product','product_actual','quantity','price')
 
 class ContainerItemAdmin(admin.ModelAdmin):
     list_display = ('container', 'product','quantity')
 
 class RMCustomerAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'classification', 'description')
+    list_display = ('id', 'name', 'classification', 'description','term','creditline')
 
 class InvoiceCustomerAdmin(admin.ModelAdmin):
     list_display = ('id', 'name','description')

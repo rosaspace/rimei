@@ -10,7 +10,7 @@
             <div class="me-2">
                 <!-- Download PDF -->
                 <a href="{% url 'print_statement_invoice_pdf' %}?{% for container in containers %}selected_ids={{ container.container_id }}&{% endfor %}" class="btn btn-secondary">
-                    <i class="fas fa-download"></i> Download Advance77 PDF
+                    <i class="fas fa-download"></i> Download Carrier PDF
                 </a>   
                 <a href="{% url 'print_statement_customer_invoice_pdf' %}?{% for container in containers %}selected_ids={{ container.container_id }}&{% endfor %}" class="btn btn-secondary">
                     <i class="fas fa-download"></i> Download Customer PDF

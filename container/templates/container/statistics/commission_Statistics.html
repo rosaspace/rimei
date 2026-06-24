@@ -1,0 +1,214 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="table-container">
+
+    <div class="row">
+
+        <!-- 表格区域 -->
+        <div class="col-md-12">
+
+            <h2>Customer Monthly Amount</h2>
+
+            <form method="get" class="row mb-3">
+
+                <div class="col-md-2">
+                    <select class="form-select" name="customer">
+                        <option value="">All Customers</option>
+                        {% for c in customers %}
+                        <option value="{{ c.id }}"
+                            {% if selected_customer == c.id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ c.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-1">
+                    <input
+                        type="month"
+                        name="month"
+                        class="form-control"
+                        value="{{ selected_month }}"
+                    >
+                </div>
+
+                <div class="col-md-1">
+                    <button class="btn btn-primary w-100">
+                        Search
+                    </button>
+                </div> 
+
+                <div class="col-md-2">
+                    <button type="button"
+                            class="btn btn-success w-100"
+                            id="exportPDF">
+                        Export Commission
+                    </button>
+                </div>
+            </form>
+
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>SO#</th>
+                        <th>PO#</th>
+                        <th>PickUp Date</th>
+                        <th>Customer</th>
+                        <th>W/O Tax AMT</th>
+                        <th>Tax</th>
+                        <th>Carrier</th>
+                        <th>W/O Carrier</th>
+                        <th>Customer AMT</th>
+                        <th>Sales AMT</th>
+                        <th>Comm%</th>
+                        <th>TotalComm</th>
+                        <th>Paid</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for customer, months in report.items %}
+                <tr class="table-primary">
+                    <td colspan="13">
+                        <strong>{{ customer }}</strong>
+                    </td>
+                </tr>
+
+                    {% for month, data in months.items %}
+                    <tr class="table-secondary">
+                        <td colspan="13">
+                            <strong>{{ month }}</strong>
+                        </td>
+                    </tr>
+
+                    {% for order in data.orders %}
+                    <tr>
+                        <td>
+                            <a href="">
+                                {{ order.so_num }}
+                            </a>
+                        </td>
+
+                        <td>{{ order.po_num }}</td>
+                        <td>{{ order.pickup_date }}</td>
+                        <td>{{ order.customer_name }}</td>
+                        <td class="text-end">
+                            ${{ order.total_amount|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            ${{ order.total_tax|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            ${{ order.carrier_price|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            ${{ order.invoice_price |floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            ${{ order.customer_price|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            ${{ order.total_cost|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            ${{ order.profit|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            ${{ order.total_profit|floatformat:2 }}
+                        </td>
+                        <td>
+                            {% if order.customer_ispay %}
+                                <span class="badge bg-success">Paid</span>
+                            {% else %}
+                                <span class="badge bg-danger">Open</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="table-warning">
+                        <td colspan="4" class="text-end">
+                            <strong>{{ month }} Total</strong>
+                        </td>
+                        <td class="text-end">
+                            <strong>${{ data.grand_amount|floatformat:2 }}</strong>
+                        </td>
+                        <td class="text-end">
+                            <strong>${{ data.grand_amount_tax|floatformat:2 }}</strong>
+                        </td>
+                        <td></td>
+                        <td class="text-end">
+                            <strong>${{ data.invoice_amount|floatformat:2 }}</strong>
+                        </td>
+                        <td class="text-end">
+                            <strong>${{ data.customer_amount|floatformat:2 }}</strong>
+                        </td>
+                        <td class="text-end">
+                            <strong>${{ data.cost_amount|floatformat:2 }}</strong>
+                        </td>
+                        <td></td>
+                        <td class="text-end">
+                            <strong>${{ data.profit_amount|floatformat:2 }}</strong>
+                        </td>
+                        <td></td>
+                    </tr>
+
+                    {% endfor %}
+                {% endfor %}
+                <tr class="table-dark">
+                    <td colspan="4" class="text-end">
+                        <strong>Grand Total</strong>
+                    </td>
+                    <td class="text-end">
+                        <strong>${{ grand_amount|floatformat:2 }}</strong>
+                    </td>
+                    <td class="text-end">
+                        <strong>${{ grand_amount_tax|floatformat:2 }}</strong>
+                    </td>
+                    <td></td>
+                    <td class="text-end">
+                        <strong>${{ invoice_amount|floatformat:2 }}</strong>
+                    </td>
+                    <td class="text-end">
+                        <strong>${{ customer_amount|floatformat:2 }}</strong>
+                    </td>
+                    <td class="text-end">
+                        <strong>${{ cost_amount|floatformat:2 }}</strong>
+                    </td>
+                    <td></td>
+                    <td class="text-end">
+                        <strong>${{ ground_profit_amount|floatformat:2 }}</strong>
+                    </td>
+                    <td></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+<script>
+    document.getElementById("exportPDF").addEventListener("click", function () {
+
+    const customer = document.querySelector("[name='customer']").value;
+    const month = document.querySelector("[name='month']").value;
+
+    let url = "/export_commission/?";
+
+    if (customer)
+        url += "customer=" + encodeURIComponent(customer) + "&";
+
+    if (month)
+        url += "month=" + encodeURIComponent(month);
+
+    window.location.href = url;
+
+});
+</script>
+
+{% endblock %}

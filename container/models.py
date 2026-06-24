@@ -20,117 +20,13 @@ class UserAndPermission(models.Model):
     def __str__(self):
         return f"{self.username.username} - {self.permissionIndex.name}"  # 返回用户和权限的组合
 
-class RMOrder(models.Model):
-    so_num = models.CharField(max_length=255, unique=True)  # 销售订单号
-    po_num = models.CharField(max_length=255)  # 采购订单号
-    plts = models.IntegerField()  # 托盘数量
-    customer_name = models.ForeignKey('RMCustomer', on_delete=models.CASCADE)  # 关联客户表
-
-    order_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Order的PDF文件名
-    invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Invoice的PDF文件名
-    bol_pdfname = models.CharField(max_length=255, blank=True, null=True)  # BOL的PDF文件名
-
-    bill_to = models.CharField(max_length=255, blank=True, null=True) # 账单地址
-    ship_to = models.CharField(max_length=255, blank=True, null=True) # 邮寄地址
-
-    order_date = models.DateField(blank=True, null=True)  # 订单日期
-    pickup_date = models.DateField(blank=True, null=True)  # 提货日期
-    outbound_date = models.DateField(blank=True, null=True)  # 出库日期
-
-    is_sendemail = models.BooleanField(default=False) # 是否发送邮件
-    is_allocated_to_stock = models.BooleanField(default=False) # 是否放入备货区
-    is_updateInventory = models.BooleanField(default=False) # 是否更新库存
-    is_canceled = models.BooleanField(default=False) # 是否被取消
-
-    created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
-    created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
-
-    customer_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    customer_payment_date = models.DateField(blank=True, null=True)  # 付款日期
-    customer_ispay = models.BooleanField(default=False) # 是否付款
-    content = models.TextField(blank=True, null=True)  # 解析出的内容
-
-    carrier_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    carrier_payment_date = models.DateField(blank=True, null=True)  # 付款日期
-
-    def __str__(self):
-        return f"{self.so_num} - {self.customer_name}"
-
-class RMCustomer(models.Model):
-    name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
-    classification = models.TextField(blank=True, null=True)  # 解析出的内容
-    description = models.TextField(blank=True, null=True)  # 客户描述
-
-    def __str__(self):
-        return self.name
-
-class OrderImage(models.Model):
-    order = models.ForeignKey(RMOrder, related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='order_images/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-    
-class InvoiceCustomer(models.Model):
-    name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
-    description = models.TextField(blank=True, null=True)  # 客户描述
-
-    def __str__(self):
-        return self.name
-
+# Clock
 class Employee(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 员工名称，唯一
     belongTo = models.CharField(max_length=255, default="CabinetsDepot")
 
     def __str__(self):
         return self.name 
-
-
-class RMProduct(models.Model):
-    name = models.CharField(max_length=255, unique=True)  # 产品名称，唯一
-    shortname = models.CharField(max_length=255, blank=True, null=True)  # 短名称，唯一
-    size = models.CharField(max_length=255, blank=True, null=True) # 产品尺寸
-    TI = models.IntegerField(default=0) # 一层数量
-    HI = models.IntegerField(default=0) # 层数
-    Pallet = models.IntegerField(default=0) # 一个托盘数量
-    Color = models.CharField(max_length=255, default='Other')
-    Location = models.CharField(max_length=255, blank=True, null=True, default='')
-    ShelfRecord = models.CharField(max_length=255, blank=True, null=True, default='')
-    description = models.TextField(blank=True, null=True)  # 客户描述
-    blongTo = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)  # 关联到 RMOrder
-    quantity_init =  models.IntegerField(blank=True, null=True)  # 初始数量
-    quantity_diff =  models.IntegerField(default=0)  # 初始差异
-    type = models.CharField(max_length=255, default='Rimei') # 类型
-    price = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 价格
-    status = models.CharField(max_length=255, default='Common') # 库存状态
-
-    def __str__(self):
-        return self.name
-
-class OrderItem(models.Model):
-    order = models.ForeignKey(RMOrder, related_name='order_items', on_delete=models.CASCADE)  # 关联到 RMOrder
-    # 客户订的商品
-    product = models.ForeignKey(
-        RMProduct,
-        related_name='ordered_items',
-        on_delete=models.CASCADE
-    )
-
-    # 实际使用/发货的商品
-    product_actual = models.ForeignKey(
-        RMProduct,
-        related_name='+',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True
-    )
-    quantity = models.IntegerField()  # 产品数量
-
-    def save(self, *args, **kwargs):
-        if not self.product_actual:
-            self.product_actual = self.product
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.product.name} - {self.quantity} pcs"
 
 class ClockRecord(models.Model):
     WEEKDAY_CHOICES = [
@@ -215,6 +111,133 @@ class ClockRecord(models.Model):
 
         super().save(*args, **kwargs)
 
+class RMProduct(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 产品名称，唯一
+    shortname = models.CharField(max_length=255, blank=True, null=True)  # 短名称，唯一
+    size = models.CharField(max_length=255, blank=True, null=True) # 产品尺寸
+    TI = models.IntegerField(default=0) # 一层数量
+    HI = models.IntegerField(default=0) # 层数
+    Pallet = models.IntegerField(default=0) # 一个托盘数量
+    Color = models.CharField(max_length=255, default='Other')
+    Location = models.CharField(max_length=255, blank=True, null=True, default='')
+    ShelfRecord = models.CharField(max_length=255, blank=True, null=True, default='')
+    description = models.TextField(blank=True, null=True)  # 客户描述
+    blongTo = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)  # 关联到 RMOrder
+    quantity_init =  models.IntegerField(blank=True, null=True)  # 初始数量
+    quantity_diff =  models.IntegerField(default=0)  # 初始差异
+    type = models.CharField(max_length=255, default='Rimei') # 类型
+    price = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 价格
+    status = models.CharField(max_length=255, default='Common') # 库存状态
+
+    def __str__(self):
+        return self.name
+
+# Order
+class RMOrder(models.Model):
+    so_num = models.CharField(max_length=255, unique=True)  # 销售订单号
+    po_num = models.CharField(max_length=255)  # 采购订单号
+    plts = models.IntegerField()  # 托盘数量
+    customer_name = models.ForeignKey('RMCustomer', on_delete=models.CASCADE)  # 关联客户表
+
+    order_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Order的PDF文件名
+    invoice_pdfname = models.CharField(max_length=255, blank=True, null=True)  # Invoice的PDF文件名
+    bol_pdfname = models.CharField(max_length=255, blank=True, null=True)  # BOL的PDF文件名
+
+    bill_to = models.CharField(max_length=255, blank=True, null=True) # 账单地址
+    ship_to = models.CharField(max_length=255, blank=True, null=True) # 邮寄地址
+
+    order_date = models.DateField(blank=True, null=True)  # 订单日期
+    pickup_date = models.DateField(blank=True, null=True)  # 提货日期
+    outbound_date = models.DateField(blank=True, null=True)  # 出库日期
+
+    is_sendemail = models.BooleanField(default=False) # 是否发送邮件
+    is_allocated_to_stock = models.BooleanField(default=False) # 是否放入备货区
+    is_updateInventory = models.BooleanField(default=False) # 是否更新库存
+    is_canceled = models.BooleanField(default=False) # 是否被取消
+
+    created_at = models.DateTimeField(auto_now_add=True)  # 创建时间
+    created_user = models.CharField(max_length=255, blank=True, null=True)  # 创建用户
+
+    customer_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    customer_payment_date = models.DateField(blank=True, null=True)  # 付款日期
+    customer_ispay = models.BooleanField(default=False) # 是否付款
+    content = models.TextField(blank=True, null=True)  # 解析出的内容
+
+    carrier_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    carrier_payment_date = models.DateField(blank=True, null=True)  # 付款日期
+
+    def __str__(self):
+        return f"{self.so_num} - {self.customer_name}"
+
+class RMCustomer(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
+    classification = models.TextField(blank=True, null=True)  # 解析出的内容
+    description = models.TextField(blank=True, null=True)  # 客户描述
+    term = models.IntegerField(default=0)  # Term Days
+    creditline = models.IntegerField(default=0)  # Credit Line
+
+    def __str__(self):
+        return self.name
+
+class OrderImage(models.Model):
+    order = models.ForeignKey(RMOrder, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='order_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(RMOrder, related_name='order_items', on_delete=models.CASCADE)  # 关联到 RMOrder
+    # 客户订的商品
+    product = models.ForeignKey(
+        RMProduct,
+        related_name='ordered_items',
+        on_delete=models.CASCADE
+    )
+
+    # 实际使用/发货的商品
+    product_actual = models.ForeignKey(
+        RMProduct,
+        related_name='+',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    quantity = models.IntegerField()  # 产品数量
+
+    price = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 价格
+
+    def save(self, *args, **kwargs):
+        if not self.product_actual:
+            self.product_actual = self.product
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.product.name} - {self.quantity} pcs"
+
+# Container
+def get_default_inbound_category():
+    first = InboundCategory.objects.first()
+    return first.id if first else None  # 避免为空时报错
+
+def get_default_railstation_category():
+    first = RailwayStation.objects.first()
+    return first.id if first else None  # 避免为空时报错
+
+def get_default_carrier():
+    default = Carrier.objects.first()
+    return default.pk if default else None
+
+def get_default_customer():
+    default = InvoiceCustomer.objects.first()
+    return default.pk if default else None
+
+def get_default_logistics():
+    default = LogisticsCompany.objects.first()
+    return default.pk if default else None
+
+def get_default_manufacturer():
+    default = Manufacturer.objects.first()
+    return default.pk if default else None
+
 class LogisticsCompany(models.Model): 
     name = models.CharField(max_length=255, unique=True)  # 物流公司名称，唯一
 
@@ -254,30 +277,13 @@ class Manufacturer(models.Model):
     def __str__(self):
         return f"{self.name}"
 
-def get_default_inbound_category():
-    first = InboundCategory.objects.first()
-    return first.id if first else None  # 避免为空时报错
+class InvoiceCustomer(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 客户名称，唯一
+    description = models.TextField(blank=True, null=True)  # 客户描述
 
-def get_default_railstation_category():
-    first = RailwayStation.objects.first()
-    return first.id if first else None  # 避免为空时报错
-
-def get_default_carrier():
-    default = Carrier.objects.first()
-    return default.pk if default else None
-
-def get_default_customer():
-    default = InvoiceCustomer.objects.first()
-    return default.pk if default else None
-
-def get_default_logistics():
-    default = LogisticsCompany.objects.first()
-    return default.pk if default else None
-
-def get_default_manufacturer():
-    default = Manufacturer.objects.first()
-    return default.pk if default else None
-
+    def __str__(self):
+        return self.name
+        
 class Container(models.Model):
     id = models.AutoField(primary_key=True)  # 默认自增整数主键
     container_id = models.CharField(max_length=255)  # Container ID
@@ -341,20 +347,6 @@ class ContainerItem(models.Model):
     def __str__(self):
         return f"{self.product.name} - {self.quantity} pcs"
 
-class AlineOrderRecord(models.Model):
-    document_number = models.CharField(max_length=255)  # 文档编号
-    order_number = models.CharField(max_length=255)  # 订单编号
-    po_number = models.CharField(max_length=255)  # PO编号
-    invoice_date = models.DateField(blank=True, null=True)  # 发票日期
-    due_date = models.DateField(blank=True, null=True)  # 截止日期
-    pdf_name = models.CharField(max_length=255)  # 文档名称
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    payment_date = models.DateField(blank=True, null=True)  # 付款日期
-    ispay = models.BooleanField(default=False) # 是否付款
-
-    def __str__(self):
-        return f"{self.order_number} - {self.po_number} - {self.price}"
-    
 class ContainerStatement(models.Model):
     container = models.ForeignKey(Container, on_delete=models.CASCADE, null=True,blank=True)
     container_id_str = models.CharField(max_length=255, blank=True, null=True)
@@ -377,6 +369,21 @@ class ContainerStatement(models.Model):
 
     def __str__(self):
         return f"{self.statement_number} - {self.container_id_str}"
+
+# Aline Order
+class AlineOrderRecord(models.Model):
+    document_number = models.CharField(max_length=255)  # 文档编号
+    order_number = models.CharField(max_length=255)  # 订单编号
+    po_number = models.CharField(max_length=255)  # PO编号
+    invoice_date = models.DateField(blank=True, null=True)  # 发票日期
+    due_date = models.DateField(blank=True, null=True)  # 截止日期
+    pdf_name = models.CharField(max_length=255)  # 文档名称
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    payment_date = models.DateField(blank=True, null=True)  # 付款日期
+    ispay = models.BooleanField(default=False) # 是否付款
+
+    def __str__(self):
+        return f"{self.order_number} - {self.po_number} - {self.price}"  
 
 # Invoice
 class InvoicePaidCustomer(models.Model):
@@ -489,7 +496,7 @@ class OfficeSupplyRecord(models.Model):
     def __str__(self):
         return f"{self.supply_item.name} - {self.quantity}"
 
-
+# Cabinets
 class CabinetProductType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     pallet_usage = models.DecimalField(

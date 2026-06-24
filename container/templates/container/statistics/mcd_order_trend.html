@@ -31,9 +31,9 @@
             <h2>Mcd Outbound Chart</h2>
             <div class="mb-2">
                 <label for="trendSelect">Select Trend: </label>
-                <select id="trendSelect" class="form-select form-select-sm" style="width: 200px; display:inline-block;">
-                    <option value="weekly">Weekly</option>
+                <select id="trendSelect" class="form-select form-select-sm" style="width: 200px; display:inline-block;">                    
                     <option value="monthly">Monthly</option>
+                    <option value="weekly">Weekly</option>
                     <option value="cumulative">Cumulative</option>
                     <option value="moving_average">Moving Average</option>
                     <option value="growth">Growth (MoM %)</option>
@@ -86,8 +86,8 @@ function renderChart(type) {
 }
 
 // 默认显示月趋势
-// renderChart('monthly');
-renderChart('weekly');
+renderChart('monthly');
+// renderChart('weekly');
 
 // 下拉选择切换趋势
 document.getElementById('trendSelect').addEventListener('change', function(){

@@ -1,0 +1,278 @@
+{% extends 'container/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h4>Add Metal Order haha</h4>
+
+    <form method="POST" enctype="multipart/form-data" action="{% url 'upload_metal_orderpdf' %}" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <div class="row">            
+            <div class="col-md-8">
+                <input type="file" class="form-control" id="pdf_file" name="pdf_file" accept=".pdf">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary  w-100" id="uploadPdf">Upload PDF</a>
+            </div>
+            <div class="col-md-2 ms-auto text-end">                
+                <a href="{% url 'rimeiorder_omar' %}" class="btn btn-secondary">Back</a>
+            </div>
+        </div>
+    </form>  
+
+    <hr class="my-3 border-2 opacity-100">
+
+    <h4>Order Detail</h4>
+
+    <div>
+        <label>{{extracted_text}}</label>
+    </div>
+
+    <form method="POST" class="needs-validation" action="{% url 'add_order' %}" novalidate>
+        {% csrf_token %}
+        
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label for="so_num" class="form-label required-label">SO Number</label>
+                <input type="text" class="form-control" id="so_num" name="so_num" 
+                    value="{{ so_no|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="customer_name" class="form-label required-label">Customer</label>
+                <select class="form-select" id="customer_name" name="customer_name" required>
+                    <option value="">Select Customer...</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}">
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="po_num" class="form-label required-label">PO Number</label>
+                <input type="text" class="form-control" id="po_num" name="po_num" 
+                    value="{{ po_no|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Pallets</label>
+                <input type="number" class="form-control" id="plts" name="plts" 
+                    value="{{ plts|default:'0' }}" min="0" required>
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-md-6">
+                <label for="bill_to" class="form-label required-label">Bill To:</label>
+                <textarea class="form-control" id="bill_to" name="bill_to" rows="4" required>{{ bill_to|default:'' }}</textarea>
+            </div>
+            
+            <div class="col-md-6">
+                <label for="ship_to" class="form-label required-label">Ship To:</label>
+                <textarea class="form-control" id="ship_to" name="ship_to" rows="4" required>{{ ship_to|default:'' }}</textarea>
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label for="order_date" class="form-label  required-label">Order Date</label>
+                <!-- <input type="date" class="form-control" id="order_date" name="order_date" required
+                    value="{{ order_date|date:'Y-m-d' }}"> -->
+                    <label>{{ order_date }}</label>
+            </div>
+
+            <div class="col-md-3">
+                <label for="pickup_date" class="form-label required-label">Pickup Date</label>
+                <input type="date" class="form-control" id="pickup_date" name="pickup_date" required
+                    value="{{ pickup_date|date:'Y-m-d' }}">                
+            </div>
+            
+            <div class="col-md-3">
+                <label for="outbound_date" class="form-label">Outbound Date</label>
+                <input type="date" class="form-control" id="outbound_date" name="outbound_date">
+            </div>
+
+            <div class="col-md-3">
+                <label for="order_pdf" class="form-label">Order PDF</label>
+                <!-- <input type="file" class="form-control" id="order_pdf" name="order_pdf" accept="application/pdf"> -->
+                {% if order_pdfname %}
+                    <p class="text-muted mb-0">Current file: {{ order_pdfname }}</p>
+                {% endif %}
+            </div>
+        </div>   
+                
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_sendemail" name="is_sendemail">
+                    <label class="form-check-label" for="is_sendemail">Send Email</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_updateInventory" name="is_updateInventory">
+                    <label class="form-check-label" for="is_updateInventory">Update Inventory</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_allocated_to_stock" name="is_allocated_to_stock">
+                    <label class="form-check-label" for="is_allocated_to_stock">To Stock</label>
+                </div>
+            </div>
+        </div>
+
+        <h4>Order List</h4>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Item Number</th>                    
+                    <th>DESCRIPTION</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in orderitems %}
+                <tr>
+                    <td style="height: 23px;">{{ item.sku }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.qty }}</td>
+                    <td>{{ item.price }}</td>
+                    <td>{{ item.amount }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td style="height: 23px;" colspan="4">No items found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>         
+        
+        <div class="mt-2">            
+            <button type="submit" class="btn btn-primary" id="saveOrder">
+                Add Order
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 处理上传 PDF 的表单提交
+    document.getElementById('uploadPdf').addEventListener('submit', function(e) {
+        e.preventDefault(); // 阻止表单默认提交
+
+        const formData = new FormData(this); // 获取表单数据
+
+        // 发送数据到后端
+        fetch('/upload_metal_orderpdf/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.text(); // 返回 HTML 文本
+            } else {
+                throw new Error('Failed to upload PDF!');
+            }
+        })
+        .then(html => {
+            // 将返回的 HTML 插入到页面中
+            document.open();
+            document.write(html);
+            document.close();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while uploading the PDF');
+        });
+    });
+
+    // 处理添加订单的表单提交
+    document.getElementById('saveOrder').addEventListener('click', function(e) {
+        e.preventDefault(); // 阻止表单默认提交
+
+        const rows = document.querySelectorAll('tbody tr');
+        let orderitems = [];
+
+        console.log("表格行数:", rows.length);
+
+        if (rows.length > 0) {
+            const firstRowText = rows[0].textContent.trim();
+            if (rows.length === 1 && firstRowText === "No items found.") {
+                console.log("没有条目，跳过提取。");
+            } else {
+                rows.forEach(row => {
+                    const itemName = row.children[0].textContent.trim();
+                    const quantity = parseInt(row.children[1].textContent.trim()) || 0;
+                    console.log("--- ", itemName, quantity);
+
+                    orderitems.push({
+                        item: itemName,
+                        qty: quantity
+                    });
+                });
+            }
+        }
+
+        console.log("订单项目:", orderitems);
+        console.log("订单项目JSON:", JSON.stringify(orderitems));
+        console.log("订单原始文件:", '{{ order_pdfname|escapejs }}');
+
+        // 创建FormData对象
+        const formData = new FormData();
+        formData.append('so_num', document.getElementById('so_num').value);
+        formData.append('po_num', document.getElementById('po_num').value);
+        formData.append('plts', document.getElementById('plts').value);
+        formData.append('customer_name', document.getElementById('customer_name').value);
+        formData.append('order_date', document.getElementById('order_date').value);
+        formData.append('pickup_date', document.getElementById('pickup_date').value);
+        formData.append('outbound_date', document.getElementById('outbound_date').value);
+        formData.append('is_sendemail', document.getElementById('is_sendemail').checked);
+        formData.append('is_updateInventory', document.getElementById('is_updateInventory').checked);
+        formData.append('is_allocated_to_stock', document.getElementById('is_allocated_to_stock').checked);        
+        formData.append('bill_to', document.getElementById('bill_to').value);
+        formData.append('ship_to', document.getElementById('ship_to').value);
+        formData.append('order_pdfname', '{{ order_pdfname|escapejs }}');
+        formData.append('orderitems', JSON.stringify(orderitems));        
+
+        // 检查FormData内容
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
+
+        // 发送数据到后端
+        fetch('/add_order/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => {
+            // Check if the response is OK (status in the range 200-299)
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text(); // Parse the JSON response
+        })
+        .then(html => {
+            // 将返回的 HTML 插入到页面中
+            document.open();
+            document.write(html);
+            document.close();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while saving the order');
+        });;
+    });
+    
+</script>
+{% endblock %}

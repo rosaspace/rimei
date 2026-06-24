@@ -183,7 +183,7 @@
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'container_advance77' %}">Container Advance77</a></li>
                 <li><a class="dropdown-item" href="{% url 'container_omar' %}">Container Omar</a></li>
-                
+                <li><a class="dropdown-item" href="{% url 'container_carrier' %}">Container Carrier</a></li>
               </ul>
             </li>
             {% endif %}
@@ -261,12 +261,23 @@
 
             {% if 'MetalOrder' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder_metal_full statistics_metal_customer_trend' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder_metal_full' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 MetalOrder
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'rimeiorder_metal_full' %}">Metal Order</a></li>
+              </ul>
+            </li>
+            {% endif %}
+
+            {% if 'Commission' in user_permissions %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'statistics_metal_customer_trend statistics_metal_commission' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Commission
+              </a>
+              <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'statistics_metal_customer_trend' %}">Metal Customer Paid</a></li>
+                <li><a class="dropdown-item" href="{% url 'statistics_metal_commission' %}">Metal Commission</a></li>
               </ul>
             </li>
             {% endif %}

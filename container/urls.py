@@ -31,6 +31,7 @@ urlpatterns = [
     # container
     path("container_advance77/", container.container_advance77, name="container_advance77"), 
     path("container_omar/", container.container_omar, name="container_omar"), 
+    path("container_carrier/", container.container_carrier, name="container_carrier"), 
     path("simplified_container_view/", container.simplified_container_view, name="simplified_container_view"),
 
     path('add_container/', container.add_container, name='add_container'), 
@@ -105,11 +106,16 @@ urlpatterns = [
     path("simplified_view/", rmorder.simplified_view, name="simplified_view"),    
     path("rimeiorder_metal_simple/", rmorder.rimeiorder_metal_simple, name="rimeiorder_metal_simple"),
 
-    path('add_order/', rmorder.add_order, name='add_order'),    
+    path('add_order/', rmorder.add_order, name='add_order'),
+    path('add_metal/', rmorder.add_metal, name='add_metal'),
     path("upload_orderpdf/", rmorder.upload_orderpdf, name="upload_orderpdf"),
+    path("upload_metal_orderpdf/", rmorder.upload_metal_orderpdf, name="upload_metal_orderpdf"),
+    
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
     path('print_metal_invoice/<str:order_id>/<int:isInvoice>/',rmorder.print_metal_invoice,name='print_metal_invoice'),
+    path('print_metal_salesorder/<str:order_id>/<int:isInvoice>/',rmorder.print_metal_salesorder,name='print_metal_salesorder'),
+    
     path("edit_order_full/<str:so_num>/", rmorder.edit_order_full, name="edit_order_full"), 
     path("edit_order_simple/<str:so_num>/", rmorder.edit_order_simple, name="edit_order_simple"), 
 
@@ -157,6 +163,8 @@ urlpatterns = [
     path("statistics_mcd_trend", statistics.statistics_mcd_trend,name="statistics_mcd_trend"),
     path("statistics_outbound_metal", statistics.statistics_outbound_metal,name="statistics_outbound_metal"),
     path("statistics_metal_customer_trend", statistics.statistics_metal_customer_trend, name="statistics_metal_customer_trend"),
+    path("statistics_metal_commission", statistics.statistics_metal_commission, name="statistics_metal_commission"),
+    path("export_commission/", statistics.export_commission, name="export_commission"),    # 导出库存
 
     # office supply
     path("office_supply_add", officesupply.office_supply_add,name="office_supply_add"),
@@ -169,4 +177,6 @@ urlpatterns = [
     path("cabinets/", cabinets.cabinets_list, name="cabinets"),
     path("add_cabinets/", cabinets.cabinets_add, name="add_cabinets"),
     path("upload_cabinetspdf/", cabinets.upload_cabinetspdf, name="upload_cabinetspdf"),
+    path("add_cabinet_packing/", cabinets.add_cabinet_packing, name="add_cabinet_packing"),
+    path("upload_cabinetspdf_packing/", cabinets.upload_cabinetspdf_packing, name="upload_cabinetspdf_packing"),
 ]

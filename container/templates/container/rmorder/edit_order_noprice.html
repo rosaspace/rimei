@@ -22,10 +22,13 @@
                 <button class="btn btn-primary" id="printMcdOrder">Mcd Order</button>
             </div>
             <div class="me-2">
-                <button class="btn btn-success" id="printMetalOrder">Metal Order</button>
+                <button class="btn btn-success" id="printMetalOrder">Packing List</button>
             </div>
             <div class="me-2">
                 <button class="btn btn-success" id="printMetalInvoice">Metal Invoice</button>
+            </div>
+            <div class="me-2">
+                <button class="btn btn-success" id="printMetalSalesOrder">Sales Order</button>
             </div>
             <div class="me-2">
                 <input type="number" id="discount" name="discount" class="form-control" placeholder="Discount %" min="0" max="100" step="1" style="width: 120px;">
@@ -333,8 +336,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 打印Metal Order
     document.getElementById('printMetalOrder').addEventListener('click', function() {
-        window.open(`/print_metal_invoice/${soNum}/${isOrder}`, '_blank');
+        window.open(`/print_metal_invoice/${soNum}/${0}`, '_blank');
     });
+
+    // 打印Metal Sales Order
+    document.getElementById('printMetalSalesOrder').addEventListener('click', function() {
+        window.open(`/print_metal_salesorder/${soNum}/${2}`, '_blank');
+    });
+
 
     // 打印StoredFile
     document.getElementById('printStoredFile').addEventListener('click', function() {
@@ -351,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
             discount = 0;
         }
 
-        const url = `/print_metal_invoice/${soNum}/${isInvoice}?discount=${encodeURIComponent(discount)}`;
+        const url = `/print_metal_invoice/${soNum}/${1}?discount=${encodeURIComponent(discount)}`;
         window.open(url, '_blank');
     });
 

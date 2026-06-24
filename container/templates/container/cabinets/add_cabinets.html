@@ -39,37 +39,30 @@
                     value="{{ po_no|default:'' }}" required>
             </div>
         </div>
-
-        <div class="row mb-2">
-            <div class="col-md-3">
-                <label for="order_pdf" class="form-label">Order PDF</label>
-                <!-- <input type="file" class="form-control" id="order_pdf" name="order_pdf" accept="application/pdf"> -->
-                {% if order_pdfname %}
-                    <p class="text-muted mb-0">Current file: {{ order_pdfname }}</p>
-                {% endif %}
-            </div>
-            <div class="col-md-3">
-                <label for="order_pdf" class="form-label">Total Amount: ${{ total_amount }}</label>
-            </div>
-        </div>
                 
         <h4>Order List</h4>
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>SKU</th>
+                    <th>SKU</th>                    
                     <th>QTY</th>
                     <th>Unit Price</th>
                     <th>Line Total</th>
+                    <th>SKU2</th>
+                    <th>Pallet</th>
+                    <th>Line Pallet</th>
                 </tr>
             </thead>
             <tbody>
                 {% for i in items %}
                 <tr>
-                    <td>{{ i.sku }}</td>
+                    <td>{{ i.sku }}</td>                    
                     <td>{{ i.qty }}</td>
                     <td>${{ i.price }}</td>
                     <td>${{ i.line_total }}</td>
+                    <td>{{ i.sku_sim }}</td>
+                    <td>{{ i.each_pallet }}</td>
+                    <td>{{ i.line_pallet }}</td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -77,13 +70,25 @@
                 </tr>
                 {% endfor %}
             </tbody>
-        </table>         
+        </table>
         
-        <div class="mt-2">            
+        <div class="row mb-2">
+            <div class="col-md-3">
+                <label class="form-label">Total Amount: ${{ total_amount }}</label>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><strong>Total Pallets: {{ total_pallet }}</strong></label>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><strong>Total Ceiling Pallets: {{ total_pallet_ceiling }}</strong></label>
+            </div>
+        </div>
+        
+        <!-- <div class="mt-2">            
             <button type="submit" class="btn btn-primary" id="saveOrder">
                 Add Order
             </button>
-        </div>
+        </div> -->
     </form>
 
 </div>
