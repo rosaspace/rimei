@@ -28,7 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*','129.80.201.9']
 
-CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
+CSRF_TRUSTED_ORIGINS = ["https://rimeius.com","https://www.rimeius.com",]
 
 LOGIN_URL = '/login/'
 

@@ -4,7 +4,6 @@ services:
 
   web:
     build: .
-    container_name: django_prod
     command: python manage.py runserver 0.0.0.0:8888
     expose:
       - "8888"
@@ -12,6 +11,8 @@ services:
       - "8888:8888"
     volumes:
       - .:/app
+    networks:
+      - rimei_net
     
 
   nginx:
@@ -23,7 +24,14 @@ services:
     volumes:
       - ./nginx/rimeius.conf:/etc/nginx/conf.d/rimeius.conf:ro
       - ./static:/code/static:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     env_file:
       - ./nginx/.env
     depends_on:
       - web
+    networks:
+      - rimei_net
+
+networks:
+  rimei_net:
+    driver: bridge

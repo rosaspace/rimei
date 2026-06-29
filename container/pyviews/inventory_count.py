@@ -10,6 +10,9 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+
 from ..constants import constants_view
 from ..models import (
     RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem,
@@ -173,6 +176,36 @@ def export_metal_stock(request):
         "user_permissions": user_permissions
     })
     
+def export_inventory_byemployee(request):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="inventory_sheet.pdf"'
+
+    c = canvas.Canvas(response, pagesize=letter)
+
+    employees = Employee.objects.filter(belongTo = "CabinetsDepot").exclude(id__in=[1, 2]).order_by("name")
+
+    for employee in employees:
+        for product_type in ["Metal", "Rimei"]:
+
+            products = RMProduct.objects.filter(
+                blongTo=employee,
+                type=product_type
+            ).order_by("name")
+
+            # 没有产品则跳过，不生成这一页
+            if not products.exists():
+                continue
+
+            draw_inventory_page(
+                c=c,
+                employee=employee,
+                products=products,
+                product_type=product_type,
+            )
+
+    c.save()
+
+    return response
 
 def order_history(request,product_id):
     product = get_object_or_404(RMProduct, id=product_id)
@@ -609,5 +642,95 @@ def export_metal_inventory_to_excel(items):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
+def draw_inventory_page(c, employee, products, product_type):
 
+    width, height = letter
+    y = height - 50
+
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(40, y, "INVENTORY COUNT SHEET")
+
+    y -= 30
+
+    c.setFont("Helvetica-Bold", 13)
+    c.drawString(40, y, f"Employee : {employee.name}")
+
+    c.drawRightString(width - 40, y, f"Type : {product_type}")
+
+    y -= 30
+
+    headers = [
+        "No",
+        "Product",
+        "Case",
+        "Pallets",
+        "Extra Case",
+        "Total"
+    ]
+
+    xs = [40, 80, 150, 190, 420, 520]
+
+    c.setFont("Helvetica-Bold", 11)
+
+    for x, h in zip(xs, headers):
+        c.drawString(x, y, h)
+
+    y -= 15
+    c.line(40, y, 568, y)
+    y -= 25
+
+    c.setFont("Helvetica", 10)
+
+    for i, product in enumerate(products, 1):
+
+        if y < 60:
+            c.showPage()
+            y = height - 50
+
+        c.drawString(40, y, str(i))
+        
+        if product_type == "Rimei":
+            product_name = product.shortname or product.name
+        else:
+            product_name = product.name
+
+        c.drawString(80, y, product_name)
+
+        if product_type == "Rimei":
+            case_num = product.Pallet
+        else:
+            case_num = 0
+        c.drawString(160, y, str(case_num))
+
+        c.drawString(190, y, "____________________________________")
+        c.drawString(420, y, "________")
+        c.drawString(500, y, "____________")
+
+        y -= 25
+
+    # ------------------------------
+    # Signature Section
+    # ------------------------------
+    if y < 100:
+        c.showPage()
+        y = height - 120
+    else:
+        y -= 30
+
+    c.setFont("Helvetica-Bold", 11)
+
+    # Signature
+    c.drawString(40, y, "Employee Signature:")
+    c.line(150, y - 2, 330, y - 2)
+
+    # Date
+    c.drawString(360, y, "Date:")
+    c.line(400, y - 2, 540, y - 2)
+
+    # Checked By（可选）
+    y -= 40
+    c.drawString(40, y, "Checked By:")
+    c.line(120, y - 2, 330, y - 2)
+
+    c.showPage()
 

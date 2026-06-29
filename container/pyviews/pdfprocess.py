@@ -52,7 +52,7 @@ def print_converted_order(request, so_num):
     doc = fitz.open(pdf_path)
 
     for page in doc:
-        x, y = 40, 28  
+        x, y = 35, 28  
         erase_width, erase_height = 250, 150  
         rect = fitz.Rect(x, y, x + erase_width, y + erase_height)
         page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))  

@@ -25,6 +25,8 @@ urlpatterns = [
     path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),# 查看产品历史记录
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    # 导出库存
     path("export_metal_stock/", inventory_count.export_metal_stock, name="export_metal_stock"),    # 导出库存
+    path("export_inventory_byemployee/", inventory_count.export_inventory_byemployee, name="export_inventory_byemployee"),    # 导出库存
+    
     path("inventory_summary", inventory_count.inventory_summary, name="inventory_summary"),    # 库存总结
     path('edit_product/<int:product_id>/',inventory_count.edit_product,name='edit_product'), # 编辑产品条目
 
@@ -115,7 +117,6 @@ urlpatterns = [
     path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
     path('print_metal_invoice/<str:order_id>/<int:isInvoice>/',rmorder.print_metal_invoice,name='print_metal_invoice'),
     path('print_metal_salesorder/<str:order_id>/<int:isInvoice>/',rmorder.print_metal_salesorder,name='print_metal_salesorder'),
-    
     path("edit_order_full/<str:so_num>/", rmorder.edit_order_full, name="edit_order_full"), 
     path("edit_order_simple/<str:so_num>/", rmorder.edit_order_simple, name="edit_order_simple"), 
 
