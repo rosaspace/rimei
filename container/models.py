@@ -111,6 +111,14 @@ class ClockRecord(models.Model):
 
         super().save(*args, **kwargs)
 
+# Product
+class ProductClassification(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # 产品名称，唯一
+    type = models.CharField(max_length=255, default='Glove')
+
+    def __str__(self):
+        return self.name
+
 class RMProduct(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 产品名称，唯一
     shortname = models.CharField(max_length=255, blank=True, null=True)  # 短名称，唯一
@@ -128,6 +136,15 @@ class RMProduct(models.Model):
     type = models.CharField(max_length=255, default='Rimei') # 类型
     price = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 价格
     status = models.CharField(max_length=255, default='Common') # 库存状态
+
+    # 产品分类
+    classification = models.ForeignKey(
+        ProductClassification,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products'
+    )
 
     def __str__(self):
         return self.name

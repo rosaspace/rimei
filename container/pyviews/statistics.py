@@ -245,7 +245,7 @@ def statistics_invoice_container(request):
         # 进入下一个月
         year = current.year + (current.month // 12)
         month = (current.month % 12) + 1
-        current = datetime.date(year, month, 1)
+        current = date(year, month, 1)
 
     # 拆分 labels 和 data（给图表用）
     chart_labels = [item['month'] for item in full_data]
@@ -569,6 +569,91 @@ def statistics_mcd_trend(request):
             "quantity": row["total_qty"]
         })
     result['table'] = table_data
+
+    result['table_average'] = []
+
+    if not monthly_df.empty:
+
+        # 复制，避免修改原来的 monthly_df
+        avg_monthly_df = monthly_df.copy()
+
+        avg_monthly_df['month'] = pd.to_datetime(
+            avg_monthly_df['month']
+        )
+
+        # 找到最早和最后一个月份
+        first_month = avg_monthly_df['month'].min().to_period('M')
+        last_month = avg_monthly_df['month'].max().to_period('M')
+
+        # 排除首月和最后一个月
+        avg_monthly_df = avg_monthly_df[
+            (avg_monthly_df['month'].dt.to_period('M') != first_month) &
+            (avg_monthly_df['month'].dt.to_period('M') != last_month)
+        ]
+
+        # 每个产品计算月平均值
+        product_monthly_average = (
+            avg_monthly_df
+            .groupby('product__name')['total_qty']
+            .mean()
+            .round(2)
+            .reset_index()
+        )
+
+        result['table_average'] = [
+            {
+                'product': row['product__name'],
+                'average': float(row['total_qty'])
+            }
+            for _, row in product_monthly_average.iterrows()
+        ]
+
+
+    # ---------- 最近3个完整月份的平均数量 ----------
+
+    result['recent_3_month_average'] = []
+
+    if not monthly_df.empty:
+
+        recent_df = monthly_df.copy()
+
+        recent_df['month'] = pd.to_datetime(
+            recent_df['month']
+        )
+
+        # 当前月份
+        current_month = pd.Timestamp.today().to_period('M')
+
+        # 排除当前月份
+        recent_df = recent_df[
+            recent_df['month'].dt.to_period('M') < current_month
+        ]
+
+        # 找到最近3个完整月份
+        recent_months = sorted(
+            recent_df['month'].dt.to_period('M').unique()
+        )[-3:]
+
+        recent_df = recent_df[
+            recent_df['month'].dt.to_period('M').isin(recent_months)
+        ]
+
+        # 每个产品计算最近3个月平均值
+        recent_3_month_avg = (
+            recent_df
+            .groupby('product__name')['total_qty']
+            .mean()
+            .round(2)
+            .reset_index()
+        )
+
+        result['recent_3_month_average'] = [
+            {
+                'product': row['product__name'],
+                'average': float(row['total_qty'])
+            }
+            for _, row in recent_3_month_avg.iterrows()
+        ]
 
     # 各类趋势图表数据
     result['weekly'] = build_chart_data(weekly_df, 'week')
@@ -1047,6 +1132,11 @@ def get_metal_commission_orders(customer_id, month):
         order.carrier_price = carrier
         order.total_cost = cost
         order.profit = profit
+
+        if carrier == 0.0:
+            order.sub_profit = amount - 150 - order.total_cost  # 不含税金额 - 运费 - 成本价 
+        else:
+            order.sub_profit = amount - order.total_cost  # 不含税金额 - 运费 - 成本价
 
         if carrier == 0.0:
             order.total_profit = amount - 150 - order.total_cost + profit # 不含税金额 - 运费 - 成本价 + 5% profit

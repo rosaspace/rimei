@@ -21,12 +21,24 @@
                     <label class="form-check-label" for="is_relocate">Empty Container Relocate</label>
                 </div>
                 <div class="form-check mb-0">
-                    <input type="checkbox" class="form-check-input" id="is_chassis_split" name="is_chassis_split">
+                    <input type="checkbox" class="form-check-input" id="is_chassis_split" name="is_chassis_split" checked>
                     <label class="form-check-label" for="is_chassis_split ">Chassis split</label>
                 </div>
                 <div class="form-check mb-0">
                     <input type="checkbox" class="form-check-input" id="is_prepull" name="is_prepull">
                     <label class="form-check-label" for="is_prepull ">IsPrepull</label>
+                </div>
+                <div class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="is_flip" name="is_flip">
+                    <label class="form-check-label" for="is_flip">IsFlip</label>
+                </div>
+                <div class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="is_detention" name="is_detention">
+                    <label class="form-check-label" for="is_detention ">IsDetention</label>
+                </div>
+                <div class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="is_overweight" name="is_overweight">
+                    <label class="form-check-label" for="is_overweight ">IsOverweight</label>
                 </div>
                 <button class="btn btn-primary" id="printCustomerInvoice">Customer Invoice</button>
             </div>
@@ -325,10 +337,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const is_chassis_split = document.getElementById('is_chassis_split').checked;
         const is_prepull = document.getElementById('is_prepull').checked;
 
+        const is_flip = document.getElementById('is_flip').checked;
+        const is_detention = document.getElementById('is_detention').checked;
+        const is_overweight = document.getElementById('is_overweight').checked;
+
         const isEmptyContainerRelocate = isRelocateChecked ? '1' : '0';
         const isClassisSplit = is_chassis_split ? '1' : '0';
         const isPrepull = is_prepull ? '1' : '0';
-        window.open(`/print_customer_invoice/${containerID}/${isEmptyContainerRelocate}/${isClassisSplit}/${isPrepull}`, '_blank');
+        const isFlip = is_flip ? '1' : '0';
+        const isDetention = is_detention ? '1' : '0';
+        const isOverweight = is_overweight ? '1' : '0';
+
+        window.open(`/print_customer_invoice/${containerID}/${isEmptyContainerRelocate}/${isClassisSplit}/${isPrepull}/${isFlip}/${isDetention}/${isOverweight}`, '_blank');
     });
 
     // 打印清关发票

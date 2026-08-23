@@ -3,31 +3,66 @@
 
 <div class="table-container">
     <div class="row"> 
-        <!-- 表格区域 -->
-        <!-- <div class="col-md-6">
-            <h2>Outbound Amount List</h2>
-            <table class="table table-bordered mt-4">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Period</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in result.table %}
-                <tr>
-                    <td>{{ row.product }}</td>
-                    <td>{{ row.quantity }}</td>
-                    <td>{{ row.date }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            </table>
-        </div> -->
+        <!-- 平均值区域 -->
+        <div class="col-md-4 mb-4">
+            <!-- Overall Monthly Average -->
+            <div class="col-md-12 mb-4">
+                <h2>Mcd Outbound Monthly Average</h2>
+
+                <div class="row">
+                    {% for row in result.table_average %}
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">
+                                    {{ row.product }}
+                                </h6>
+
+                                <h3 class="mb-0">
+                                    {{ row.average|floatformat:2 }}
+                                </h3>
+
+                                <small class="text-muted">
+                                    Monthly Average
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+
+            <!-- Recent 3 Months Average -->
+            <div class="col-md-12 mb-4">
+                <h2>Recent 3 Months Average</h2>
+
+                <div class="row">
+                    {% for row in result.recent_3_month_average %}
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">
+                                    {{ row.product }}
+                                </h6>
+
+                                <h3 class="mb-0">
+                                    {{ row.average|floatformat:2 }}
+                                </h3>
+
+                                <small class="text-muted">
+                                    Last 3 Complete Months
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
 
         <!-- 图表区域 -->
-        <div class="col-md-12">
+        <div class="col-md-8">
             <h2>Mcd Outbound Chart</h2>
             <div class="mb-2">
                 <label for="trendSelect">Select Trend: </label>

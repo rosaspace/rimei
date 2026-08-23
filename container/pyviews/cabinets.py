@@ -117,7 +117,7 @@ def parse_sales_order(raw_text):
 
     # 2️⃣ 提取所有 SKU 行
     pattern = re.compile(
-        r'\d+\s+(SW-[A-Z0-9\-\(\)]+).*?\s(\d+)\s+\$(\d+\.\d{2})\s+\$',
+        r'\d+\s+((?:SW|GR|NB|SE|SDW|AG|TC|SAO|SWO|LWSW)-[A-Z0-9\-\(\)]+).*?\s(\d+)\s+\$(\d+\.\d{2})\s+\$',
         re.DOTALL
     )
 
@@ -233,10 +233,12 @@ def parse_packing_list(raw_text):
         qty = int(qty_str)
 
         # sku_sim = sku.split("-", 1)[1] if "-" in sku else sku
-
+        sku = sku.strip()
         if sku.startswith("SW-"):
             sku_sim = sku[3:]
         elif sku.startswith("LWSE-"):
+            sku_sim = sku[5:]
+        elif sku.startswith("LWSW-"):
             sku_sim = sku[5:]
         else:
             sku_sim = sku

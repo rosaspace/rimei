@@ -203,6 +203,94 @@ def print_mcd_label(request):
 
     return finalize_pdf_and_response(c, filename)
 
+def print_vertical_mcd_label(request):
+    print("----------print_mcd_label----------")
+
+    lotnum = request.POST.get("lot_number", "").strip()
+    startdate = request.POST.get("start_date", "").strip()
+    expireddate = request.POST.get("expired_date", "").strip()
+
+    if not lotnum:
+        return HttpResponse("LOT number is required", status=400)
+
+    # === PDF 路径 ===
+    pdf_dir = get_media_path(
+        constants_address.UPLOAD_DIR_temp,
+        constants_address.MCD_FOLDER_Temp
+    )
+    ensure_dir_exists(pdf_dir)
+
+    filename = os.path.join(pdf_dir, f"LOT_{lotnum}.pdf")
+
+    # === 页面设置 ===    
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    PAGE_WIDTH, PAGE_HEIGHT = pagesize
+
+    # === Label 布局 ===
+    COLS = 5
+    ROWS = 10
+    ROW_GAP = 20
+    COL_GAP = 10
+    TOTAL_LABELS = 50
+
+    MARGIN_LEFT = 5
+    MARGIN_TOP = 26
+    MARGIN_RIGHT = 5
+    MARGIN_BOTTOM = 24
+
+    usable_width = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT - COL_GAP * (COLS - 1)
+    # usable_width = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
+    usable_height = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM - ROW_GAP * (ROWS - 1)
+
+    LABEL_WIDTH = usable_width / COLS
+    LABEL_HEIGHT = usable_height / ROWS
+
+    FONT_SIZE_TITLE = 16
+    FONT_SIZE_TEXT = 12
+    line_gap = 22    
+    
+
+    # === 开始画 labels ===
+    for i in range(50):
+        row = i // COLS
+        col = i % COLS
+
+        x = MARGIN_LEFT + col * (LABEL_WIDTH + COL_GAP)
+        y = PAGE_HEIGHT - MARGIN_TOP - row * (LABEL_HEIGHT + ROW_GAP)
+
+        # ===== Label center =====
+        center_x = x + LABEL_WIDTH / 2
+        label_center_y = y - LABEL_HEIGHT / 2
+
+        # ===== Text block center =====
+        text_block_height = line_gap * 2
+        base_y = label_center_y + text_block_height / 2
+
+        # ===== Draw text =====
+        # c.setFont(constants_address.font_Helvetica_Bold, FONT_SIZE_TITLE)
+        # c.drawCentredString(center_x, base_y,                f"{lotnum}")
+        # c.setFont(constants_address.font_Helvetica, FONT_SIZE_TEXT)
+        # c.drawCentredString(center_x, base_y - line_gap,     f"{startdate}")
+        # c.drawCentredString(center_x, base_y - line_gap * 2, f"{expireddate}")
+
+        # ===== Draw text - rotate 90 degrees =====
+        c.saveState()
+
+        # 以 Label 中心为旋转中心
+        c.translate(center_x, label_center_y)
+        c.rotate(90)
+
+        c.setFont(constants_address.font_Helvetica_Bold, FONT_SIZE_TEXT)
+        c.drawCentredString(0, line_gap, f"{lotnum}")
+
+        c.setFont(constants_address.font_Helvetica, FONT_SIZE_TEXT)
+        c.drawCentredString(0, 0, f"{startdate}")
+        c.drawCentredString(0, -line_gap, f"{expireddate}")
+
+        c.restoreState()
+
+    return finalize_pdf_and_response(c, filename)
+
 
 def import_inventory(request):
     if request.method == "POST" and request.FILES.get("excel_file"):
@@ -418,13 +506,13 @@ def export_pallet(request):
     
 # Office depot, inventory, order received
 def preview_email(request):
-    email_type = request.POST.get("action")
+    email_type = request.POST.get("action", "default")
     officedepot_id = request.POST.get('officedepot_number')
 
     username  = request.user.username.lower()
     SIGNATURE_MAP = {
         "rosa": email_constants.SIGNATURE_JING,
-        "rimei": email_constants.SIGNATURE_AVA,
+        "rimei": email_constants.SIGNATURE_IRENE,
         "david": email_constants.SIGNATURE_DAVID,
     }
     signature = SIGNATURE_MAP.get(username, email_constants.SIGNATURE_JING)
@@ -439,7 +527,39 @@ def preview_email(request):
         current_date=current_date,
     )
 
-    return render(request, constants_view.template_temporary, email_data)
+    return render(request, constants_view.template_temporary, {
+        "inventory": email_data,
+    })
+
+# Temporary Carrier Email
+def preview_carrier_email(request):
+    do_option = request.POST.get("do_option", "1")
+    username = request.user.username.lower()
+    ship_to = request.POST.get("ship_to", "").strip()
+
+    print("method:", request.method)
+    print("GET:", request.GET)
+    print("-------preview_carrier_email-----")
+    print(do_option)
+
+    
+    SIGNATURE_MAP = {
+        "rosa": email_constants.SIGNATURE_JING,
+        "rimei": email_constants.SIGNATURE_IRENE,
+        "david": email_constants.SIGNATURE_DAVID,
+    }
+    signature = SIGNATURE_MAP.get(username, email_constants.SIGNATURE_JING)
+
+    template_func = email_constants.CARRIER_EMAIL_TEMPLATES["do"]
+    email_data = template_func(
+        signature=signature,
+        carrier=do_option,
+        shipto = ship_to,
+    )
+
+    return render(request, constants_view.template_temporary, {
+        "carrier": email_data,
+    })
 
 # order ship out
 def order_email(request, so_num):
@@ -449,7 +569,7 @@ def order_email(request, so_num):
     username  = request.user.username.lower()
     SIGNATURE_MAP = {
         "rosa": email_constants.SIGNATURE_JING,
-        "rimei": email_constants.SIGNATURE_AVA,
+        "rimei": email_constants.SIGNATURE_IRENE,
         "david": email_constants.SIGNATURE_DAVID,
     }
     signature = SIGNATURE_MAP.get(username, email_constants.SIGNATURE_JING)
@@ -459,7 +579,9 @@ def order_email(request, so_num):
     template_func = email_constants.ORDER_EMAIL_TEMPLATES.get(email_type, email_constants.ORDER_EMAIL_TEMPLATES["shippedout"])
     email_data = template_func(order, signature, is_rimei_user)
 
-    return render(request, constants_view.template_temporary, email_data)
+    return render(request, constants_view.template_temporary, {
+        "inventory": email_data,
+    })
 
 # container DO, empty, receive in
 def container_email(request, container_id):
@@ -489,7 +611,7 @@ def container_email(request, container_id):
     username  = request.user.username.lower()
     SIGNATURE_MAP = {
         "rosa": email_constants.SIGNATURE_JING,
-        "rimei": email_constants.SIGNATURE_AVA,
+        "rimei": email_constants.SIGNATURE_IRENE,
         "david": email_constants.SIGNATURE_DAVID,
     }
     signature = SIGNATURE_MAP.get(username, email_constants.SIGNATURE_JING)
@@ -499,4 +621,6 @@ def container_email(request, container_id):
     template_func = email_constants.CONTAINER_EMAIL_TEMPLATES.get(email_type, email_constants.CONTAINER_EMAIL_TEMPLATES["default"])
     email_data = template_func(container, signature, is_rimei_user, carrier)
 
-    return render(request, constants_view.template_temporary, email_data) 
+    return render(request, constants_view.template_temporary, {
+        "inventory": email_data,
+    }) 

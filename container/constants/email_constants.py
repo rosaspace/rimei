@@ -2,22 +2,58 @@
 from django.utils import timezone
 from datetime import datetime, date, time
 
+from . import constants_address
+
 # 收件人
 SIGNATURE_AVA = "Ava"
+SIGNATURE_IRENE = "Irene"
 SIGNATURE_JING = "Jing"
 SIGNATURE_DAVID = "David"
 RECIPIENT_OMAR_rosa = "omarorders@omarllc.com;omarwarehouse@rimeius.com"
 RECIPIENT_OMAR_rimei ="omarorders@omarllc.com;order@rimeius.com"
+
 RECIPIENT_ADVANCE = "jovana@advance77.com;tijana@advance77.com;raluca@advance77.com;intermodal@advance77.com"
 RECIPIENT_LadingCargo = "brandon@ladingcargo.com;Rajinder@ladingcargo.com;prabnek@ladingcargo.com"
 RECIPIENT_DevenTransport = "anthony@deventransport.com"
 RECIPIENT_FreighTech = "Jeff@ftcartage.com;Dispatch@ftcartage.com"
+
+RECIPIENT_TQL = "pambrose@tql.com"
+RECIPIENT_RYAN = "jchristianson@ryantrans.com;zfrede@ryantrans.com"
+RECIPIENT_DYNAMO = "JE@dynamofreight.com"
+RECIPIENT_DEMI = "demi@algusa.com"
+RECIPIENT_ABF = "pweinsinger@abf.com"
 
 CARRIER_RECIPIENTS = {
     1: RECIPIENT_ADVANCE,
     2: RECIPIENT_LadingCargo,
     3: RECIPIENT_DevenTransport,
     4: RECIPIENT_FreighTech,
+}
+
+CARRIER_RECIPIENTS_2 = {
+    "1": RECIPIENT_LadingCargo,
+    "2": RECIPIENT_RYAN,
+    "3": RECIPIENT_TQL,
+    "4": RECIPIENT_DYNAMO,
+    "5": RECIPIENT_ABF,
+    "6": RECIPIENT_DEMI,
+    "default": RECIPIENT_LadingCargo,
+}
+
+CARRIER_EMAIL_TEMPLATES = {
+    "do": lambda signature, carrier,shipto: {
+        "recipient": CARRIER_RECIPIENTS_2.get(carrier, RECIPIENT_LadingCargo),
+        "subject": f"Flatbed Quote",
+        "body": (
+            f"Hello,\n\n"
+            f"From:\n{constants_address.ssa_address}\n"
+            f"To:\n{shipto}\n\n"
+            f"Metal studs\n48'/53' flatbed\n"
+            f"Weight: 40000 lbs.\n"
+            f"Could you send a quote for this one?\n\n"
+            f"Thank you!\n{signature}"
+        )
+    },
 }
 
 # container_email 的邮件模板（按类型）

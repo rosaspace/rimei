@@ -1,6 +1,7 @@
 {% extends "container/base.html" %}
 {% block content %}
 
+<!--Import-->
 <div class="row mb-3">
     <div class="col-md-3">
         <h4>Import Inventory</h4>    
@@ -48,6 +49,7 @@
 
 <hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
 
+<!--Print Label BOL-->
 <div class="row mb-3">
     <div class="col-md-2">
         <h4>Print Label</h4>
@@ -103,6 +105,21 @@
                 Print Mcd Label
             </button>
         </form>
+        <form action="/print_vertical_mcd_label/" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-2">
+                <input type="text" name="lot_number" id="lot_number" class="form-control" placeholder="LOT Number" required>
+            </div>
+            <div class="mb-2">
+                <input type="month" name="start_date" id="start_date" class="form-control" required>
+            </div>
+            <div class="mb-2">
+                <input type="month" name="expired_date" id="expired_date" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-success" id="printMcdLabel">
+                Print Vertical Mcd Label
+            </button>
+        </form>
     </div>
 
     <div class="col-md-2">
@@ -138,11 +155,74 @@
             </button>
         </form>
     </div>
+
+    <div class="col-md-2">
+        <h4>Print shipout BOL</h4>
+        <form action="/print_shipout_bol/" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-2">
+                <textarea class="form-control" id="ship_to" name="ship_to" rows="4" required></textarea>
+            </div>
+            <!-- 日期，重量 -->
+            <div class="row mb-2">
+                <div class="col-6">
+                    <input type="date" name="shipout_date" id="shipout_date" class="form-control" required>
+                </div>
+                <div class="col-6">
+                    <input type="number" name="item_weight" id="item_weight" class="form-control"
+                        placeholder="Weight" required>
+                </div>
+            </div>
+
+            <!-- Name，Lot， Quality -->
+            <div class="row mb-2">
+                <div class="col-4">
+                    <input type="text" name="item_name" id="item_name" class="form-control"
+                        placeholder="Name" required>
+                </div>
+                
+                <div class="col-4">
+                    <input type="number" name="item_number" id="item_number" class="form-control"
+                        placeholder="Quality" required>
+                </div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-12">
+                    <input type="text" name="item_lot" id="item_lot" class="form-control"
+                        placeholder="Lot#" required>
+                </div>
+            </div>
+
+            <!-- Name，Lot，Quality -->
+            <div class="row mb-2">
+                <div class="col-4">
+                    <input type="text" name="item_name2" id="item_name2" class="form-control"
+                        placeholder="Name" required>
+                </div>
+                <div class="col-4">
+                    <input type="number" name="item_number2" id="item_number2" class="form-control"
+                        placeholder="Quality" required>
+                </div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-12">
+                    <input type="text" name="item_lot2" id="item_lot2" class="form-control"
+                        placeholder="Lot#" required>
+                </div>
+            </div>
+
+
+            <button type="submit" class="btn btn-success" id="printShipoutBOL">
+                Print Shipout BOL
+            </button>
+        </form>
+    </div>
     
 </div>
 
 <hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
 
+<!--Export-->
 <div class="row">
     <div class="col-md-3">
         <h4>Export Pallets</h4>
@@ -180,6 +260,7 @@
 
 <hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
 
+<!--Email-->
 <div class="row mt-4">
     <div class="col-md-4">
         <h4>Email Content Preview</h4>
@@ -209,13 +290,13 @@
         <div class="row">
             <div class="col-12">
                 <div class="mb-3">
-                    <div class="container-id-display">{{ recipient }}</div>
-                    <div class="container-id-display">{{ subject }}</div>
-                    <textarea id="emailContent" class="form-control" rows="8" readonly>{{ body }}</textarea>
+                    <div class="container-id-display">{{ inventory.recipient  }}</div>
+                    <div class="container-id-display">{{ inventory.subject  }}</div>
+                    <textarea id="emailContent" class="form-control" rows="8" readonly>{{ inventory.body  }}</textarea>
                 </div>
 
                 <div class="mb-3">
-                    <a href="mailto:{{ recipient }}?subject={{ subject|urlencode }}&body={{ body|urlencode }}" 
+                    <a href="mailto:{{ inventory.recipient }}?subject={{ inventory.subject|urlencode }}&body={{ inventory.body|urlencode }}" 
                         class="btn btn-secondary">
                         <i class="fas fa-envelope"></i> Open in Outlook
                     </a>
@@ -224,7 +305,92 @@
         </div>
     </div>
 
-    <div class="col-md-8">
+    <div class="col-md-3">
+        <h4>Carrier Email Preview</h4>
+        <form method="POST" action="{% url 'preview_carrier_email'%}"> 
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <textarea class="form-control" id="ship_to" name="ship_to" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                <!-- 单选按钮 -->
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input"
+                        type="radio"
+                        name="do_option"
+                        value="1"
+                        checked>
+                    <label class="form-check-label">LadingCargo</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input"
+                        type="radio"
+                        name="do_option"
+                        value="2">
+                    <label class="form-check-label">Ryan Transportation</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input"
+                        type="radio"
+                        name="do_option"
+                        value="3">
+                    <label class="form-check-label">TQL</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input"
+                        type="radio"
+                        name="do_option"
+                        value="4">
+                    <label class="form-check-label">Dynamo Freight LLC</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input"
+                        type="radio"
+                        name="do_option"
+                        value="5">
+                    <label class="form-check-label">ABF</label>
+                </div>
+
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input"
+                        type="radio"
+                        name="do_option"
+                        value="6">
+                    <label class="form-check-label">Ddemi</label>
+                </div>
+                </div>
+            </div>
+            <!-- 提交按钮 -->
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="fas fa-plus"></i> Generate Email
+            </button>
+        </form>
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    <div class="container-id-display">{{ carrier.recipient  }}</div>
+                    <div class="container-id-display">{{ carrier.subject  }}</div>
+                    <textarea id="emailContent" class="form-control" rows="9" readonly>{{ carrier.body  }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <a href="mailto:{{ carrier.recipient }}?subject={{ carrier.subject|urlencode }}&body={{ carrier.body|urlencode }}" 
+                        class="btn btn-secondary">
+                        <i class="fas fa-envelope"></i> Open in Outlook
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
         <h4>Inventory Count Number</h4>
         <a href="{% url 'inventory_summary' %}" class="btn btn-primary mb-3">Inventory Summary</a>
         <ul class="nav nav-tabs mb-3" role="tablist">

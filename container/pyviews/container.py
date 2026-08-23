@@ -22,7 +22,7 @@ from .utils.invoice_utils import get_product_qty_with_inventory_from_container
 from .utils.pdfgenerate import print_containerid_lot, print_checklist_template
 from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
 from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file
-from .utils.date_utils import parse_date
+from .utils.date_utils import get_week_range, parse_date
 
 # container
 @login_required(login_url='/login/')
@@ -34,9 +34,18 @@ def container_advance77(request):
     mode = request.GET.get("mode", "full")  # full / simple
 
     # 今天，计算本周的周一和周日
-    today = date.today()    
-    start_of_week = today - timedelta(days=today.weekday())   # 本周一
-    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+    #today = date.today()    
+    #start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    #end_of_week = start_of_week + timedelta(days=6)           # 本周日
+    week_info = get_week_range()
+    today = week_info['start']
+    start_of_week = week_info['start']
+    end_of_week = week_info['end']
+
+    next_start_of_week = week_info['next_start']
+    next_end_of_week = week_info['next_end']
+    next2_start_of_week = week_info['next2_start']
+    next2_end_of_week = week_info['next2_end'] 
 
     # GET 参数
     customer_id = request.GET.get('customer')
@@ -68,11 +77,15 @@ def container_advance77(request):
         'today': today,
         'start_of_week': start_of_week,
         'end_of_week': end_of_week,
+        "next_start_of_week": next_start_of_week,
+        "next_end_of_week": next_end_of_week,
+        "next2_start_of_week":next2_start_of_week,
+        "next2_end_of_week":next2_end_of_week,
         'customers': InvoiceCustomer.objects.all(),
         'logistics_list': LogisticsCompany.objects.all(),
         'carriers': Carrier.objects.filter(Q(id = 1) | Q(id=5) ),
         'inbound_categories': InboundCategory.objects.all(),
-        })
+        }) 
 
 @login_required(login_url='/login/')
 def container_omar(request):

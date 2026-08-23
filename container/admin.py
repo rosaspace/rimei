@@ -8,7 +8,8 @@ from .models import (
     AlineOrderRecord, Carrier, InboundCategory, RailwayStation, ContainerStatement, Manufacturer,
     InvoicePurposeFor, InvoicePaidCustomer, InvoiceVendor, InvoiceARRecord, InvoiceAPRecord,
     OfficeSupplyItem, OfficeSupplyPurpose, OfficeSupplyPlatform, OfficeSupplyRecord,
-    CabinetProductType, CabinetProduct, CabinetSalesOrder, CabinetSalesOrderItem
+    CabinetProductType, CabinetProduct, CabinetSalesOrder, CabinetSalesOrderItem,
+    ProductClassification
 )
 
 class ContainerAdmin(admin.ModelAdmin):
@@ -29,6 +30,9 @@ class RMProductdAdmin(admin.ModelAdmin):
 
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'id', 'belongTo')
+
+class ProductClassificationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'type')
 
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ('order', 'product','product_actual','quantity','price')
@@ -108,4 +112,4 @@ admin.site.register(CabinetProductType, CabinetProductTypeAdmin)
 admin.site.register(CabinetProduct)
 admin.site.register(CabinetSalesOrder)
 admin.site.register(CabinetSalesOrderItem)
-
+admin.site.register(ProductClassification, ProductClassificationAdmin)

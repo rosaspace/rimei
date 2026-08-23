@@ -305,7 +305,7 @@ def print_containerid_lot(
         )
 
 
-def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull):
+def converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull,isFlip,isDetention,isOverweight):
     
     ensure_dir_exists(output_dir)
     output_path = os.path.join(output_dir, new_filename)
@@ -498,6 +498,42 @@ def converter_customer_invoice(container, amount_items, output_dir, new_filename
             extra_row[3] = f"${extra_charge:,.2f}"
 
             total += Decimal(str(extra_charge))
+
+    if isFlip == "1":
+        # 找到对应行
+        relocate_row = desc_to_row.get("Flip")
+        if relocate_row:
+            relocate_units = 1
+            relocate_rate = constants_address.Flip_rate
+            relocate_charge = relocate_units * relocate_rate
+            relocate_row[1] = relocate_units
+            relocate_row[2] = f"${relocate_rate:,.2f}"
+            relocate_row[3] = f"${relocate_charge:,.2f}"
+            total += Decimal(str(relocate_charge))
+
+    if isDetention == "1":
+        # 找到对应行
+        relocate_row = desc_to_row.get("Detention")
+        if relocate_row:
+            relocate_units = 1
+            relocate_rate = constants_address.Detention_rate
+            relocate_charge = relocate_units * relocate_rate
+            relocate_row[1] = relocate_units
+            relocate_row[2] = f"${relocate_rate:,.2f}"
+            relocate_row[3] = f"${relocate_charge:,.2f}"
+            total += Decimal(str(relocate_charge))
+
+    if isOverweight == "1":
+        # 找到对应行
+        relocate_row = desc_to_row.get("Overweight")
+        if relocate_row:
+            relocate_units = 1
+            relocate_rate = constants_address.Overweight_rate
+            relocate_charge = relocate_units * relocate_rate
+            relocate_row[1] = relocate_units
+            relocate_row[2] = f"${relocate_rate:,.2f}"
+            relocate_row[3] = f"${relocate_charge:,.2f}"
+            total += Decimal(str(relocate_charge))
 
     # 填入总金额
     data[-1][-1] = f"${total:,.2f}"
@@ -766,6 +802,123 @@ def print_bol_template(title,filename, contentTitle, container_info, order_detai
             item['Name'],
             item['Qty'],
             item['PLTS'],
+        ]
+        x = left_margin  # 每行开始时重置 x 坐标
+        for value, w in zip(row_values, col_widths):
+            draw_text(x, y, str(value))
+            x += w
+        y -= line_height  # 向下移一行
+
+    # 添加数据行下方横线
+    y += line_height
+    c.setLineWidth(1)
+    c.line(left_margin, y - 4, width - left_margin, y - 4)
+
+    # 提示信息
+    y -= line_height * 2
+    for note in certification_notes:
+        wrapped_lines = textwrap.wrap(note, width=constants_address.max_line_width)
+        for line in wrapped_lines:
+            draw_text(x_label, y, line)
+            y -= 16
+        y -= 6  # 每段间距
+
+    # 添加签名和日期区域
+    y -= line_height  # 签名上方稍作间隔
+    signature_labels = ["Checker", "Shipper","Carrier"]
+    signature_spacing = 160  # 每组签名之间的水平间距
+    signature_y = y     # 签名区开始的 Y 坐标
+    signature_x_start = x_label
+
+    c.setFont(constants_address.font_Helvetica, 12)
+    for i, label in enumerate(signature_labels):
+        x_pos = signature_x_start + i * signature_spacing
+        c.drawString(x_pos, signature_y, f"{label}:")
+        c.line(x_pos + 60, signature_y, x_pos + 150, signature_y)  # 签名字下划线
+
+        c.drawString(x_pos, signature_y - 30, "Date:")
+        c.line(x_pos + 60, signature_y - 30, x_pos + 150, signature_y - 30)  # 日期下划线
+
+def print_shipout_bol_template(title,filename, contentTitle, container_info, order_details, certification_notes, canvas_obj, pagesize):
+    # 创建 PDF 文件
+    # 使用传入的 canvas 或创建新的
+    c = canvas_obj
+    c.setTitle(title)
+    width, height = pagesize
+
+    # 设置标题居中
+    c.setFont(constants_address.font_Helvetica_Bold, 16)
+    title = contentTitle
+    c.drawCentredString(width / 2, height - 80, title)
+
+    # 内容起始位置
+    x_label = 60         # 标签起始 x
+    line_length = 210    # 下划线长度
+    y = height - 120     # 初始 y 坐标
+    line_spacing = 30
+    x_sub_table = 100   #子表起始点
+
+    # 设置正文字体
+    c.setFont(constants_address.font_Helvetica, 12)
+
+    regular_font = constants_address.font_Helvetica
+    bold_font = constants_address.font_Helvetica_Bold
+    font_size = 10
+    left_margin = 0.8 * inch
+    line_height = 18
+
+    def draw_text(x, y, text, font=regular_font, size=font_size):
+        c.setFont(font, size)
+        c.drawString(x, y, text)
+
+    part1_Y = y
+    items_Y = 0
+    for key, value in container_info.items():
+        # 左上角多行地址
+        if key in ["Ship To", "Bill To", "Ship From"] and isinstance(value, str):
+            draw_text(x_label, y, f"{key}:")
+            address_lines = value.splitlines()
+            for i, line in enumerate(address_lines):
+                draw_text(x_label + 60, y, line)
+                if i == len(address_lines) - 1:
+                    y -= 18
+                    items_Y = y
+                else:
+                    y -= 14  # 多行地址行间距
+        # 右侧其他Number
+        else:
+            # 右上角信息
+            right_x = width - 280
+            draw_text(right_x, part1_Y, f"{key}:")            
+            draw_text(right_x + 80, part1_Y, str(value))
+            # c.line(right_x + 60, part1_Y - 2, right_x + line_length, part1_Y - 2)
+            part1_Y -= line_spacing
+
+    # 产品条目表头
+    y = items_Y - line_height
+
+    # 添加表头上方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y + line_height -2, width - left_margin, y + line_height -2)
+
+    table_headers = ["Name", "Description", "Qty",]
+    col_widths = [120, 350, 60]
+    x = left_margin
+    for header, w in zip(table_headers, col_widths):
+        draw_text(x, y, header, bold_font)
+        x += w
+
+    # 添加表头下方横线
+    c.setLineWidth(1)
+    c.line(left_margin, y - 4, width - left_margin, y - 4)
+    
+    # 产品条目
+    y -= line_height 
+    for item in order_details:
+        row_values = [
+            item['ShortName'],
+            item['Name'],
+            item['Qty'],
         ]
         x = left_margin  # 每行开始时重置 x 坐标
         for value, w in zip(row_values, col_widths):
@@ -1095,34 +1248,46 @@ def converter_commision_pdf(c, orders, width, height):
     total_profit_ground = Decimal("0")
 
     table_data = [[
-        "SO#",
-        "Pickup",
-        "Customer AMT",
-        "W/O Tax AMT",
+        "NO",
+        "Invoice Date",
+        "Invoice",
+        "Cus AMT",
+        "W/O Tax",
         "Sales AMT",
+        "Deli Fee",
         "Comm%",
-        "TotalComm",
-        "Carrier"
+        "Markup",
+        "TotalComm",        
     ]]
 
+    index = 0
     for order in orders:
+        index+=1
 
         customer = order.customer_price or Decimal("0")
         sales = order.total_amount or Decimal("0")
         cost = order.total_cost or Decimal("0")
         profit = order.profit or Decimal("0")
         total_profit = order.total_profit or Decimal("0")
+        sub_profit = order.sub_profit or Decimal("0")
         carrier = order.carrier_price or Decimal("0")
+        if carrier == 0:
+            carrier = 150
+        else:
+            carrier = 0
 
         table_data.append([
-            order.so_num,
+            index,
             order.pickup_date.strftime("%m/%d/%Y"),
+            order.so_num,            
             f"{customer:,.2f}",
             f"{sales:,.2f}",
             f"{cost:,.2f}",
-            f"{profit:,.2f}",
-            f"{total_profit:,.2f}",
             f"{carrier:,.2f}",
+            f"{profit:,.2f}",
+            f"{sub_profit:,.2f}",
+            f"{total_profit:,.2f}",
+            
         ])
 
         total_customer += customer
@@ -1131,7 +1296,7 @@ def converter_commision_pdf(c, orders, width, height):
 
     table = Table(
         table_data,
-        colWidths=[95, 60, 75, 70, 60, 50, 60, 50]
+        colWidths=[22,60,95,50, 50, 55,50, 50, 50,55]
     )
 
     table.setStyle(TableStyle([
@@ -1163,16 +1328,29 @@ def converter_commision_pdf(c, orders, width, height):
         table_top_y - table._height
     )
 
+    # 统计报表时间范围
+    if orders:
+        start_date = min(order.pickup_date for order in orders)
+        end_date = max(order.pickup_date for order in orders)
+
+        period = (
+            f"{start_date.strftime('%m/%d/%Y')} - "
+            f"{end_date.strftime('%m/%d/%Y')}"
+        )
+    else:
+        period = "N/A"
+
     y = table_top_y - table._height - 30
 
     c.setFont("Helvetica-Bold", 12)
     c.drawString(40, y, "Summary")
 
-    y -= 25
-    c.drawString(60, y, f"Total Customer : ${total_customer:,.2f}")
+    y -= 20
+    c.setFont("Helvetica", 10)
+    c.drawString(60, y, f"Report Period : {period}")
 
-    y -= 18
-    c.drawString(60, y, f"Total Sales : ${total_cost:,.2f}")
+    y -= 25
+    c.drawString(60, y, f"Monthly Sales : ${total_customer:,.2f}")
 
     y -= 18
     c.drawString(60, y, f"Total Commission : ${total_profit_ground:,.2f}")

@@ -10,7 +10,8 @@ from django.shortcuts import get_object_or_404
 from ..models import RMOrder, OrderItem
 from ..constants import constants_address
 
-from .utils.pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page, print_bol_template, print_weekly_droplist_on_one_page, print_mcd_template
+from .utils.pdfgenerate import print_pickuplist, print_weekly_pickuplist_on_one_page, print_weekly_droplist_on_one_page, print_mcd_template
+from .utils.pdfgenerate import print_bol_template, print_shipout_bol_template
 from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
 from .utils.file_utils import get_media_path, ensure_dir_exists, serve_pdf_file
 
@@ -238,8 +239,8 @@ def print_order_mcd(request, so_num):
     LOT_MAPPING = {
         "07604-034": "GF041124-S",
         "07605-039": "GF100524-M",
-        "07606-039": "GF052015-L",
-        "07607-024": "GF082625-XL",
+        "07606-039": "GF030926-L",
+        "07607-024": "GF030926-XL",
         "07326-024": "GF030126-B",
         # Add more mappings if needed
     }
@@ -442,6 +443,95 @@ def print_forklift_bol(request):
         filename=os.path.basename(file_path),
     )
 
+# Print shipout BOL
+def print_shipout_bol(request):
+    print("----------print_shipout_bol----------")
+    
+    ship_to = request.POST.get("ship_to", "").strip()
+    pick_date_str = request.POST.get("shipout_date", "").strip()
+    item_weight = int(request.POST.get("item_weight", 1))
+
+    item_name = request.POST.get("item_name", "")
+    item_lot = request.POST.get("item_lot", "")
+    item_number = int(request.POST.get("item_number", 1))
+    item_name2 = request.POST.get("item_name2", "")
+    item_lot2 = request.POST.get("item_lot2", "")
+    item_number2 = int(request.POST.get("item_number2", 1))
+
+    # 转换字符串为日期对象
+    pick_date = datetime.fromisoformat(pick_date_str)
+
+    # 输出路径
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_temp,
+        constants_address.Forklift_FOLDER
+    )
+    ensure_dir_exists(pdf_path)
+
+    file_path = os.path.join(
+        pdf_path,
+        f"item_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    )
+
+    # ✅ 创建 canvas（reportlab 全部藏在工具函数里）
+    c, pagesize, inch, ImageReader = create_pdf_canvas(file_path)
+    width, height = pagesize
+
+    order_details = []
+    # forklift_num = 3
+    order_details.append({
+        "ShortName": item_name,
+        "Name": item_lot,
+        "Qty": item_number,
+    })
+    order_details.append({
+        "ShortName": item_name2,
+        "Name": item_lot2,
+        "Qty": item_number2,
+    })
+
+    # 基本信息模板
+    container_info_template = {
+        "Ship From": constants_address.ssa_address,
+        "Bill To": ship_to,
+        "Ship To": ship_to,
+        "Total LBS": "N/A",
+    }
+
+    certification_notes = [
+        "NOTE: Liability Limitation for loss or damage in this shipment may be applicable. See 49 U.S.C. - 14706(c)(1)(A) and (B).",
+        "Checker: All pallets are in good condition, with no visible damage.",
+        "Shipper: Materials are properly classified, packaged, and labeled per DOT regulations, and in good condition for transport.",
+        "Carrier: Receipt of goods and placards; emergency info provided or accessible. Goods received in apparent good order unless noted.",
+    ]
+
+    # --- 生成前 1 页 Pick Up ---
+    bol_number = f"{pick_date.strftime('%m%d%Y')}"
+    container_info = container_info_template.copy()
+    container_info["BOL Number"] = bol_number
+    container_info["Ship Date"] = pick_date.strftime("%m/%d/%Y")
+    container_info["Ship Time"] = "N/A"
+
+    # 调用模板生成单页 BOL
+    print_shipout_bol_template(
+        title=f"Forklift BOL - {bol_number}",
+        filename=file_path,  # filename=None 表示写入当前 canvas
+        contentTitle=f"Bill Of Lading - {bol_number}",
+        container_info=container_info,
+        order_details=order_details,  # 如果没有具体产品，可以传空列表
+        certification_notes=certification_notes,
+        canvas_obj=c,  # 传入已有 canvas
+        pagesize=pagesize,
+    )
+    c.showPage()  # 新页
+
+    
+    # ✅ 统一保存 + 返回 Response
+    return finalize_pdf_and_response(
+        canvas_obj=c,
+        file_path=file_path,
+        filename=os.path.basename(file_path),
+    )
 
 # pick up list
 def print_pickup_today(request):

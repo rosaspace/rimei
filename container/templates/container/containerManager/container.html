@@ -88,7 +88,11 @@
                 class="table-secondary"
                 {% elif container.delivery_date and container.delivery_date >= start_of_week and container.delivery_date <= end_of_week %}
                 class="table-warning"
-                {% endif %}>
+                {% elif container.delivery_date and container.delivery_date >= next_start_of_week and container.delivery_date <= next_end_of_week %}
+                class="table-primary"
+                {% elif container.delivery_date and container.delivery_date >= next2_start_of_week and container.delivery_date <= next2_end_of_week %}
+                class="table-warning"
+                {% endif %}> 
                 <!-- <td>{{ container.id }}</td> -->
                 <td>
                     <a href="{% url 'edit_container' container.container_id %}">{{ container.container_id }}</a>

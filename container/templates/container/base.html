@@ -190,13 +190,13 @@
       
             {% if 'ContainerOrder' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder_omar rimeiorder_officedepot rimeiorder_metal_simple' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder_omar rimeiorder_officedepot rimeiorder_metal_simple rimeiorder_metal_full' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Orders
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'rimeiorder_omar' %}">Rimei Order</a></li>
                 <li><a class="dropdown-item" href="{% url 'rimeiorder_officedepot' %}">Office Depot</a></li>                
-                <li><a class="dropdown-item" href="{% url 'rimeiorder_metal_simple' %}">Metal Order</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_metal_full' %}">Metal Order</a></li>
               </ul>
             </li>
             {% endif %}            
@@ -240,7 +240,10 @@
 
             {% if 'Simplified' in user_permissions %}
             <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.url_name == 'simplified_view' %}active{% endif %}" href="{% url 'simplified_view' %}">Sim_Order</a>
+              <a class="nav-link {% if request.resolver_match.url_name == 'simplified_glove_view' %}active{% endif %}" href="{% url 'simplified_glove_view' %}">Sim_Order</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'simplified_metal_view' %}active{% endif %}" href="{% url 'simplified_metal_view' %}">Sim_Metal</a>
             </li>
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.url_name == 'simplified_container_view' %}active{% endif %}" href="{% url 'simplified_container_view' %}">Sim_Container</a>
@@ -259,7 +262,7 @@
             </li>
             {% endif %}
 
-            {% if 'MetalOrder' in user_permissions %}
+            <!-- {% if 'MetalOrder' in user_permissions %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder_metal_full' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 MetalOrder
@@ -268,7 +271,7 @@
                 <li><a class="dropdown-item" href="{% url 'rimeiorder_metal_full' %}">Metal Order</a></li>
               </ul>
             </li>
-            {% endif %}
+            {% endif %} -->
 
             {% if 'Commission' in user_permissions %}
             <li class="nav-item dropdown">
@@ -316,7 +319,7 @@
                     ordering: false,
                     info: true,
                     searching: true,
-                    pageLength: 29
+                    pageLength: 33
                 });
             }
         });

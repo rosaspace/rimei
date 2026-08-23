@@ -103,6 +103,19 @@
                 </select>
             </div>
         </div>
+        <div class="row mb-2" >
+            <div class="col-md-3">
+                <label for="classification" class="form-label required-label">Classification</label>
+                <select class="form-select" id="classification" name="classification" required>
+                    <option value="">Select...</option>
+                    {% for customer in classification %}
+                    <option value="{{ customer.id }}" {% if customer.id == product.classification.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
         <div class="row mb-2">
             <div class="col-md-12">
                 <label class="form-label">Description</label>

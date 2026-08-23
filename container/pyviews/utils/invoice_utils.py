@@ -191,7 +191,7 @@ def extract_items_from_pdf(text):
     for line in items_part.split("\n"):
         line = line.strip()
         # 判断是否是新的一行（以数字、CAN、KLT、T 开头）
-        if re.match(r'^\s*(\d{4,}|CAN|KLT|TC|TCL|TLESIM|PC|LPC|FACE|TLUB|TLRB|GXL|RPR)(?!x)', line, re.IGNORECASE):
+        if re.match(r'^\s*(\d{4,}|CAN|KLT|TC|TCL|TLESIM|PC|LPC|FACE|FM|TLUB|TLRB|GXL|RPR)(?!x)', line, re.IGNORECASE):
             if current_item:
                 items.append(current_item.strip())
             current_item = line # 开始新的产品名称

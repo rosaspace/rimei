@@ -16,17 +16,27 @@ from reportlab.lib.pagesizes import letter
 from ..constants import constants_view
 from ..models import (
     RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem,
-    AlineOrderRecord, ContainerItem, UserAndPermission, Employee
+    AlineOrderRecord, ContainerItem, UserAndPermission, Employee,
+    ProductClassification
 )
 
 from .utils.getPermission import get_user_permissions
 from .utils.date_utils import sort_by_date
 
 def inventory_view(request):
-    employee_id = request.GET.get('employee')    
+    employee_id = request.GET.get('employee')
+    classification = request.GET.get('classification')
     inventory_items = RMProduct.objects.filter(type = "Rimei")
+    classifications = ProductClassification.objects.filter(type = "Glove").order_by('name')
+
     if employee_id:
         inventory_items = inventory_items.filter(blongTo_id=employee_id)
+
+    if classification:
+        if classification == 'none':
+            inventory_items = inventory_items.filter(classification__isnull=True)
+        else:
+            inventory_items = inventory_items.filter(classification_id=classification)
     
     inventory_items_converty = []  
     for product in inventory_items:
@@ -42,6 +52,7 @@ def inventory_view(request):
     return render(request, constants_view.template_inventory, {
         "inventory_items": inventory_items_converty,
         'employees': employees,
+        'classifications':classifications,
         'user_permissions': user_permissions,
     })
     
@@ -64,10 +75,19 @@ def inventory_diff_view(request):
 
 def inventory_metal(request):
     employee_id = request.GET.get('employee')
+    classification = request.GET.get('classification')
+
     inventory_items = RMProduct.objects.filter(type = "Metal")
+    classifications = ProductClassification.objects.filter(type = "Metal").order_by('name')
     
     if employee_id:
         inventory_items = inventory_items.filter(blongTo_id=employee_id)
+
+    if classification:
+        if classification == 'none':
+            inventory_items = inventory_items.filter(classification__isnull=True)
+        else:
+            inventory_items = inventory_items.filter(classification_id=classification)
 
     inventory_items_converty = []  # 用来存储有差异的库存记录
     for product in inventory_items:
@@ -84,7 +104,9 @@ def inventory_metal(request):
     return render(request, constants_view.template_inventory, {
         "inventory_items": inventory_items_converty,
         'employees': employees,
-        'user_permissions': user_permissions})
+        'classifications':classifications,
+        'user_permissions': user_permissions
+        })
 
 def inventory_diff_metal(request):
     employee_id = request.GET.get('employee')
@@ -341,6 +363,7 @@ def inventory_summary(request):
 def edit_product(request,product_id):
     product = get_object_or_404(RMProduct, id=product_id)
     employee = Employee.objects.filter(belongTo = "CabinetsDepot")
+    classification = ProductClassification.objects.filter(type = "Metal").order_by('name') # Glove, Metal
 
     if request.method == 'POST':
         product.name = request.POST.get('name')
@@ -360,6 +383,14 @@ def edit_product(request,product_id):
         product.blongTo = Employee.objects.get(id=request.POST.get('blongTo'))
         product.status = request.POST.get('status')
 
+        classification_id = request.POST.get('classification')
+        if classification_id:
+            product.classification = ProductClassification.objects.get(
+                id=classification_id
+            )
+        else:
+            product.classification = None
+
         product.save()
 
         if product.type == 'Metal':
@@ -372,6 +403,7 @@ def edit_product(request,product_id):
     return render(request, constants_view.template_edit_product, {
         'product': product,
         'employee': employee,
+        'classification':classification,
     })
 
 # sub function
@@ -648,19 +680,19 @@ def draw_inventory_page(c, employee, products, product_type):
     y = height - 50
 
     c.setFont("Helvetica-Bold", 18)
-    c.drawString(40, y, "INVENTORY COUNT SHEET")
+    c.drawString(190, y, "INVENTORY COUNT SHEET")
 
     y -= 30
 
     c.setFont("Helvetica-Bold", 13)
-    c.drawString(40, y, f"Employee : {employee.name}")
+    c.drawString(40, y, f"Name : {employee.name}")
 
     c.drawRightString(width - 40, y, f"Type : {product_type}")
 
     y -= 30
 
     headers = [
-        "No",
+        "No.",
         "Product",
         "Case",
         "Pallets",
@@ -668,7 +700,7 @@ def draw_inventory_page(c, employee, products, product_type):
         "Total"
     ]
 
-    xs = [40, 80, 150, 190, 420, 520]
+    xs = [40, 60, 150, 190, 420, 520]
 
     c.setFont("Helvetica-Bold", 11)
 
@@ -694,7 +726,7 @@ def draw_inventory_page(c, employee, products, product_type):
         else:
             product_name = product.name
 
-        c.drawString(80, y, product_name)
+        c.drawString(60, y, product_name)
 
         if product_type == "Rimei":
             case_num = product.Pallet
@@ -706,29 +738,29 @@ def draw_inventory_page(c, employee, products, product_type):
         c.drawString(420, y, "________")
         c.drawString(500, y, "____________")
 
-        y -= 25
+        y -= 24
 
     # ------------------------------
     # Signature Section
     # ------------------------------
-    if y < 100:
+    if y < 90:
         c.showPage()
         y = height - 120
     else:
-        y -= 30
+        y -= 15 # 最后一行间距是25+15=40
 
     c.setFont("Helvetica-Bold", 11)
 
     # Signature
-    c.drawString(40, y, "Employee Signature:")
-    c.line(150, y - 2, 330, y - 2)
+    c.drawString(40, y, "Signature:")
+    c.line(120, y - 2, 330, y - 2)
 
     # Date
     c.drawString(360, y, "Date:")
-    c.line(400, y - 2, 540, y - 2)
+    c.line(400, y - 2, 568, y - 2)
 
     # Checked By（可选）
-    y -= 40
+    y -= 30
     c.drawString(40, y, "Checked By:")
     c.line(120, y - 2, 330, y - 2)
 

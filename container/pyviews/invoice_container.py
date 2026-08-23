@@ -95,7 +95,7 @@ def print_converted_invoice(request, container_id):
     return serve_pdf_file(pdf_path, container.customer_invoice_pdfname)
 
 # generate invoice for omar
-def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, isClassisSplit = 0, isPrepull = 0):
+def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, isClassisSplit = 0, isPrepull = 0,isFlip=0,isDetention=0,isOverweight=0):
     print("----------print_customer_invoice----------")
     print("isEmptyContainerRelocate: ", isEmptyContainerRelocate)
     print("isClassisSplit: ", isClassisSplit)
@@ -220,7 +220,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
         constants_address.CUSTOMER_INVOICE_FOLDER
     )
     output_file_path = os.path.join(output_dir, new_filename)
-    converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull)
+    converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull,isFlip,isDetention,isOverweight)
     # 打开并读取PDF文件
     return serve_pdf_file(output_file_path, new_filename)
 

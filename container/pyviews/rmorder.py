@@ -581,13 +581,15 @@ def rimeiorder_view(request):
     today = week_info['start']
     start_of_week = week_info['start']
     end_of_week = week_info['end']
+    
     next_start_of_week = week_info['next_start']
     next_end_of_week = week_info['next_end']
     next2_start_of_week = week_info['next2_start']
-    next2_end_of_week = week_info['next2_end']
+    next2_end_of_week = week_info['next2_end'] 
 
     customer_name = request.GET.get('customer_name')
     is_canceled = request.GET.get('is_canceled')
+    is_paid = request.GET.get('is_paid')
 
     if customer_name:
         orders = orders.filter(customer_name=customer_name)
@@ -596,6 +598,11 @@ def rimeiorder_view(request):
         orders = orders.filter(is_canceled=True)
     elif is_canceled == "false":
         orders = orders.filter(is_canceled=False)
+
+    if is_paid == "true":
+        orders = orders.filter(customer_ispay=True)
+    elif is_paid == "false":
+        orders = orders.filter(customer_ispay=False)
 
     return render(request, constants_view.template_rmorder, {
         'rimeiorders': orders,
@@ -618,6 +625,7 @@ def rimeiorder_metal_full(request):
 
     customer_name = request.GET.get('customer_name')
     is_canceled = request.GET.get('is_canceled')
+    is_paid = request.GET.get('is_paid')
 
     if customer_name:
         orders = orders.filter(customer_name=customer_name)
@@ -626,6 +634,11 @@ def rimeiorder_metal_full(request):
         orders = orders.filter(is_canceled=True)
     elif is_canceled == "false":
         orders = orders.filter(is_canceled=False)
+
+    if is_paid == "true":
+        orders = orders.filter(customer_ispay=True)
+    elif is_paid == "false":
+        orders = orders.filter(customer_ispay=False)
 
     return render(request, constants_view.template_rmorder, {
         'rimeiorders': orders,
@@ -641,6 +654,7 @@ def rimeiorder_metal_simple(request):
 
     customer_name = request.GET.get('customer_name')
     is_canceled = request.GET.get('is_canceled')
+    is_paid = request.GET.get('is_paid')
 
     if customer_name:
         orders = orders.filter(customer_name=customer_name)
@@ -649,6 +663,11 @@ def rimeiorder_metal_simple(request):
         orders = orders.filter(is_canceled=True)
     elif is_canceled == "false":
         orders = orders.filter(is_canceled=False)
+
+    if is_paid == "true":
+        orders = orders.filter(customer_ispay=True)
+    elif is_paid == "false":
+        orders = orders.filter(customer_ispay=False)
 
     return render(request, constants_view.template_rmorder3, {
         'rimeiorders': orders,
@@ -671,8 +690,40 @@ def rimeiorder_officedepot(request):
         })
 
 @login_required(login_url='/login/')
-def simplified_view(request):
+def simplified_glove_view(request):
     orders = RMOrder.objects.exclude(Q(customer_name__classification='OfficeDepot') | Q(customer_name__classification='Metal')).annotate(image_count=Count('images')).order_by('pickup_date')
+    unfinished_orders = orders.filter(
+        Q(is_canceled=False) &
+        Q(is_updateInventory=False)
+    )
+
+    today = date.today()
+    # 计算本周的周一和周日
+    start_of_week = today - timedelta(days=today.weekday())   # 本周一
+    end_of_week = start_of_week + timedelta(days=6)           # 本周日
+    # 下周的时间范围
+    next_start_of_week = start_of_week + timedelta(days=7)
+    next_end_of_week = next_start_of_week + timedelta(days=6)
+    # 下下周
+    next2_start_of_week = start_of_week + timedelta(days=14)
+    next2_end_of_week = next2_start_of_week + timedelta(days=6)
+
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_simplified_order,{
+        'rimeiorders': unfinished_orders,
+        'user_permissions': user_permissions,
+        'today': today,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        "next_start_of_week": next_start_of_week,
+        "next_end_of_week": next_end_of_week,
+        "next2_start_of_week":next2_start_of_week,
+        "next2_end_of_week":next2_end_of_week
+        })
+
+@login_required(login_url='/login/')
+def simplified_metal_view(request):
+    orders = RMOrder.objects.filter(Q(customer_name__classification='Metal')).annotate(image_count=Count('images')).order_by('pickup_date')
     unfinished_orders = orders.filter(
         Q(is_canceled=False) &
         Q(is_updateInventory=False)

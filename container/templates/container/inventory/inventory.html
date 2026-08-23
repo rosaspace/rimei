@@ -9,12 +9,18 @@
         </a>
     </div>
     <!-- 右侧按钮组 -->
+    
     <div class="d-flex flex-wrap gap-2 ms-auto">
         <form method="get" class="d-flex flex-wrap gap-2 align-items-center ms-auto">
 
-            <!-- Customer -->
-            <select name="employee" class="form-select form-select-sm" style="width: 160px;" onchange="this.form.submit()">
+            <!-- Employee -->
+            <select name="employee"
+                    class="form-select form-select-sm"
+                    style="width: 160px;"
+                    onchange="this.form.submit()">
+
                 <option value="">All Employees</option>
+
                 {% for c in employees %}
                     <option value="{{ c.id }}"
                         {% if request.GET.employee == c.id|stringformat:"s" %}selected{% endif %}>
@@ -22,8 +28,34 @@
                     </option>
                 {% endfor %}
             </select>
+
+
+            <!-- Classification -->
+            <select name="classification"
+                    class="form-select form-select-sm"
+                    style="width: 160px;"
+                    onchange="this.form.submit()">
+
+                <option value="">All Classifications</option>
+
+                {% for c in classifications %}
+                    <option value="{{ c.id }}"
+                        {% if request.GET.classification == c.id|stringformat:"s" %}selected{% endif %}>
+                        {{ c.name }}
+                    </option>
+                {% endfor %}
+
+                <!-- Products without classification -->
+                <option value="none"
+                    {% if request.GET.classification == "none" %}selected{% endif %}>
+                    No Classification
+                </option>
+
+            </select>
+
         </form>
-    </div> 
+    </div>
+
 </div>
 
 <div class="table-container">
@@ -42,7 +74,8 @@
                 <!-- <th>Avail.Qty</th> -->
                 <th>Pallet</th> 
                 <th>Case</th>
-                <th>Loca</th>
+                <!-- <th>Loca</th> -->
+                <th>Classification</th>
                 <th>BlongTo</th>
                 <th>Shelf</th>
                 <th>Desc</th>
@@ -67,7 +100,8 @@
                 <!-- <td>{{ item.availableQTY }}</td>  -->
                 <td>{{ item.palletnumber }}</td>
                 <td>{{ item.case }}</td>
-                <td>{{ item.Location }}</td>
+                <!-- <td>{{ item.Location }}</td> -->
+                <td>{{ item.classification.name }}</td>
                 <td>{{ item.blongTo.name }}</td>
                 <td>{{ item.ShelfRecord }}</td>
                 <td>{{ item.description }}</td>

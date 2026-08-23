@@ -10,7 +10,7 @@ Lemont, IL 60439"""
 NEW_TITLE = "Packing Slip" 
 
 rimei_address = 'Rimei INTERNATION INC\n1285 101st St\nLemont, IL 60439'
-ssa_address = 'Secure Source America LLC\n1285 101st St\nLemont, IL 60439'
+ssa_address = 'Secure Source America LLC\n1215 101st St\nLemont, IL 60439'
 
 Only_ADDRESS = [
     "1285 101st St",
@@ -89,6 +89,9 @@ EmptyContainerRelocate_rate = 150
 ClassisSplit_rate = 70 
 Pre_pull_rate = 150
 Yard_storage_rate = 45
+Flip_rate = 115
+Detention_rate = 150
+Overweight_rate = 100
 
 # 描述映射：原始 → 表格描述
 description_mapping = {

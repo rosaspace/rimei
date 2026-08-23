@@ -70,7 +70,7 @@ urlpatterns = [
     path('print_original_do/<str:container_id>/', invoice_container.print_original_do, name='print_original_do'),
     path('print_original_invoice/<str:container_id>/', invoice_container.print_original_invoice, name='print_original_invoice'),
     path('print_converted_invoice/<str:container_id>/', invoice_container.print_converted_invoice, name='print_converted_invoice'),
-    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/<str:isPrepull>/', invoice_container.print_customer_invoice, name='print_customer_invoice'),
+    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/<str:isPrepull>/<str:isFlip>/<str:isDetention>/<str:isOverweight>/', invoice_container.print_customer_invoice, name='print_customer_invoice'),
     path('print_clearence_invoice/<str:container_id>/', invoice_container.print_clearence_invoice, name='print_clearence_invoice'),
 
     # monthly pallet invoice
@@ -105,7 +105,8 @@ urlpatterns = [
     path("rimeiorder_omar/", rmorder.rimeiorder_view, name="rimeiorder_omar"),
     path("rimeiorder_metal_full/", rmorder.rimeiorder_metal_full, name="rimeiorder_metal_full"),
     path("rimeiorder_officedepot/", rmorder.rimeiorder_officedepot, name="rimeiorder_officedepot"), 
-    path("simplified_view/", rmorder.simplified_view, name="simplified_view"),    
+    path("simplified_glove_view/", rmorder.simplified_glove_view, name="simplified_glove_view"),
+    path("simplified_metal_view/", rmorder.simplified_metal_view, name="simplified_metal_view"),
     path("rimeiorder_metal_simple/", rmorder.rimeiorder_metal_simple, name="rimeiorder_metal_simple"),
 
     path('add_order/', rmorder.add_order, name='add_order'),
@@ -128,12 +129,16 @@ urlpatterns = [
     path("import_cabinettype/", temporary.import_cabinettype, name ="import_cabinettype"),
 
     path('export_pallet/',temporary.export_pallet,name='export_pallet'),    
+    
     path("preview_email/", temporary.preview_email,name="preview_email"), 
+    path("preview_carrier_email/", temporary.preview_carrier_email,name="preview_carrier_email"),     
     path('order_email/<str:so_num>/', temporary.order_email, name='order_email'),
-    path('container_email/<str:container_id>/', temporary.container_email, name='container_email'),     
+    path('container_email/<str:container_id>/', temporary.container_email, name='container_email'),  
+
     path('print_label_only/', temporary.print_label_only, name='print_label_only'),
     path('print_label_containerid_lot/', temporary.print_label_containerid_lot, name='print_label_containerid_lot'),
     path('print_mcd_label/', temporary.print_mcd_label, name='print_mcd_label'),
+    path('print_vertical_mcd_label/', temporary.print_vertical_mcd_label, name='print_vertical_mcd_label'),
     
     # pdf     
     path('print_original_order/<str:so_num>/', pdfprocess.print_original_order, name='print_original_order'),
@@ -142,6 +147,7 @@ urlpatterns = [
     path('print_order_bol/<str:so_num>/', pdfprocess.print_order_bol, name='print_order_bol'),
     path('print_order_mcd/<str:so_num>/', pdfprocess.print_order_mcd, name='print_order_mcd'),
     path('print_forklift_bol/', pdfprocess.print_forklift_bol, name='print_forklift_bol'),
+    path('print_shipout_bol/', pdfprocess.print_shipout_bol, name='print_shipout_bol'),
     path('print_stored_file/<str:order_id>/', pdfprocess.print_stored_file, name='print_stored_file'),
 
     path('print_pickup_today/', pdfprocess.print_pickup_today, name='print_pickup_today'),

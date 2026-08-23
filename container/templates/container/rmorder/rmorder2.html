@@ -29,6 +29,24 @@
                 {% endfor %}
             </select>
 
+            <!-- Paid -->
+            <select name="is_paid"
+                    class="form-select form-select-sm ms-2"
+                    onchange="this.form.submit()"
+                    style="width:160px;">
+                <option value="">Paid?</option>
+
+                <option value="true"
+                    {% if request.GET.is_paid == "true" %}selected{% endif %}>
+                    Paid
+                </option>
+
+                <option value="false"
+                    {% if request.GET.is_paid == "false" %}selected{% endif %}>
+                    Unpaid
+                </option>
+            </select>
+
             <!-- Canceled -->
             <select name="is_canceled"
                     class="form-select form-select-sm"
