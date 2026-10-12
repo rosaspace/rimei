@@ -175,15 +175,19 @@ class RMProduct(models.Model):
 
         code = self.name.strip().upper()
 
+        # 同时兼容：
+        # 250CT-33
+        # 800S162-54-12
         match = re.match(
-            r"^(\d+)([A-Z]+)(\d+)-(\d+)(?:-(\d+(?:['.]\d+)?))?$",
+            r"^(\d+)([A-Z]+)(\d+)?-(\d+)(?:-(\d+(?:['.]\d+)?))?$",
             code
         )
 
         if not match:
             return self.description or code
 
-        width_code, type_code, leg_code, _, length_code = match.groups()
+        #width_code, type_code, leg_code, _, length_code = match.groups()
+        width_code, type_code, leg_code, middle_code, length_code = match.groups()
 
         # =========================================================
         # WIDTH
@@ -196,9 +200,7 @@ class RMProduct(models.Model):
             '162': '1-5/8"',
             '200': '2"',
             '250': '2-1/2"',
-            '312': '3-1/2"',
             '362': '3-5/8"',
-            '400': '4"',
             '600': '6"',
             '800': '8"',
         }
@@ -243,6 +245,27 @@ class RMProduct(models.Model):
         # =========================================================
 
         gauge = self.gauge.name if self.gauge else ""
+
+        # =========================================================
+        # H-STUD (CT)
+        # =========================================================
+
+        if type_code == 'CT':
+            return f'{width} H-STUD, {length}, {gauge}'
+
+        if type_code == 'JT':
+            return f'{width} J TRACK, {length}, {gauge}'
+
+        # =========================================================
+        # Z CHANNEL
+        # =========================================================
+
+        if type_code == 'DZF':
+
+            return (
+                f'{width} '
+                f'DEEP Z FURRING CHANNEL ({gauge})'
+            )
 
         # =========================================================
         # U CHANNEL

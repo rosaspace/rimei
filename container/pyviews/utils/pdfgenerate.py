@@ -2699,6 +2699,9 @@ def generate_delivery_order_pdf(containers, mbl_no=None, pickup_location=None, f
         raise ValueError("At least one container is required.")
 
     #----------------------------------------------------------------------
+    # 子方法只接收文件名，不负责生成文件名
+    filename = os.path.basename(filename.strip())
+
     first_item = containers[0]
 
     # 兼容数据库 Container 对象和临时提取的字典
@@ -2706,11 +2709,11 @@ def generate_delivery_order_pdf(containers, mbl_no=None, pickup_location=None, f
         container_infos = [
             {
                 "container_id": item.get("container_no", ""),
-                "size_type": item.get("size_type", "40HQ"),
-                "weight": item.get("weight", ""),
+                "size_type": item.get("size_type", "40HC"),
+                "weight": item.get("weight", "52029 LBS"),
                 "seal_number": item.get("seal_no", ""),
                 "Remarks": item.get("Remarks", item.get("remarks", "")),
-                "commodity": item.get("commodity", "Metal"),
+                "commodity": item.get("commodity", "SOLAR MODULE"),
                 "vessel": item.get("vessel", ""),
                 "voyage": item.get("voyage", ""),
                 "ssl": item.get("ssl", ""),
@@ -2731,45 +2734,40 @@ def generate_delivery_order_pdf(containers, mbl_no=None, pickup_location=None, f
 
     containerInfo = container_infos[0]
 
+    # 实际 Container 数量，供 Footer 模板使用
+    containerInfo["containerNum"] = len(container_infos)
+
     # 优先使用调用方传入的公共信息
     if mbl_no is not None:
         containerInfo["mbl"] = mbl_no
 
     if pickup_location is not None:
         containerInfo["pickup_location"] = pickup_location
+
+    # 多个 container 使用固定的 Delivery Location
+    if len(containers) > 1:
+        containerInfo["delivery_location"] = constants_address.ssa_old_address
     #----------------------------------------------------------------------
 
-    # 默认使用第一个 Container 的公共信息
-    containerInfo = container_infos[0]
-
-    # PDF 路径
-    pdf_path = get_media_path(
+    # PDF 保存目录
+    pdf_dir = get_media_path(
         constants_address.UPLOAD_DIR_solar,
         constants_address.SOLAR_DO
     )
-    ensure_dir_exists(pdf_path)
 
-    
-    # file name
+    # 确保目录有效并创建
+    if not pdf_dir:
+        raise ValueError("PDF output directory is empty.")
+    os.makedirs(pdf_dir, exist_ok=True)
+
     if not filename:
-        if isinstance(containers[0], dict):
-            container_names = [
-                item.get("container_no", "")
-                for item in containers
-            ]
-        else:
-            container_names = [
-                item.container_id
-                for item in containers
-            ]
+        raise ValueError("PDF filename cannot be empty.")
 
-        filename = "-".join(
-            str(name).strip()
-            for name in container_names
-            if name and str(name).strip()
-        ) + ".pdf"
+    # 拼接完整 PDF 路径
+    full_pdf_path = os.path.join(pdf_dir, filename)
 
-    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    # 创建 PDF 时使用完整路径
+    c, pagesize, inch, ImageReader = create_pdf_canvas(full_pdf_path)
     width, height = pagesize
 
     # 样式
@@ -2928,7 +2926,7 @@ def generate_delivery_order_pdf(containers, mbl_no=None, pickup_location=None, f
 
         return y - line_height
 
-    y -= 20
+    # y -= 20
     y = draw_table_header(y)
 
     # 一个 Container 对应一行
@@ -2967,7 +2965,7 @@ def generate_delivery_order_pdf(containers, mbl_no=None, pickup_location=None, f
     # --------------------------------------------------
     # Footer
     # --------------------------------------------------
-    y -= 20
+    # y -= 20
 
     c.setFont(regular_font, font_size_small)
 
@@ -2988,7 +2986,8 @@ def generate_delivery_order_pdf(containers, mbl_no=None, pickup_location=None, f
         draw_text(width / 2, y, line)
         y -= line_height
 
-    return finalize_pdf_and_response(c, filename)
+    return finalize_pdf_and_response(c, full_pdf_path)
+
 # 构建Container信息
 def build_container_info(container):
     """将单个 Container 转换为 DO 所需的数据"""

@@ -10,6 +10,7 @@ Lemont, IL 60439"""
 NEW_TITLE = "Packing Slip" 
 
 rimei_address = 'Rimei INTERNATION INC\n1285 101st St\nLemont, IL 60439'
+ssa_old_address = 'SECURE SOURCE AMERICA\n1285 101st St\nLemont, IL 60439'
 ssa_address = 'Secure Source America | DBA : SSA Metal\n1215 101st St\nLemont, IL 60439'
 
 Only_ADDRESS = [
@@ -202,7 +203,7 @@ DO_CONTACT_LINES = [
 ]
 
 DO_FOOTER_LINES_TEMPLATE = [
-    "Total Containers: 1",
+    "Total Containers: {containerNum}",
     "Commodity: {commodity}",
     "Vessel: {vessel}",
     "Voyage: {voyage}",

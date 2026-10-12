@@ -627,7 +627,10 @@ def print_container_delivery_order(request, container_num):
     print("------------print_container_delivery_order------------")
     container = get_object_or_404(Container, container_id=container_num)
 
+    # 在调用处生成 PDF 文件名
+    filename = f"{container.container_id}.pdf"
+
     return generate_delivery_order_pdf(
         containers=[container],
-        filename=f"{container.container_id}.pdf"
-    )
+        filename=filename
+    ) 

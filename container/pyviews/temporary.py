@@ -449,11 +449,30 @@ def import_deliveryorder(request):
         mbl_no, pickup_location, containers = extract_container_seals(extracted_text)
         # print(extracted_text)
 
+        if not containers:
+            return JsonResponse(
+                {"error": "No containers found in the uploaded PDF."},
+                status=400
+            )
+
+        # 根据所有 container number 生成 PDF 文件名
+        container_numbers = [
+            str(item.get("container_no", "")).strip()
+            for item in containers
+            if item.get("container_no")
+        ]
+
+        if container_numbers:
+            filename = "-".join(container_numbers) + ".pdf"
+        else:
+            filename = "Delivery_Order.pdf"
+
         # 直接生成并返回 PDF，不存储业务数据
         return generate_delivery_order_pdf(
+            containers=containers,
             mbl_no=mbl_no,
             pickup_location=pickup_location,
-            containers=containers
+            filename=filename
         )
     
     return JsonResponse({"error": "No file uploaded"}, status=400)
@@ -732,7 +751,11 @@ def extract_container_seals(text):
 
     pickup_location = ""
     if location_match:
-        pickup_location = ", ".join(location_match.groups())
+        # 使用换行符保留原始地址格式
+        pickup_location = "\n".join(
+            group.strip() for group in location_match.groups()
+        )
+        
 
     # 提取 Container No. 和 Seal No.
     container_section = re.search(

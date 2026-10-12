@@ -6,11 +6,17 @@ def get_media_path(*path_parts):
     """构建 MEDIA_ROOT 下的文件路径"""
     return os.path.join(settings.MEDIA_ROOT, *path_parts)
 
-def ensure_dir_exists(file_path):
-    """确保文件所在目录存在"""
-    dir_path = os.path.dirname(file_path)
-    os.makedirs(dir_path, exist_ok=True)
-    return file_path
+# def ensure_dir_exists(file_path):
+#     """确保文件所在目录存在"""
+#     dir_path = os.path.dirname(file_path)
+#     os.makedirs(dir_path, exist_ok=True)
+#     return file_path
+
+def ensure_dir_exists(path):
+    if not path:
+        raise ValueError("Directory path cannot be empty.")
+
+    os.makedirs(path, exist_ok=True)
 
 def save_uploaded_file(uploaded_file, save_dir, filename=None):
     """保存上传的文件"""
