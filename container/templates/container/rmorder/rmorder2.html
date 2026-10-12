@@ -96,6 +96,7 @@
 
                 <th>Carrier</th>
                 <th>CarrierPaid</th>
+                <th>Delivery</th>
                 
                 <th>Canceled</th>
                 <th>Shipped</th>
@@ -140,7 +141,7 @@
                     </form>
                 </td>
                 
-                <td>{{ order.customer_price }}</td>
+                <td>{{ order.customer_price }}</td>                
                 <td>{{ order.customer_payment_date |date:"m/d/Y" }}</td>
                 <td class="text-center">
                     {% if order.customer_ispay %}
@@ -152,6 +153,7 @@
 
                 <td>{{ order.carrier_price }}</td>
                 <td>{{ order.carrier_payment_date |date:"m/d/Y" }}</td>
+                <td>{{ order.delivery_price }}</td>                
                 
                 <td class="text-center">
                     {% if order.is_canceled %}

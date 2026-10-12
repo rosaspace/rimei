@@ -8,8 +8,7 @@
             <i class="fas fa-plus"></i> Add Product
         </a>
     </div>
-    <!-- 右侧按钮组 -->
-    
+    <!-- 右侧按钮组 -->    
     <div class="d-flex flex-wrap gap-2 ms-auto">
         <form method="get" class="d-flex flex-wrap gap-2 align-items-center ms-auto">
 
@@ -53,16 +52,38 @@
 
             </select>
 
+            <!-- Gauge -->
+            <select name="gauge"
+                    class="form-select form-select-sm"
+                    style="width: 160px;"
+                    onchange="this.form.submit()">
+
+                <option value="">All Gauge</option>
+
+                {% for c in gauges %}
+                    <option value="{{ c.id }}"
+                        {% if request.GET.gauge == c.id|stringformat:"s" %}selected{% endif %}>
+                        {{ c.name }}
+                    </option>
+                {% endfor %}
+
+                <!-- Products without classification -->
+                <option value="none"
+                    {% if request.GET.gauge == "none" %}selected{% endif %}>
+                    No Classification
+                </option>
+
+            </select>
+
         </form>
     </div>
-
 </div>
 
 <div class="table-container">
     <table class="table table-striped table-bordered table-hover">
         <thead>
             <tr>
-                <th>Product Name</th>
+                <th>Product</th>
                 <th>QTY</th>
                 <th>Order</th>
                 <!-- <th>InPrep</th> -->
@@ -76,11 +97,20 @@
                 <th>Case</th>
                 <!-- <th>Loca</th> -->
                 <th>Classification</th>
-                <th>BlongTo</th>
+                <th>Gauge</th>
+                <!-- <th>BlongTo</th> -->
                 <th>Shelf</th>
+                <!-- <th>Desc</th> -->
                 <th>Desc</th>
                 <!-- <th>Type</th> -->
+                <th>Price-March</th>
+                <!-- <th>PriceJuly</th>
+                <th>PriceSep</th> -->
+                <th>Flameproof</th>
                 <th>Price</th>
+                <th>ABC</th>
+                <th>Home</th>
+                <th>WHSE</th>
                 <th>His</th>
             </tr>
         </thead>
@@ -102,11 +132,20 @@
                 <td>{{ item.case }}</td>
                 <!-- <td>{{ item.Location }}</td> -->
                 <td>{{ item.classification.name }}</td>
-                <td>{{ item.blongTo.name }}</td>
+                <td>{{ item.gauge.name }}</td>
+                <!-- <td>{{ item.blongTo.name }}</td> -->
                 <td>{{ item.ShelfRecord }}</td>
-                <td>{{ item.description }}</td>
+                <!-- <td>{{ item.description }}</td> -->
+                <td>{{ item.get_product_description }}</td>
                 <!-- <td>{{ item.type }}</td> -->
                 <td>{{ item.price }}</td>
+                <!-- <td>{{ item.price_july }}</td>
+                <td>{{ item.price_sep }}</td> -->
+                <td>{{ item.flameproofprice }}</td>
+                <td>{{ item.roundprice }}</td>
+                <td>{{ item.price_abc }}</td>
+                <td>{{ item.price_matrix_homeowner }}</td>
+                <td>{{ item.price_matrix_warehouse }}</td>
                 <td style="height: 23px;">
                     <a href="{% url 'order_history' item.id %}" class="text-primary text-decoration-underline">
                         View

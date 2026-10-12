@@ -9,7 +9,7 @@ from .models import (
     InvoicePurposeFor, InvoicePaidCustomer, InvoiceVendor, InvoiceARRecord, InvoiceAPRecord,
     OfficeSupplyItem, OfficeSupplyPurpose, OfficeSupplyPlatform, OfficeSupplyRecord,
     CabinetProductType, CabinetProduct, CabinetSalesOrder, CabinetSalesOrderItem,
-    ProductClassification
+    ProductClassification,ProductGauge
 )
 
 class ContainerAdmin(admin.ModelAdmin):
@@ -58,6 +58,12 @@ class InvoiceAPRecordAdmin(admin.ModelAdmin):
 class CabinetProductTypeAdmin(admin.ModelAdmin):
     list_display = ('id', 'name','pallet_usage')
 
+class LogisticsCompanyAdmin(admin.ModelAdmin):
+    list_display = ('id','name')
+
+class ProductGaugeAdmin(admin.ModelAdmin):
+    list_display = ('id','name')
+
 @admin.register(OfficeSupplyItem)
 class OfficeSupplyItemAdmin(admin.ModelAdmin):
     search_fields = ("name",)
@@ -94,7 +100,7 @@ admin.site.register(InvoiceCustomer, InvoiceCustomerAdmin)
 admin.site.register(RMProduct, RMProductdAdmin)
 admin.site.register(ClockRecord, ClockRecordAdmin)
 admin.site.register(Employee, EmployeeAdmin)
-admin.site.register(LogisticsCompany)
+admin.site.register(LogisticsCompany,LogisticsCompanyAdmin)
 admin.site.register(OrderItem, OrderItemAdmin)
 admin.site.register(ContainerItem, ContainerItemAdmin)
 admin.site.register(AlineOrderRecord)
@@ -113,3 +119,4 @@ admin.site.register(CabinetProduct)
 admin.site.register(CabinetSalesOrder)
 admin.site.register(CabinetSalesOrderItem)
 admin.site.register(ProductClassification, ProductClassificationAdmin)
+admin.site.register(ProductGauge,ProductGaugeAdmin)

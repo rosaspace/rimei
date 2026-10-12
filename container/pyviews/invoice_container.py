@@ -1,6 +1,6 @@
 import os
 import re
-import fitz  # PyMuPDF 解析 PDF
+import pymupdf
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, F
@@ -29,11 +29,11 @@ def invoice_view(request):
     containers = Container.objects.select_related(
         'customer', 'logistics'
     ).all().exclude(
-        logistics=2
+        Q(logistics=2) | Q(logistics=6)
     ).order_by('-delivery_date')
 
     containerss = filter_containers(request).exclude(
-        logistics=2
+        Q(logistics=2) | Q(logistics=6)
     ).order_by('-delivery_date')
 
     
@@ -95,7 +95,7 @@ def print_converted_invoice(request, container_id):
     return serve_pdf_file(pdf_path, container.customer_invoice_pdfname)
 
 # generate invoice for omar
-def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, isClassisSplit = 0, isPrepull = 0,isFlip=0,isDetention=0,isOverweight=0):
+def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, isClassisSplit = 0, isPrepull = 0,isFlip=0,isDetention=0,isOverweight=0,israilstorage=0):
     print("----------print_customer_invoice----------")
     print("isEmptyContainerRelocate: ", isEmptyContainerRelocate)
     print("isClassisSplit: ", isClassisSplit)
@@ -142,7 +142,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
         )
 
         # 打开原始 PDF
-        original_doc  = fitz.open(input_pdf_path)
+        original_doc  = pymupdf.open(input_pdf_path)
         amount_items = []
         total_original = 0
         lines = []
@@ -220,7 +220,7 @@ def print_customer_invoice(request, container_id, isEmptyContainerRelocate=0, is
         constants_address.CUSTOMER_INVOICE_FOLDER
     )
     output_file_path = os.path.join(output_dir, new_filename)
-    converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull,isFlip,isDetention,isOverweight)
+    converter_customer_invoice(container, amount_items, output_dir, new_filename, isEmptyContainerRelocate, isClassisSplit, isPrepull,isFlip,isDetention,isOverweight,israilstorage)
     # 打开并读取PDF文件
     return serve_pdf_file(output_file_path, new_filename)
 

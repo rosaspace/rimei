@@ -10,7 +10,7 @@ Lemont, IL 60439"""
 NEW_TITLE = "Packing Slip" 
 
 rimei_address = 'Rimei INTERNATION INC\n1285 101st St\nLemont, IL 60439'
-ssa_address = 'Secure Source America LLC\n1215 101st St\nLemont, IL 60439'
+ssa_address = 'Secure Source America | DBA : SSA Metal\n1215 101st St\nLemont, IL 60439'
 
 Only_ADDRESS = [
     "1285 101st St",
@@ -30,14 +30,14 @@ GF_ADDRESS = [
 ]
 
 SSA_ADDRESS = [
-    "Secure Source America LLC",
+    "Secure Source America | DBA : SSA Metal",
     "1215 101 st Street",
     "Lemont, IL 60439",
     "Phone: 708-882-1188",
 ]
 
 SSA_ADDRESSADAM = [
-    "Secure Source America LLC",
+    "Secure Source America | DBA : SSA Metal",
     "1215 101 st Street",
     "Lemont, IL 60439",
     "Phone: 708-888-8810",
@@ -90,8 +90,10 @@ ClassisSplit_rate = 70
 Pre_pull_rate = 150
 Yard_storage_rate = 45
 Flip_rate = 115
-Detention_rate = 150
+Detention_rate = 100
 Overweight_rate = 100
+Railstorage_rate = 300
+
 
 # 描述映射：原始 → 表格描述
 description_mapping = {
@@ -121,6 +123,7 @@ UPLOAD_DIR_order = "orders/"
 UPLOAD_DIR_temp = "temp/"
 UPLOAD_DIR_workrecord = "workrecord/"
 UPDATE_DIR_cabinets = "cabinets/"
+UPLOAD_DIR_solar = "solar/"
 
 # Order中的二级目录
 BOL_FOLDER = "BOL/"
@@ -151,10 +154,13 @@ INVOICE_METAL_ORDER = "metalInvoice"
 INVOICE_OFFICE_SUPPLY = "office_supply"
 INVOICR_COMMISION = "Commission"
 
+SOLAR_DO = "DO"
+
 # logo
 Rimei_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/remei.jpg')
 SSA_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/ssa.jpg')
 GF_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/goldenfeather.jpg')
+Metal_LOGO_PATH = os.path.join(settings.BASE_DIR, 'static/icon/ssametal.jpg')
 
 # Label
 PAGE_WIDTH, PAGE_HEIGHT = letter  # Letter size (8.5 x 11 inches)

@@ -9,7 +9,7 @@
         {% if product.type == 'Metal' %}
             <a href="{% url 'inventory_metal' %}" class="btn btn-secondary">Back</a>
         {% else %}
-            <a href="{% url 'inventory' %}" class="btn btn-secondary">Back</a>
+            <a href="{% url 'inventory_glove' %}" class="btn btn-secondary">Back</a>
         {% endif %}
     </div>
 
@@ -26,6 +26,7 @@
                         <th>Quantity</th>
                         <th>Operator</th>
                         <th>Source</th>
+                        <th>Lot</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -35,6 +36,7 @@
                         <td>{{ record.quantity }}</td>
                         <td>{{ record.operator }}</td>
                         <td>{{ record.note }}</td>
+                        <td>{{ record.lot }}</td>
                     </tr>
                     {% empty %}
                     <tr>

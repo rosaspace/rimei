@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import re
 
 from datetime import datetime, date, timedelta
 
@@ -7,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
+from django.core.files.storage import default_storage
 
 from ..constants import constants_address, constants_view
 from ..constants import email_constants
@@ -16,12 +18,16 @@ from ..models import (
     CabinetProductType
 )
 
-from .utils.pdfgenerate import print_containerid_lot
+from .utils.pdfgenerate import print_containerid_lot, generate_delivery_order_pdf
 from .utils.getPermission import get_user_permissions
 from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
 from .utils.date_utils import parse_date
 from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file
 from .utils.excel_utils import format_worksheet
+from .utils.pdfgenerate import extract_text_from_pdf
+
+from django.http import JsonResponse
+from django.db.models import Avg
 
 # Temp
 @login_required(login_url='/login/')
@@ -425,6 +431,34 @@ def import_cabinettype(request):
     
     return JsonResponse({"error": "No file uploaded"}, status=400)
 
+def import_deliveryorder(request):
+    if request.method == "POST" and request.FILES.get("pdf_file"):
+        pdf_file = request.FILES["pdf_file"]
+
+        upload_dir = get_media_path(constants_address.UPLOAD_DIR_solar, constants_address.SOLAR_DO)
+        ensure_dir_exists(upload_dir)
+
+        file_path = os.path.join(upload_dir, pdf_file.name)
+
+        # 保存文件
+        with default_storage.open(file_path, "wb+") as destination:
+            for chunk in pdf_file.chunks():
+                destination.write(chunk) 
+
+        extracted_text = extract_text_from_pdf(file_path)
+        mbl_no, pickup_location, containers = extract_container_seals(extracted_text)
+        # print(extracted_text)
+
+        # 直接生成并返回 PDF，不存储业务数据
+        return generate_delivery_order_pdf(
+            mbl_no=mbl_no,
+            pickup_location=pickup_location,
+            containers=containers
+        )
+    
+    return JsonResponse({"error": "No file uploaded"}, status=400)
+
+
 # export pallets
 def export_pallet(request):
     # 获取请求中的月份和年份
@@ -624,3 +658,307 @@ def container_email(request, container_id):
     return render(request, constants_view.template_temporary, {
         "inventory": email_data,
     }) 
+
+def FreighTechCartage_avg_price(request):
+    qs = Container.objects.filter(
+        logistics=5,
+        inboundCategory__in=[7, 13],
+        price__gt=0
+    )
+
+    containers = qs.values(
+        'id',
+        'container_id',
+        'inboundCategory',
+        'logistics',
+        'price'
+    )
+
+    avg_price = qs.aggregate(
+        avg_price=Avg('price')
+    )['avg_price']
+
+    data = list(containers)
+
+    print('----------------------------')
+
+    for item in data:
+        print(
+            'container:', item['container_id'],
+            'inboundCategory:', item['inboundCategory'],
+            'logistics:', item['logistics'],
+            'price:', item['price']
+        )
+
+    print('Average Price:', avg_price)
+    print('----------------------------')
+
+    return JsonResponse({
+        'avg_price': float(avg_price) if avg_price is not None else 0,
+        'containers': [
+            {
+                'id': item['id'],
+                'container_id': item['container_id'],
+                'inboundCategory': item['inboundCategory'],
+                'logistics': item['logistics'],
+                'price': float(item['price'])
+            }
+            for item in data
+        ]
+    })
+
+# sub function
+def extract_container_seals(text):
+    # 提取 MBL No.
+    mbl_match = re.search(
+        r'MBL\s*No\.?\s*[\r\n]+'
+        r'HBL\s*No\.?\s*[\r\n]+'
+        r'([A-Z0-9]+)',
+        text,
+        re.IGNORECASE
+    )
+
+    mbl_no = mbl_match.group(1).strip() if mbl_match else ""
+
+    # 提取 Pickup Location
+    location_match = re.search(
+        r'PICKUP\s*\n\s*CARRIER\s*\n\s*L\s*\n\s*\.F\.D\s*\n'
+        r'\s*(H\d+-BNSF CHICAGO)\s*\n'
+        r'\s*(26664 ELWOOD INT\'L PORT RD)\s*\n'
+        r'\s*(ELWOOD, IL 60421)',
+        text,
+        re.IGNORECASE
+    )
+
+    pickup_location = ""
+    if location_match:
+        pickup_location = ", ".join(location_match.groups())
+
+    # 提取 Container No. 和 Seal No.
+    container_section = re.search(
+        r'CONTAINER INFO.*?CONTAINER No\.(.*?)(?:RECEIVED IN GOOD ORDER|$)',
+        text,
+        re.DOTALL | re.IGNORECASE
+    )
+
+    containers = []
+
+    if container_section:
+        section_text = container_section.group(1)
+
+        pattern = (
+            r'\b([A-Z]{4}\d{7})\s*\n'
+            r'\s*40HC\s*\n'
+            r'\s*([A-Z0-9]+)'
+        )
+
+        for match in re.finditer(pattern, section_text):
+            containers.append({
+                "container_no": match.group(1),
+                "seal_no": match.group(2),
+            })
+
+    return mbl_no, pickup_location, containers
+
+def generate_imported_delivery_order_pdf(
+    mbl_no,
+    pickup_location,
+    containers
+):
+    if not containers:
+        raise ValueError("No container information found.")
+
+    pdf_path = get_media_path(
+        constants_address.UPLOAD_DIR_container,
+        constants_address.DO_FOLDER
+    )
+    ensure_dir_exists(pdf_path)
+
+    filename = os.path.join(
+        pdf_path,
+        f"DO_{mbl_no or 'Imported'}.pdf"
+    )
+
+    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
+    width, height = pagesize
+
+    left_margin = 0.5 * inch
+    line_height = 18
+    font_size = 10
+    font_size_small = 8
+
+    bold_font = constants_address.font_Helvetica_Bold
+    regular_font = constants_address.font_Helvetica
+
+    def draw_text(x, y, text, font=regular_font, size=font_size):
+        c.setFont(font, size)
+        c.drawString(x, y, str(text or ""))
+
+    # Logo
+    logo_width, logo_height = 80, 80
+    c.drawImage(
+        ImageReader(constants_address.SSA_LOGO_PATH),
+        0.5 * inch,
+        height - logo_height - 40,
+        width=logo_width,
+        height=logo_height
+    )
+
+    # 标题
+    y = height - 75
+    c.setFont(bold_font, 18)
+    c.drawCentredString(width / 2, y, "DELIVERY ORDER")
+
+    # 公司地址
+    y = height - 140
+    draw_text(left_margin, y, "US Headquarter:", bold_font)
+
+    for line in constants_address.Only_ADDRESS:
+        draw_text(left_margin + 120, y, line)
+        y -= line_height
+
+    y += line_height
+
+    # 右上角信息
+    right_x = width - 240
+    y += line_height
+
+    draw_text(
+        right_x, y,
+        f"DATE: {datetime.now().strftime('%m/%d/%Y')}"
+    )
+    y -= line_height
+
+    draw_text(right_x, y, f"MBL: {mbl_no or ''}")
+
+    # Pickup Location
+    y -= line_height * 2
+
+    pickup_y = y
+    draw_text(left_margin, pickup_y, "Pickup Location:", bold_font)
+
+    pickup_lines = (pickup_location or "").replace("\\n", "\n").splitlines()
+
+    for line in pickup_lines:
+        draw_text(left_margin + 120, pickup_y, line, bold_font)
+        pickup_y -= line_height
+
+    y = pickup_y - line_height
+
+    # 联系信息
+    c.setFont(regular_font, font_size_small)
+
+    for line in constants_address.DO_CONTACT_LINES:
+        draw_text(left_margin + 120, y, line, regular_font, font_size_small)
+        y -= line_height
+
+    # Container 表格
+    y -= 20
+
+    table_headers = [
+        "Container#",
+        "Container Size/Type",
+        "Weight",
+        "Seal#",
+        "Remarks",
+    ]
+    col_widths = [120, 150, 100, 100, 100]
+
+    def draw_table_header(y):
+        c.setLineWidth(1)
+        c.line(
+            left_margin, y + line_height - 2,
+            width - left_margin, y + line_height - 2
+        )
+
+        x = left_margin
+        for header, col_width in zip(table_headers, col_widths):
+            draw_text(x, y, header, bold_font)
+            x += col_width
+
+        c.line(
+            left_margin, y - 4,
+            width - left_margin, y - 4
+        )
+
+        return y - line_height
+
+    y = draw_table_header(y)
+
+    for item in containers:
+        if y < 100:
+            c.showPage()
+            y = height - 70
+            y = draw_table_header(y)
+
+        row_values = [
+            item.get("container_no", ""),
+            item.get("size_type", "40HQ"),
+            item.get("weight", ""),
+            item.get("seal_no", ""),
+            item.get("Remarks", item.get("remarks", "")),
+        ]
+
+        x = left_margin
+        for value, col_width in zip(row_values, col_widths):
+            draw_text(x, y, value)
+            x += col_width
+
+        c.line(
+            left_margin, y - 4,
+            width - left_margin, y - 4
+        )
+
+        y -= line_height
+
+    # Footer
+    y -= 20
+    c.setFont(regular_font, font_size_small)
+
+    footer_info = {
+        "mbl": mbl_no or "",
+        "pickup_location": pickup_location or "",
+        "commodity": "Metal",
+        "container_id": ", ".join(
+            item.get("container_no", "")
+            for item in containers
+        ),
+        "ref_no": "",
+        "weight": "",
+        "seal_number": "",
+        "Remarks": "",
+        "vessel": "",
+        "voyage": "",
+        "ssl": "",
+        "pickup_date": "Pending",
+        "delivery_location": "",
+        "delivery_date": "Pending",
+    }
+
+    for line in constants_address.DO_FOOTER_LINES_TEMPLATE:
+        if y < 80:
+            c.showPage()
+            y = height - 70
+
+        draw_text(
+            left_margin + 120,
+            y,
+            line.format(**footer_info),
+            regular_font,
+            font_size_small
+        )
+        y -= line_height
+
+    # 签名
+    y -= 40
+
+    for line in constants_address.DO_SIGNATURE_LINES:
+        if y < 60:
+            c.showPage()
+            y = height - 70
+
+        draw_text(width / 2, y, line)
+        y -= line_height
+
+    return finalize_pdf_and_response(c, filename)
+

@@ -19,7 +19,7 @@ from ..models import (
 )
 from .utils.getPermission import get_user_permissions
 from .utils.invoice_utils import get_product_qty_with_inventory_from_container
-from .utils.pdfgenerate import print_containerid_lot, print_checklist_template
+from .utils.pdfgenerate import print_containerid_lot, print_checklist_template, generate_delivery_order_pdf
 from .utils.pdf_utils import create_pdf_canvas, finalize_pdf_and_response
 from .utils.file_utils import get_media_path, ensure_dir_exists, save_uploaded_file
 from .utils.date_utils import get_week_range, parse_date
@@ -307,10 +307,10 @@ def edit_container(request, container_id):
     if request.method == 'GET':
         
         if container.inboundCategory.id != 13:
-            products = RMProduct.objects.exclude(type="Metal").order_by('name')
+            products = RMProduct.objects.exclude(type__in=['Metal','ZeroMetal']).order_by('name')
             print("Hello, Gloves")
         else:
-            products = RMProduct.objects.filter(type="Metal").order_by('name')
+            products = RMProduct.objects.filter(type__in=['Metal','ZeroMetal']).order_by('name')
             print("Hello, OBL")
 
         container_items = ContainerItem.objects.filter(container=container)
@@ -627,165 +627,7 @@ def print_container_delivery_order(request, container_num):
     print("------------print_container_delivery_order------------")
     container = get_object_or_404(Container, container_id=container_num)
 
-    # COLD ROLLING MILLS UN-COILER
-    # Metal  Plastic Bag
-    containerInfo = {
-        "container_id": container.container_id,              # 集装箱编号
-        "size_type": "40HQ",                        # 集装箱尺寸/类型
-        "weight": f"{container.weight} LBS",                       # 重量
-        "seal_number": "",                # 封条号
-        "Remarks":"Overweight" if container.customer.id in [12, 3] else "",
-        "commodity": "Metal" if container.customer.id == 12 else "Plastic Bag" ,                # 商品描述
-        "vessel": "",               # 船名
-        "voyage": "",                          # 航次
-        "ssl": "",                          # 船公司（Shipping Line）
-
-        "pickup_location": f"{container.railwayStation.name}\n{container.railwayStation.address}".replace("\\n", "\n").replace("\r\n", "\n"),
-        "pickup_date": "Pending",                   # 提货日期
-        "delivery_location": f"{container.Carrier.name}\n{container.Carrier.address}".replace("\\n", "\n").replace("\r\n", "\n"),
-        "delivery_date": "Pending",                 # 送货日期
-
-        "ref_no": container.refnumber,                 # 参考编号
-        "mbl": container.mbl                   # 提单号
-    }
-
-
-
-    # PDF 路径设置
-    pdf_path = get_media_path(
-        constants_address.UPLOAD_DIR_container,
-        constants_address.DO_FOLDER
+    return generate_delivery_order_pdf(
+        containers=[container],
+        filename=f"{container.container_id}.pdf"
     )
-    ensure_dir_exists(pdf_path)
-    filename = os.path.join(pdf_path, f"{container.container_id}.pdf")
-
-    c, pagesize, inch, ImageReader = create_pdf_canvas(filename)
-    width, height = pagesize
-
-    # 插入 logo
-    logo_width, logo_height = 80, 80  
-    logo_x = 0.5 * inch  # left_margin
-    logo_y = height - logo_height - 40  # 顶部边距 10
-    c.drawImage(ImageReader(constants_address.SSA_LOGO_PATH), logo_x, logo_y, width=logo_width, height=logo_height)
-
-    # 样式设置
-    left_margin = 0.5 * inch
-    line_height = 18
-    font_size = 10
-    font_size_small = 8
-    bold_font = constants_address.font_Helvetica_Bold
-    regular_font = constants_address.font_Helvetica
-
-    def draw_text(x, y, text, font=regular_font, size=font_size):
-        c.setFont(font, size)
-        c.drawString(x, y, text)
-
-    y = height - 75
-
-    # 标题
-    c.setFont(constants_address.font_Helvetica_Bold, 18)
-    c.drawCentredString(width / 2 , y, "DELIVERY ORDER")
-
-    # US Headquarter
-    y = height - 140
-    draw_text(left_margin, y, "US Headquarter:", bold_font)
-    for line in constants_address.Only_ADDRESS:
-        draw_text(left_margin + 120, y, line)
-        y -= line_height
-    y += line_height
-
-    # 右上角信息
-    right_x = width - 240
-    y += line_height
-    draw_text(right_x, y, f"DATE: {datetime.now().strftime('%m/%d/%Y')}")
-    y -= line_height
-    draw_text(right_x, y, f"REF. NO: {containerInfo['ref_no']}")
-    y -= line_height
-    draw_text(right_x, y, f"MBL: {containerInfo['mbl']}")
-
-    # Pickup / Delivery 信息
-    # y -= 40
-    y = y - line_height * 2  # 空一行
-
-    # Pickup Location
-    pickup_lines = containerInfo['pickup_location'].split('\n')
-    pickup_y = y  # 记录起始高度
-    draw_text(left_margin, pickup_y, "Pickup Location:", bold_font)
-    for line in pickup_lines:
-        draw_text(left_margin + 120, pickup_y, line, bold_font)
-        pickup_y -= line_height
-    # Pickup Date 与 Pickup Location 的首行对齐
-    draw_text(right_x, y, f"Pickup Date:    {containerInfo['pickup_date']}")
-
-    # Delivery Location
-    y = pickup_y - line_height  # 空一行
-    delivery_lines = containerInfo['delivery_location'].split('\n')
-    delivery_y = y
-    draw_text(left_margin, delivery_y, "Delivery Location:", bold_font)
-    for line in delivery_lines:
-        draw_text(left_margin + 120, delivery_y, line, bold_font)
-        delivery_y -= line_height
-    # Delivery Date 与 Delivery Location 的首行对齐
-    draw_text(right_x, y, f"Delivery Date:    {containerInfo['delivery_date']}")
-    y = delivery_y  # 更新 y 供后续使用
-
-    # 提示
-    y -= 20
-    c.setFont(regular_font, font_size_small)
-    for line in constants_address.DO_CONTACT_LINES:
-        c.drawString(left_margin + 120, y, line)
-        y -= line_height
-    y += line_height
-
-    # 表头
-    y -= 20
-
-    # 添加表头上方横线
-    c.setLineWidth(1)
-    c.line(left_margin, y + line_height -2, width - left_margin, y + line_height -2)
-
-    table_headers = ["Container#", "Container Size/Type", "Weight", "Seal#", "Remarks"]
-    col_widths = [120, 150, 100, 100, 100]
-    x = left_margin
-    for header, w in zip(table_headers, col_widths):
-        draw_text(x, y, header, bold_font)
-        x += w
-
-    # 添加表头下方横线
-    c.setLineWidth(1)
-    c.line(left_margin, y - 4, width - left_margin, y - 4)
-
-    # 数据行
-    y -= line_height
-    x = left_margin
-    row_values = [
-        containerInfo['container_id'],
-        containerInfo['size_type'],
-        containerInfo['weight'],
-        containerInfo['seal_number'],
-        containerInfo['Remarks']
-    ]
-    for value, w in zip(row_values, col_widths):
-        draw_text(x, y, str(value))
-        x += w
-
-    # 添加数据行下方横线
-    c.setLineWidth(1)
-    c.line(left_margin, y - 4, width - left_margin, y - 4)
-
-    # Footer
-    y -= 20
-    c.setFont(regular_font, font_size_small)
-    footer_lines = [line.format(**containerInfo) for line in constants_address.DO_FOOTER_LINES_TEMPLATE]
-    for line in footer_lines:
-        c.drawString(left_margin + 120, y, line)
-        y -= line_height
-
-    # 签名区
-    y -= 60
-    for line in constants_address.DO_SIGNATURE_LINES:
-        draw_text(width / 2, y, line)
-        y -= line_height
-
-    return finalize_pdf_and_response(c, filename)
-

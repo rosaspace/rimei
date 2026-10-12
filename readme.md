@@ -8,7 +8,7 @@ sudo yum install -y libjpeg-devel zlib-devel
 sudo pip3 install reportlab
 sudo pip3 install pillow
 sudo pip3 install weasyprint
-sudo pip3 install fitz
+sudo pip3 install pymupdf
 ```
 
 ```

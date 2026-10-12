@@ -10,46 +10,100 @@
 
             <h2>Customer Monthly Amount</h2>
 
-            <form method="get" class="row mb-3">
+            <form method="get" class="row mb-3 g-3 align-items-end">
 
-                <div class="col-md-2">
-                    <select class="form-select" name="customer">
+                <!-- Customer -->
+                <div class="col-md-3">
+                    <label for="customer" class="form-label">
+                        Select Customer
+                    </label>
+
+                    <select class="form-select" name="customer" id="customer">
                         <option value="">All Customers</option>
+
                         {% for c in customers %}
-                        <option value="{{ c.id }}"
-                            {% if selected_customer == c.id|stringformat:"s" %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ c.name }}
-                        </option>
+                            <option value="{{ c.id }}"
+                                {% if selected_customer == c.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ c.name }}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div class="col-md-1">
+
+                <!-- Month -->
+                <div class="col-md-2">
+                    <label for="month" class="form-label">
+                        Select Month
+                    </label>
+
                     <input
                         type="month"
                         name="month"
+                        id="month"
                         class="form-control"
                         value="{{ selected_month }}"
                     >
                 </div>
 
-                <div class="col-md-1">
-                    <button class="btn btn-primary w-100">
+
+                <!-- Search -->
+                <div class="col-md-1 d-flex align-items-end">
+                    <button
+                        type="submit"
+                        class="btn btn-primary w-100"
+                    >
                         Search
                     </button>
-                </div> 
+                </div>
 
+                <!-- Start Date -->
                 <div class="col-md-2">
-                    <button type="button"
-                            class="btn btn-success w-100"
-                            id="exportPDF">
+                    <label for="start_date" class="form-label">
+                        Start Date
+                    </label>
+
+                    <input
+                        type="date"
+                        name="start_date"
+                        id="start_date"
+                        class="form-control"
+                        value="{{ selected_start_date|default:'' }}"
+                    >
+                </div>
+
+                <!-- End Date -->
+                <div class="col-md-2">
+                    <label for="end_date" class="form-label">
+                        End Date
+                    </label>
+
+                    <input
+                        type="date"
+                        class="form-control"
+                        id="end_date"
+                        name="end_date"
+                        value="{{ selected_end_date|default:'' }}"
+                    >
+                </div>
+
+
+                <!-- Export -->
+                <div class="col-md-2 d-flex align-items-end">
+                    <button
+                        type="button"
+                        class="btn btn-success w-100"
+                        id="exportPDF"
+                    >
                         Export Commission
                     </button>
                 </div>
+
             </form>
+
 
             <table class="table table-bordered table-hover">
                 <thead>
@@ -61,6 +115,7 @@
                         <th>W/O Tax AMT</th>
                         <th>Tax</th>
                         <th>Carrier</th>
+                        <th>Delivery</th>
                         <th>W/O Carrier</th>
                         <th>Customer AMT</th>
                         <th>Sales AMT</th>
@@ -105,6 +160,9 @@
                         </td>
                         <td class="text-end">
                             ${{ order.carrier_price|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            ${{ order.delivery_price|floatformat:2 }}
                         </td>
                         <td class="text-end">
                             ${{ order.invoice_price |floatformat:2 }}
@@ -197,15 +255,30 @@
 
     const customer = document.querySelector("[name='customer']").value;
     const month = document.querySelector("[name='month']").value;
+    const startDate = document.querySelector("[name='start_date']").value;
+    const endDate = document.querySelector("[name='end_date']").value;
 
     let url = "/export_commission/?";
 
-    if (customer)
-        url += "customer=" + encodeURIComponent(customer) + "&";
+    let params = [];
 
-    if (month)
-        url += "month=" + encodeURIComponent(month);
+    if (customer) {
+        params.push("customer=" + encodeURIComponent(customer));
+    }
 
+    if (month) {
+        params.push("month=" + encodeURIComponent(month));
+    }
+
+    if (startDate) {
+        params.push("start_date=" + encodeURIComponent(startDate));
+    }
+
+    if (endDate) {
+        params.push("end_date=" + encodeURIComponent(endDate));
+    }
+
+    url += params.join("&");
     window.location.href = url;
 
 });

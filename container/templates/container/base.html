@@ -190,35 +190,30 @@
       
             {% if 'ContainerOrder' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder_omar rimeiorder_officedepot rimeiorder_metal_simple rimeiorder_metal_full' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'rimeiorder_omar rimeiorder_officedepot rimeiorder_metal_simple rimeiorder_metal_full rimeiorder_metal_wholesaler' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Orders
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'rimeiorder_omar' %}">Rimei Order</a></li>
                 <li><a class="dropdown-item" href="{% url 'rimeiorder_officedepot' %}">Office Depot</a></li>                
                 <li><a class="dropdown-item" href="{% url 'rimeiorder_metal_full' %}">Metal Order</a></li>
+                <li><a class="dropdown-item" href="{% url 'rimeiorder_metal_wholesaler' %}">Wholesaler Order</a></li>
               </ul>
             </li>
             {% endif %}            
       
             {% if 'ContainerOrder' in user_permissions %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'inventory inventory_diff_glove inventory_metal inventory_diff_metal inventory_mcd' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'inventory_glove inventory_diff_glove inventory_mcd inventory_other statistics_glove_customer_product_outbound' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Inventory
               </a>
               <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="{% url 'inventory' %}">Rimei</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_glove' %}">Rimei</a></li>
                 <li><a class="dropdown-item" href="{% url 'inventory_diff_glove' %}">Rimei Diff</a></li>
-                <li><a class="dropdown-item" href="{% url 'inventory_metal' %}">Metal</a></li>
-                <li><a class="dropdown-item" href="{% url 'inventory_diff_metal' %}">Metal Diff</a></li>
                 <li><a class="dropdown-item" href="{% url 'inventory_mcd' %}">Mcdonalds</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_other' %}">Other</a></li>
+                <li><a class="dropdown-item" href="{% url 'statistics_glove_customer_product_outbound' %}">Glove Outbound</a></li>
               </ul>
-            </li>
-            {% endif %}
-
-            {% if 'Temporary' in user_permissions %}
-            <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.url_name == 'temporary' %}active{% endif %}" href="{% url 'temporary' %}">Temporary</a>
             </li>
             {% endif %}
 
@@ -238,7 +233,23 @@
             </li>
             {% endif %}
 
+            {% if 'Temporary' in user_permissions %}
+            <!-- 竖线 -->
+            <li class="nav-item">
+                <span class="nav-link text-secondary">|</span>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'temporary' %}active{% endif %}" href="{% url 'temporary' %}">Temporary</a>
+            </li>
+            {% endif %}
+            
             {% if 'Simplified' in user_permissions %}
+            <!-- 竖线 -->
+            <li class="nav-item">
+                <span class="nav-link text-secondary">|</span>
+            </li>
+
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.url_name == 'simplified_glove_view' %}active{% endif %}" href="{% url 'simplified_glove_view' %}">Sim_Order</a>
             </li>
@@ -248,19 +259,41 @@
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.url_name == 'simplified_container_view' %}active{% endif %}" href="{% url 'simplified_container_view' %}">Sim_Container</a>
             </li>
-            {% endif %}
+            {% endif %}            
 
             {% if 'Cabinets' in user_permissions %}
+            <!-- 竖线 -->
+            <li class="nav-item">
+                <span class="nav-link text-secondary">|</span>
+            </li>
+
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.url_name == 'cabinets' %}active{% endif %}" href="{% url 'cabinets' %}">Cabinets</a>
             </li>
-            {% endif %}
+            {% endif %}            
 
             {% if 'ChinaMetal' in user_permissions %}
+            <!-- 竖线 -->
+            <li class="nav-item">
+                <span class="nav-link text-secondary">|</span>
+            </li>
+
             <li class="nav-item">
               <a class="nav-link {% if request.resolver_match.url_name == 'statistics_outbound_metal' %}active{% endif %}" href="{% url 'statistics_outbound_metal' %}">MetalTrend</a>
             </li>
-            {% endif %}
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'inventory_metal inventory_zerometal inventory_diff_metal statistics_metal_customer_product_outbound' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                MetalInventory
+              </a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'inventory_metal' %}">Metal</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_zerometal' %}">Zero Metal</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory_diff_metal' %}">Metal Diff</a></li>                
+                <li><a class="dropdown-item" href="{% url 'statistics_metal_customer_product_outbound' %}">Metal Product Outbound</a></li>
+              </ul>
+            </li>
+            {% endif %}  
 
             <!-- {% if 'MetalOrder' in user_permissions %}
             <li class="nav-item dropdown">
@@ -274,13 +307,20 @@
             {% endif %} -->
 
             {% if 'Commission' in user_permissions %}
+            <!-- 竖线 -->
+            <li class="nav-item">
+                <span class="nav-link text-secondary">|</span>
+            </li>
+
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'statistics_metal_customer_trend statistics_metal_commission' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name in 'statistics_metal_customer_trend statistics_metal_commission statistics_metal_product_trend statistics_metal_product_trend_customer_outbound' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Commission
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'statistics_metal_customer_trend' %}">Metal Customer Paid</a></li>
                 <li><a class="dropdown-item" href="{% url 'statistics_metal_commission' %}">Metal Commission</a></li>
+                <li><a class="dropdown-item" href="{% url 'statistics_metal_product_trend' %}">Metal Product Trend</a></li>
+                <li><a class="dropdown-item" href="{% url 'statistics_metal_product_trend_customer_outbound' %}">Metal Customer Outbound</a></li>
               </ul>
             </li>
             {% endif %}

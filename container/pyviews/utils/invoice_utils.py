@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from container.models import RMOrder,Container,RMProduct,ContainerItem,OrderItem
 from container.pyviews import inventory_count
-
+from decimal import Decimal, ROUND_CEILING
 
 # 提取Gloves订单信息
 def extract_order_info(text):
@@ -336,24 +336,45 @@ def get_product_qty_with_inventory_from_order(order_items):
     for item in order_items:
         # 查询库存记录
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list = inventory_count.get_quality(item.product)
-        inventory = RMProduct.objects.filter(name=item.product).first()
-        actualproduct = RMProduct.objects.filter(name=item.product_actual).first()
-        product = inventory_count.get_product_qty(inventory, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
-
+        inventoryproduct = RMProduct.objects.filter(name=item.product).first()
+        
+        # 库存产品的SKU，描述，数量，托盘数，箱数
+        product = inventory_count.get_product_qty(inventoryproduct, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
         item.so_num = product.name
         item.description = product.description
         item.inventory_qty = product.quantity
         item.pallet_qty = 0 if product.Pallet == 0 else item.quantity //product.Pallet
         item.case_qty = 0 if product.Pallet == 0 else item.quantity % product.Pallet
-        item.costprice = product.price
-        item.totalprice = product.price * item.quantity
+        
+        # 订单条目的短缺数量，销售价格
         item.shortage = item.inventory_qty - item.case_qty
         item.salesprice = item.price
 
+        # 订单SKU的价格，SKU,描述
+        actualproduct = RMProduct.objects.filter(name=item.product_actual).first()
+        roundprice = (
+            actualproduct.price
+            * Decimal("1.075")
+            * Decimal("1.15")
+        ).quantize(Decimal("0.01"), rounding=ROUND_CEILING)
         item.so_num_actual = actualproduct.name
-        item.description_actual = actualproduct.description
+        item.description_actual = actualproduct.description        
+        item.actual_costprice = roundprice
+        item.actual_totalprice = roundprice * item.quantity
+        item.warehouseprice_single = actualproduct.price_matrix_warehouse
+        item.warehouseprice = actualproduct.price_matrix_warehouse * item.quantity
+        item.homeownerprice_single =  actualproduct.price_matrix_homeowner
+        item.homeownerprice = actualproduct.price_matrix_homeowner * item.quantity
 
+        # frameproof
+        flameproofprice = (
+            actualproduct.price
+            * Decimal("1.075")
+        ).quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+        item.flameproofprice = flameproofprice
+        item.flameproofprice_totalprice = flameproofprice * item.quantity
 
+        # 计算重量
         if(product.shortname == "20HBC"):
             item.weight = item.quantity * 17.5
             print("20HBC: ",item.weight, product.quantity)

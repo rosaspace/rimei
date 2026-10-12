@@ -10,7 +10,7 @@ from django.core.files.storage import default_storage
 
 from ..constants import constants_address, constants_view
 from .utils.file_utils import get_media_path, ensure_dir_exists
-from .utils.pdfgenerate import extract_text_from_pdf, converter_metal_invoice
+from .utils.pdfgenerate import extract_text_from_pdf
 from ..models import CabinetProductType
 
 def cabinets_list(request):

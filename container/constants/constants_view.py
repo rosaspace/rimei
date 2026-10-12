@@ -27,7 +27,6 @@ template_edit_simple_order = 'container/rmorder/edit_order_simple.html'
 template_edit_order = 'container/rmorder/edit_order.html'
 template_edit_order_noprice = 'container/rmorder/edit_order_noprice.html'
 
-template_add_metal = 'container/rmorder/add_metal.html'
 
 # weekrecord
 template_add_record = 'container/weekrecord/add_record.html'
@@ -69,6 +68,13 @@ template_statistics_weekrecord = 'container/statistics/weekrecord_Statistics.htm
 template_statistics_aparInvoice = 'container/statistics/aparInvoice_Statistics.html'
 template_statistics_metalCustomerTrend ='container/statistics/metalcustomer_trend.html'
 template_statistics_metalCommission = 'container/statistics/commission_Statistics.html'
+template_statistics_metalCustomerProductTrend = 'container/statistics/metalcustomer_product_trend.html'
+template_statistics_metalCustomerOutbound = (
+    "container/statistics/metal_customer_outbound.html"
+)
+template_statistics_metalCustomerProductOutbound = (
+    "container/statistics/metal_customer_product_outbound.html"
+)
 
 # office supply
 template_officesupply_list = 'container/officesupply/officesupply_list.html'

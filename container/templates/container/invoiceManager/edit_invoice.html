@@ -40,6 +40,10 @@
                     <input type="checkbox" class="form-check-input" id="is_overweight" name="is_overweight">
                     <label class="form-check-label" for="is_overweight ">IsOverweight</label>
                 </div>
+                <div class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="is_railstorage" name="is_railstorage">
+                    <label class="form-check-label" for="is_railstorage ">Israilstorage</label>
+                </div>
                 <button class="btn btn-primary" id="printCustomerInvoice">Customer Invoice</button>
             </div>
         </div>
@@ -340,6 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const is_flip = document.getElementById('is_flip').checked;
         const is_detention = document.getElementById('is_detention').checked;
         const is_overweight = document.getElementById('is_overweight').checked;
+        const is_railstorage = document.getElementById('is_railstorage').checked;        
 
         const isEmptyContainerRelocate = isRelocateChecked ? '1' : '0';
         const isClassisSplit = is_chassis_split ? '1' : '0';
@@ -347,8 +352,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const isFlip = is_flip ? '1' : '0';
         const isDetention = is_detention ? '1' : '0';
         const isOverweight = is_overweight ? '1' : '0';
+        const israilstorage = is_railstorage ? '1' : '0';
 
-        window.open(`/print_customer_invoice/${containerID}/${isEmptyContainerRelocate}/${isClassisSplit}/${isPrepull}/${isFlip}/${isDetention}/${isOverweight}`, '_blank');
+        window.open(`/print_customer_invoice/${containerID}/${isEmptyContainerRelocate}/${isClassisSplit}/${isPrepull}/${isFlip}/${isDetention}/${isOverweight}/${israilstorage}`, '_blank');
     });
 
     // 打印清关发票

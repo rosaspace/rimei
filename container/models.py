@@ -1,3 +1,5 @@
+import re
+
 from django.db import models
 from datetime import datetime
 from .constants import constants_address
@@ -119,6 +121,12 @@ class ProductClassification(models.Model):
     def __str__(self):
         return self.name
 
+class ProductGauge(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
 class RMProduct(models.Model):
     name = models.CharField(max_length=255, unique=True)  # 产品名称，唯一
     shortname = models.CharField(max_length=255, blank=True, null=True)  # 短名称，唯一
@@ -134,7 +142,12 @@ class RMProduct(models.Model):
     quantity_init =  models.IntegerField(blank=True, null=True)  # 初始数量
     quantity_diff =  models.IntegerField(default=0)  # 初始差异
     type = models.CharField(max_length=255, default='Rimei') # 类型
-    price = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 价格
+    price = models.DecimalField(max_digits=10, decimal_places=5, default=0) # 3月价格
+    price_july = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 7月价格
+    price_sep = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 9月价格
+    price_abc = models.DecimalField(max_digits=10, decimal_places=3, default=0) # 7月价格
+    price_matrix_homeowner = models.DecimalField(max_digits=10, decimal_places=3, default=0) # Matrix homeowner价格
+    price_matrix_warehouse = models.DecimalField(max_digits=10, decimal_places=3, default=0) # Matrix warehouse价格
     status = models.CharField(max_length=255, default='Common') # 库存状态
 
     # 产品分类
@@ -145,6 +158,151 @@ class RMProduct(models.Model):
         blank=True,
         related_name='products'
     )
+
+    gauge = models.ForeignKey(
+        ProductGauge,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=1,
+        related_name='products'
+    )
+
+    def get_product_description(self):
+        """
+        根据产品编号自动生成客户描述。
+        """
+
+        code = self.name.strip().upper()
+
+        match = re.match(
+            r"^(\d+)([A-Z]+)(\d+)-(\d+)(?:-(\d+(?:['.]\d+)?))?$",
+            code
+        )
+
+        if not match:
+            return self.description or code
+
+        width_code, type_code, leg_code, _, length_code = match.groups()
+
+        # =========================================================
+        # WIDTH
+        # =========================================================
+
+        width_map = {
+            '087': '7/8"',
+            '125': '1-1/4"',
+            '150': '1-1/2"',
+            '162': '1-5/8"',
+            '200': '2"',
+            '250': '2-1/2"',
+            '312': '3-1/2"',
+            '362': '3-5/8"',
+            '400': '4"',
+            '600': '6"',
+            '800': '8"',
+        }
+
+        width = width_map.get(width_code, width_code)
+
+        # =========================================================
+        # LEG
+        # =========================================================
+
+        leg_map = {
+            '125': '1-1/4"',
+            '150': '1-1/2"',
+            '162': '1-5/8"',
+            '175': '1-3/4"',
+            '200': '2"',
+            '250': '2-1/2"',
+        }
+
+        if type_code == 'U' and leg_code == '050':
+            leg = '050'
+        else:
+            leg = leg_map.get(leg_code, leg_code)
+
+        # =========================================================
+        # LENGTH
+        # =========================================================
+
+        if length_code:
+            if "'" in length_code:
+                length = f'{length_code}"'
+            elif "." in length_code:
+                feet, inches = length_code.split(".", 1)
+                length = f'{feet}\'{inches}"'
+            else:
+                length = f"{length_code}'"
+        else:
+            length = "10'"
+
+        # =========================================================
+        # GAUGE
+        # =========================================================
+
+        gauge = self.gauge.name if self.gauge else ""
+
+        # =========================================================
+        # U CHANNEL
+        # =========================================================
+
+        if type_code == 'U':
+
+            return (
+                f'{width} U-CHANNEL, '
+                f'{length}, '
+                f'{gauge}'
+            )
+
+        # =========================================================
+        # FRAMING ANGLE
+        # =========================================================
+
+        if type_code == 'L':
+            return (
+                f'{width} x {leg} x {length} '
+                f'FRAMING ANGLE, ({gauge})'
+            )
+
+        # =========================================================
+        # FURRING CHANNEL
+        # =========================================================
+
+        if type_code == 'F':
+
+            return (
+                f'{width} x {length} '
+                f'FURRING CHANNEL ({gauge})'
+            )
+
+
+        # =========================================================
+        # STUD / TRACK
+        # =========================================================
+
+        classification_name = ""
+
+        if self.classification:
+            classification_name = self.classification.name.upper()
+
+        if classification_name:
+            product_type = classification_name
+        else:
+            product_type = 'STUD'
+
+        if product_type == 'TRACK':
+            suffix = 'LEG'
+        elif product_type == 'STUD':
+            suffix = 'FLANGE'
+        else:
+            suffix = ''
+
+        return (
+            f'{width} x {length} ({gauge}) '
+            f'{product_type} WITH {leg} {suffix}'
+        )
 
     def __str__(self):
         return self.name
@@ -178,10 +336,11 @@ class RMOrder(models.Model):
     customer_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     customer_payment_date = models.DateField(blank=True, null=True)  # 付款日期
     customer_ispay = models.BooleanField(default=False) # 是否付款
-    content = models.TextField(blank=True, null=True)  # 解析出的内容
+    content = models.TextField(blank=True, null=True, default='')  # 解析出的内容
 
     carrier_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     carrier_payment_date = models.DateField(blank=True, null=True)  # 付款日期
+    delivery_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"{self.so_num} - {self.customer_name}"

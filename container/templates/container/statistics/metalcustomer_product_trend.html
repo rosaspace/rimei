@@ -1,0 +1,820 @@
+{% extends "container/base.html" %}
+{% block content %}
+
+<div class="container-fluid">
+
+    <!-- ========================================= -->
+    <!-- Page Header + Customer Selection -->
+    <!-- ========================================= -->
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h2 class="mb-0">
+            Metal Customer Product Analysis
+        </h2>
+
+    </div>
+
+
+    <!-- Customer Selection -->
+    <div class="card mb-4">
+        <div class="card-body">
+
+            <form method="GET">
+
+                <div class="row align-items-end">
+
+                    <div class="col-md-5">
+
+                        <label for="customer" class="form-label fw-bold">
+                            Customer
+                        </label>
+
+                        <select
+                            name="customer"
+                            id="customer"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                -- Select Customer --
+                            </option>
+
+                            {% for customer in customers %}
+
+                                <option
+                                    value="{{ customer.id }}"
+                                    {% if selected_customer == customer.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ customer.name }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-md-2">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            Search
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+
+    {% if selected_customer %}
+
+
+    <!-- ========================================= -->
+    <!-- Customer Summary + Chart -->
+    <!-- ========================================= -->
+
+    <div class="row g-4">
+
+
+        <!-- ===================================== -->
+        <!-- LEFT SIDE -->
+        <!-- ===================================== -->
+
+        <div class="col-xl-4 col-lg-5">
+
+
+            <!-- Customer Summary -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <h5 class="mb-0">
+                        Customer Summary
+                    </h5>
+
+                </div>
+
+
+                <div class="card-body">
+
+                    <div class="row">
+
+
+                        <!-- YTD Invoice Sales with Tax and Carrier -->
+                        <div class="col-6 mb-4">
+
+                            <div class="text-muted small">
+                                YTD Invoice Sales with Tax and Carrier
+                            </div>
+
+                            <div class="fs-4 fw-bold">
+                                <!-- ${{ ytd_invoice|floatformat:2 }} -->
+                            </div>
+
+                        </div>
+
+                        <!-- YTD Quantity -->
+                        <div class="col-6 mb-4">
+
+                            <div class="text-muted small">
+                                YTD Quantity
+                            </div>
+
+                            <div class="fs-4 fw-bold">
+                                {{ ytd_quantity|floatformat:0 }}
+                            </div>
+
+                        </div>
+
+
+                        <!-- YTD Sales without Tax -->
+                        <div class="col-6 mb-4">
+
+                            <div class="text-muted small">
+                                YTD Sales without Tax
+                            </div>
+
+                            <div class="fs-4 fw-bold">
+                                <!-- ${{ ytd_sales|floatformat:2 }} -->
+                            </div>
+
+                        </div>
+
+                        <!-- YTD Cost -->
+                        <div class="col-6 mb-4">
+
+                            <div class="text-muted small">
+                                YTD Cost
+                            </div>
+
+                            <div class="fs-4 fw-bold">
+                                <!-- ${{ ytd_cost|floatformat:2 }} -->
+                            </div>
+
+                        </div>
+
+
+                        
+
+
+                        <!-- YTD Gross Profit -->
+                        <div class="col-6 mb-4">
+
+                            <div class="text-muted small">
+                                YTD Gross Profit
+                            </div>
+
+                            <div class="fs-4 fw-bold">
+                                <!-- ${{ ytd_gross_profit|floatformat:2 }} -->
+                            </div>
+
+                        </div>
+
+
+                        <!-- YTD Commission Profit -->
+                        <div class="col-6 mb-4">
+
+                            <div class="text-muted small">
+                                YTD Commission Profit
+                            </div>
+
+                            <div class="fs-4 fw-bold">
+                                <!-- ${{ ytd_total_profit|floatformat:2 }} -->
+                            </div>
+
+                        </div>
+
+
+                        <!-- Average Monthly Demand -->
+                        <div class="col-6">
+
+                            <div class="text-muted small">
+                                Avg. Monthly Quantity
+                            </div>
+
+                            <div class="fs-5 fw-bold">
+                                {{ avg_monthly_quantity|floatformat:0 }}
+                            </div>
+
+                        </div>
+
+
+                        <!-- Order Frequency -->
+                        <div class="col-6">
+
+                            <div class="text-muted small">
+                                Order Frequency
+                            </div>
+
+                            <div class="fs-5 fw-bold">
+                                {{ order_frequency|default:"--" }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Top Products -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <h5 class="mb-0">
+                        Top Products
+                    </h5>
+
+                </div>
+
+
+                <div class="card-body p-0">
+
+                    <div class="table-responsive">
+
+                        <table class="table table-hover mb-0">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Product
+                                    </th>
+
+                                    <th class="text-end">
+                                        Qty
+                                    </th>
+
+                                    <th class="text-end">
+                                        %
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+
+                                    <td>
+                                        {{ product.name }}
+                                    </td>
+
+                                    <td class="text-end">
+                                        {{ product.quantity|floatformat:0 }}
+                                    </td>
+
+                                    <td class="text-end">
+                                        {{ product.percentage|floatformat:1 }}%
+                                    </td>
+
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">
+                                        No product data
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Customer Activity -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <h5 class="mb-0">
+                        Customer Activity
+                    </h5>
+
+                </div>
+
+
+                <div class="card-body">
+
+                    <div class="row">
+
+
+                        <div class="col-6 mb-3">
+
+                            <div class="text-muted small">
+                                Last Order
+                            </div>
+
+                            <div class="fw-bold">
+                                {{ last_order_date|date:"M d, Y"|default:"--" }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-6 mb-3">
+
+                            <div class="text-muted small">
+                                Days Since Last Order
+                            </div>
+
+                            <div class="fw-bold">
+                                {% if days_since_last_order != None %}
+                                    {{ days_since_last_order }} days
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-6">
+
+                            <div class="text-muted small">
+                                Avg. Order Cycle
+                            </div>
+
+                            <div class="fw-bold">
+                                {% if avg_order_cycle %}
+                                    {{ avg_order_cycle }} days
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-6">
+
+                            <div class="text-muted small">
+                                Expected Next Order
+                            </div>
+
+                            <div class="fw-bold">
+                                {{ expected_next_order|date:"M d, Y"|default:"--" }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Inventory Coverage -->
+            <div class="card">
+
+                <div class="card-header">
+
+                    <h5 class="mb-0">
+                        Inventory / Demand
+                    </h5>
+
+                </div>
+
+
+                <div class="card-body p-0">
+
+                    <div class="table-responsive">
+
+                        <table class="table table-hover mb-0">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Product
+                                    </th>
+
+                                    <th class="text-end">
+                                        Avg. Demand
+                                    </th>
+
+                                    <th class="text-end">
+                                        Inventory
+                                    </th>
+
+                                    <th class="text-end">
+                                        Coverage
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody>
+
+                                {% for product in inventory_products %}
+                                <tr>
+                                    <td>
+                                        {{ product.name }}
+                                    </td>
+                                    <td class="text-end">
+                                        {{ product.avg_demand|floatformat:0 }}
+                                    </td>
+                                    <td class="text-end">
+                                        {{ product.inventory|floatformat:0 }}
+                                    </td>
+                                    <td class="text-end">
+
+                                        {% if product.coverage < 0.5 %}
+                                            <span class="text-danger fw-bold">
+                                                {{ product.coverage|floatformat:1 }} mo ⚠️
+                                            </span>
+
+                                        {% elif product.coverage < 1 %}
+                                            <span class="text-warning fw-bold">
+                                                {{ product.coverage|floatformat:1 }} mo
+                                            </span>
+
+                                        {% else %}
+                                            {{ product.coverage|floatformat:1 }} mo
+                                        {% endif %}
+                                    </td>
+                                </tr>
+
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        No inventory data available.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- ===================================== -->
+        <!-- RIGHT SIDE -->
+        <!-- ===================================== -->
+
+        <div class="col-xl-8 col-lg-7">
+
+
+            <!-- Product Trend -->
+            <div class="card mb-4">
+
+                <div class="card-header">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <h5 class="mb-0">
+                            Monthly Product Demand Trend
+                        </h5>
+
+                    </div>
+
+                </div>
+
+
+                <div class="card-body">
+
+                    {% if datasets %}
+
+                        <div
+                            style="
+                                position: relative;
+                                height: 650px;
+                                width: 100%;
+                            "
+                        >
+
+                            <canvas id="productTrendChart"></canvas>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="alert alert-info mb-0">
+
+                            No product sales data found
+                            for this customer.
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Monthly Average -->
+            <div class="card">
+
+                <div class="card-header">
+
+                    <h5 class="mb-0">
+                        Demand Analysis
+                    </h5>
+
+                </div>
+
+
+                <div class="card-body">
+
+                    <div class="row">
+
+
+                        <!-- 3 Month Average -->
+                        <div class="col-md-4">
+
+                            <div class="border rounded p-3">
+
+                                <div class="text-muted small">
+                                    Last 3 Months Average
+                                </div>
+
+                                <div class="fs-4 fw-bold">
+                                    {{ last_3_month_avg|floatformat:0 }}
+                                </div>
+
+                                <div class="text-muted small">
+                                    pcs / month
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- 6 Month Average -->
+                        <div class="col-md-4">
+
+                            <div class="border rounded p-3">
+
+                                <div class="text-muted small">
+                                    Last 6 Months Average
+                                </div>
+
+                                <div class="fs-4 fw-bold">
+                                    {{ last_6_month_avg|floatformat:0 }}
+                                </div>
+
+                                <div class="text-muted small">
+                                    pcs / month
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Growth -->
+                        <div class="col-md-4">
+
+                            <div class="border rounded p-3">
+
+                                <div class="text-muted small">
+                                    Recent Growth
+                                </div>
+
+                                <div class="fs-4 fw-bold">
+                                    {% if recent_growth > 0 %}
+                                        <span class="text-success">
+                                            +{{ recent_growth|floatformat:1 }}%
+                                        </span>
+                                    {% elif recent_growth < 0 %}
+                                        <span class="text-danger">
+                                            {{ recent_growth|floatformat:1 }}%
+                                        </span>
+                                    {% else %}
+                                        0.0%
+                                    {% endif %}
+                                </div>
+
+                                <div class="text-muted small">
+                                    vs previous period
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+    {% else %}
+
+
+        <!-- ========================================= -->
+        <!-- No Customer Selected -->
+        <!-- ========================================= -->
+
+        <div class="card">
+
+            <div class="card-body text-center py-5">
+
+                <h5 class="text-muted">
+                    Please select a customer
+                </h5>
+
+                <p class="text-muted mb-0">
+                    Select a Metal customer above to view
+                    product demand and purchasing trends.
+                </p>
+
+            </div>
+
+        </div>
+
+
+    {% endif %}
+
+</div>
+
+
+
+<!-- ========================================= -->
+<!-- Chart.js -->
+<!-- ========================================= -->
+
+{% if selected_customer and datasets %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+    const chartLabels = {{ chart_labels|safe }};
+    const chartDatasets = {{ datasets|safe }};
+
+    const ctx = document.getElementById(
+        'productTrendChart'
+    );
+
+
+    if (ctx) {
+
+        new Chart(ctx, {
+
+            type: 'line',
+
+            data: {
+
+                labels: chartLabels,
+
+                datasets: chartDatasets.map(
+                    function(dataset) {
+
+                        return {
+
+                            label: dataset.label,
+
+                            data: dataset.data,
+
+                            borderWidth: 2,
+
+                            tension: 0.2,
+
+                            fill: false,
+
+                            pointRadius: 3,
+
+                            pointHoverRadius: 6
+
+                        };
+
+                    }
+                )
+
+            },
+
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+
+                interaction: {
+
+                    mode: 'index',
+
+                    intersect: false
+
+                },
+
+
+                plugins: {
+
+                    legend: {
+
+                        display: true,
+
+                        position: 'top'
+
+                    },
+
+
+                    tooltip: {
+
+                        mode: 'index',
+
+                        intersect: false
+
+                    }
+
+                },
+
+
+                scales: {
+
+                    x: {
+
+                        title: {
+
+                            display: true,
+
+                            text: 'Month'
+
+                        }
+
+                    },
+
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        title: {
+
+                            display: true,
+
+                            text: 'Quantity'
+
+                        },
+
+                        ticks: {
+
+                            precision: 0
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        });
+
+    }
+
+</script>
+
+{% endif %}
+
+{% endblock %}

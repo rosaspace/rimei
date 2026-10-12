@@ -6,6 +6,8 @@ from datetime import datetime, date, time
 from io import BytesIO
 from openpyxl.utils import get_column_letter
 
+from decimal import Decimal, ROUND_CEILING
+
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
@@ -17,7 +19,7 @@ from ..constants import constants_view
 from ..models import (
     RMOrder, RMCustomer, OrderImage, Container, RMProduct, OrderItem,
     AlineOrderRecord, ContainerItem, UserAndPermission, Employee,
-    ProductClassification
+    ProductClassification,ProductGauge
 )
 
 from .utils.getPermission import get_user_permissions
@@ -76,8 +78,75 @@ def inventory_diff_view(request):
 def inventory_metal(request):
     employee_id = request.GET.get('employee')
     classification = request.GET.get('classification')
+    gauge = request.GET.get('gauge')
 
+    inventory_items = RMProduct.objects.filter(Q(type = "Metal")|Q(type = "ZeroMetal"))
+    # inventory_items = RMProduct.objects.filter(Q(type = "Metal"))
+    classifications = ProductClassification.objects.filter(type = "Metal").order_by('name')
+    gauges = ProductGauge.objects.all().order_by('name')
+    
+    if employee_id:
+        inventory_items = inventory_items.filter(blongTo_id=employee_id)
+
+    if classification:
+        if classification == 'none':
+            inventory_items = inventory_items.filter(classification__isnull=True)
+        else:
+            inventory_items = inventory_items.filter(classification_id=classification)
+
+    if gauge:
+        inventory_items = inventory_items.filter(gauge_id=gauge)
+
+    inventory_items_converty = []  # 用来存储有差异的库存记录
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
+
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+
+        inventory_items_converty.append(productTemp)
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
+
+    employees = Employee.objects.filter(belongTo = "CabinetsDepot")
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_inventory, {
+        "inventory_items": inventory_items_converty,
+        'employees': employees,
+        'classifications':classifications,
+        'gauges':gauges,
+        'user_permissions': user_permissions
+        })
+
+def inventory_diff_metal(request):
+    employee_id = request.GET.get('employee')
     inventory_items = RMProduct.objects.filter(type = "Metal")
+    
+    if employee_id:
+        inventory_items = inventory_items.filter(blongTo_id=employee_id)
+
+    inventory_items_converty = []  # 用来存储有差异的库存记录
+    for product in inventory_items:
+        # 查询库存记录
+        inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
+
+        productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
+        # if productTemp.quantity != productTemp.quantity_for_neworder:
+        if productTemp.status == 'Short':
+            inventory_items_converty.append(productTemp)
+    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
+
+    employees = Employee.objects.filter(belongTo = "CabinetsDepot")
+    user_permissions = get_user_permissions(request.user)
+    return render(request, constants_view.template_inventory, {
+        "inventory_items": inventory_items_converty,
+        'employees': employees,
+        'user_permissions': user_permissions})
+
+def inventory_zerometal(request):
+    employee_id = request.GET.get('employee')
+    classification = request.GET.get('classification')
+
+    inventory_items = RMProduct.objects.filter(type = "ZeroMetal")
     classifications = ProductClassification.objects.filter(type = "Metal").order_by('name')
     
     if employee_id:
@@ -108,12 +177,8 @@ def inventory_metal(request):
         'user_permissions': user_permissions
         })
 
-def inventory_diff_metal(request):
-    employee_id = request.GET.get('employee')
-    inventory_items = RMProduct.objects.filter(type = "Metal")
-    
-    if employee_id:
-        inventory_items = inventory_items.filter(blongTo_id=employee_id)
+def inventory_mcd(request):
+    inventory_items = RMProduct.objects.filter(Q(type="Mcdonalds") | Q(type="MCD"))
 
     inventory_items_converty = []  # 用来存储有差异的库存记录
     for product in inventory_items:
@@ -121,21 +186,15 @@ def inventory_diff_metal(request):
         inbound_list, outbound_list, outbound_actual_list,outbound_stock_list, inbound_actual_list = get_quality(product)
 
         productTemp = get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,outbound_stock_list,inbound_actual_list)
-        # if productTemp.quantity != productTemp.quantity_for_neworder:
-        if productTemp.status == 'Short':
-            inventory_items_converty.append(productTemp)
-    inventory_items_converty = sorted(inventory_items_converty, key=lambda x: x.name)
 
-    employees = Employee.objects.filter(belongTo = "CabinetsDepot")
+        inventory_items_converty.append(productTemp)
+        inventory_items_converty = sorted(inventory_items_converty, key=lambda x: (x.type,x.name))
+
     user_permissions = get_user_permissions(request.user)
-    return render(request, constants_view.template_inventory, {
-        "inventory_items": inventory_items_converty,
-        'employees': employees,
-        'user_permissions': user_permissions})
+    return render(request, constants_view.template_inventory, {"inventory_items": inventory_items_converty,'user_permissions': user_permissions})
 
-
-def inventory_mcd(request):
-    inventory_items = RMProduct.objects.filter(Q(type="Mcdonalds") | Q(type="Other") | Q(type="MCD"))
+def inventory_other(request):
+    inventory_items = RMProduct.objects.filter( Q(type="Other"))
 
     inventory_items_converty = []  # 用来存储有差异的库存记录
     for product in inventory_items:
@@ -363,7 +422,9 @@ def inventory_summary(request):
 def edit_product(request,product_id):
     product = get_object_or_404(RMProduct, id=product_id)
     employee = Employee.objects.filter(belongTo = "CabinetsDepot")
-    classification = ProductClassification.objects.filter(type = "Metal").order_by('name') # Glove, Metal
+    # classification = ProductClassification.objects.filter(type = "Glove").order_by('name') # Glove, Metal
+    classification = ProductClassification.objects.all().order_by('name') # Glove, Metal
+    gauge = ProductGauge.objects.all().order_by('name')
 
     if request.method == 'POST':
         product.name = request.POST.get('name')
@@ -379,7 +440,14 @@ def edit_product(request,product_id):
         product.quantity_init = request.POST.get('quantity_init') or 0
         product.quantity_diff = request.POST.get('quantity_diff') or 0
         product.type = request.POST.get('type')
+
         product.price = request.POST.get('price') or 0
+        product.price_july = request.POST.get('price_july') or 0
+        product.price_sep = request.POST.get('price_sep') or 0
+        product.price_matrix_homeowner = request.POST.get('price_matrix_homeowner') or 0
+        product.price_matrix_warehouse = request.POST.get('price_matrix_warehouse') or 0
+        product.price_abc = request.POST.get('price_abc') or 0
+
         product.blongTo = Employee.objects.get(id=request.POST.get('blongTo'))
         product.status = request.POST.get('status')
 
@@ -391,19 +459,23 @@ def edit_product(request,product_id):
         else:
             product.classification = None
 
+        gauge_id = request.POST.get('gauge')
+        product.gauge = ProductGauge.objects.get(id=gauge_id)
+
         product.save()
 
-        if product.type == 'Metal':
+        if product.type in ['Metal','ZeroMetal']:
             return redirect('inventory_metal')
         elif product.type == 'Mcdonalds' or product.type == 'MCD':
             return redirect('inventory_mcd')
         else:
-            return redirect('inventory')
+            return redirect('inventory_glove')
 
     return render(request, constants_view.template_edit_product, {
         'product': product,
         'employee': employee,
         'classification':classification,
+        'gauge':gauge,
     })
 
 # sub function
@@ -490,6 +562,18 @@ def get_product_qty(product, inbound_list, outbound_list, outbound_actual_list,o
     product.Location = product.Location
     product.ShelfRecord = product.ShelfRecord or '-'
     # product.totalPallet = 0 if product.Pallet == 0 else math.ceil(product.quantity / product.Pallet)
+    product.roundprice = (
+            product.price
+            * Decimal("1.075")
+            * Decimal("1.15")
+        ).quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+    product.flameproofprice = (
+            product.price
+            * Decimal("1.075")
+        ).quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+    product.price_abc = product.price_abc.quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+    product.price_matrix_homeowner = product.price_matrix_homeowner.quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+    product.price_matrix_warehouse = product.price_matrix_warehouse.quantize(Decimal("0.01"), rounding=ROUND_CEILING)
 
     return product
 
@@ -509,7 +593,8 @@ def get_quality(product):
         'date': item.container.delivery_date if item.container else None,
         'quantity': item.quantity,
         'operator': getattr(item.container, 'created_user', str(item.container)) if hasattr(item, 'container') else 'N/A',
-        'note': getattr(item.container, 'container_id', '')
+        'note': getattr(item.container, 'container_id', ''),
+        'lot':getattr(item.container, 'lot', '')
     } for item in inbound_logs]
 
     # 排序
@@ -546,7 +631,9 @@ def get_quality(product):
     # 插入初始记录到入库列表最前
     inbound_actual_list.insert(0, initial_log)    
 
-    # 实际出库记录
+    # 实际出库记录( product = product )
+    # 账面库存：product
+    # 订单库存：product_actual
     outbound_actual_logs = OrderItem.objects.filter(
         product=product,
         order__is_updateInventory=True

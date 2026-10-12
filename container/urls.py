@@ -16,11 +16,13 @@ urlpatterns = [
     path("logout", login.logout_view, name="logout"),
 
     # inventory count
-    path("inventory/", inventory_count.inventory_view, name="inventory"),
+    path("inventory_glove/", inventory_count.inventory_view, name="inventory_glove"),
     path("inventory_diff_glove/", inventory_count.inventory_diff_view, name="inventory_diff_glove"), 
     path("inventory_metal/", inventory_count.inventory_metal, name="inventory_metal"), 
+    path("inventory_zerometal/", inventory_count.inventory_zerometal, name="inventory_zerometal"), 
     path("inventory_diff_metal/", inventory_count.inventory_diff_metal, name="inventory_diff_metal"),
     path("inventory_mcd/", inventory_count.inventory_mcd, name="inventory_mcd"), 
+    path("inventory_other/", inventory_count.inventory_other, name="inventory_other"), 
 
     path("order_history/<int:product_id>/", inventory_count.order_history, name="order_history"),# 查看产品历史记录
     path("export_stock/", inventory_count.export_stock, name="export_stock"),    # 导出库存
@@ -70,7 +72,7 @@ urlpatterns = [
     path('print_original_do/<str:container_id>/', invoice_container.print_original_do, name='print_original_do'),
     path('print_original_invoice/<str:container_id>/', invoice_container.print_original_invoice, name='print_original_invoice'),
     path('print_converted_invoice/<str:container_id>/', invoice_container.print_converted_invoice, name='print_converted_invoice'),
-    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/<str:isPrepull>/<str:isFlip>/<str:isDetention>/<str:isOverweight>/', invoice_container.print_customer_invoice, name='print_customer_invoice'),
+    path('print_customer_invoice/<str:container_id>/<str:isEmptyContainerRelocate>/<str:isClassisSplit>/<str:isPrepull>/<str:isFlip>/<str:isDetention>/<str:isOverweight>/<str:israilstorage>/', invoice_container.print_customer_invoice, name='print_customer_invoice'),
     path('print_clearence_invoice/<str:container_id>/', invoice_container.print_clearence_invoice, name='print_clearence_invoice'),
 
     # monthly pallet invoice
@@ -108,11 +110,10 @@ urlpatterns = [
     path("simplified_glove_view/", rmorder.simplified_glove_view, name="simplified_glove_view"),
     path("simplified_metal_view/", rmorder.simplified_metal_view, name="simplified_metal_view"),
     path("rimeiorder_metal_simple/", rmorder.rimeiorder_metal_simple, name="rimeiorder_metal_simple"),
+    path("rimeiorder_metal_wholesaler/", rmorder.rimeiorder_metal_wholesaler, name="rimeiorder_metal_wholesaler"),
 
     path('add_order/', rmorder.add_order, name='add_order'),
-    path('add_metal/', rmorder.add_metal, name='add_metal'),
     path("upload_orderpdf/", rmorder.upload_orderpdf, name="upload_orderpdf"),
-    path("upload_metal_orderpdf/", rmorder.upload_metal_orderpdf, name="upload_metal_orderpdf"),
     
     path('order_images/<int:order_id>/', rmorder.order_images, name='order_images'),
     path('order_is_allocated_to_stock/<str:so_num>/', rmorder.order_is_allocated_to_stock, name='order_is_allocated_to_stock'),
@@ -127,6 +128,7 @@ urlpatterns = [
     path("import_aline/", temporary.import_aline, name="import_aline"), 
     path("import_accounting/", temporary.import_accounting, name="import_accounting"),
     path("import_cabinettype/", temporary.import_cabinettype, name ="import_cabinettype"),
+    path("import_deliveryorder/",temporary.import_deliveryorder,name ="import_deliveryorder"),
 
     path('export_pallet/',temporary.export_pallet,name='export_pallet'),    
     
@@ -170,6 +172,10 @@ urlpatterns = [
     path("statistics_mcd_trend", statistics.statistics_mcd_trend,name="statistics_mcd_trend"),
     path("statistics_outbound_metal", statistics.statistics_outbound_metal,name="statistics_outbound_metal"),
     path("statistics_metal_customer_trend", statistics.statistics_metal_customer_trend, name="statistics_metal_customer_trend"),
+    path("statistics_metal_product_trend", statistics.statistics_metal_product_trend, name="statistics_metal_product_trend"),
+    path("statistics_metal_product_trend_customer_outbound", statistics.statistics_metal_product_trend_customer_outbound, name="statistics_metal_product_trend_customer_outbound"),
+    path("statistics_metal_customer_product_outbound",statistics.statistics_metal_customer_product_outbound,name="statistics_metal_customer_product_outbound"),
+    path("statistics_glove_customer_product_outbound",statistics.statistics_glove_customer_product_outbound,name="statistics_glove_customer_product_outbound"),
     path("statistics_metal_commission", statistics.statistics_metal_commission, name="statistics_metal_commission"),
     path("export_commission/", statistics.export_commission, name="export_commission"),    # 导出库存
 
@@ -186,4 +192,6 @@ urlpatterns = [
     path("upload_cabinetspdf/", cabinets.upload_cabinetspdf, name="upload_cabinetspdf"),
     path("add_cabinet_packing/", cabinets.add_cabinet_packing, name="add_cabinet_packing"),
     path("upload_cabinetspdf_packing/", cabinets.upload_cabinetspdf_packing, name="upload_cabinetspdf_packing"),
+
+    path('FreighTechCartage_avg_price/',temporary.FreighTechCartage_avg_price,name='FreighTechCartage_avg_price'),
 ]

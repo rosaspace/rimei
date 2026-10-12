@@ -1,5 +1,5 @@
 import os
-import fitz  # PyMuPDF 解析 PDF
+import pymupdf
 import math
 
 from datetime import datetime, timedelta
@@ -50,17 +50,17 @@ def print_converted_order(request, so_num):
 
     updated_pdf_name = f"{order.order_pdfname}_updated.pdf"
     updated_pdf_path = os.path.join(converted_dir, updated_pdf_name)
-    doc = fitz.open(pdf_path)
+    doc = pymupdf.open(pdf_path)
 
     for page in doc:
         x, y = 35, 28  
         erase_width, erase_height = 250, 150  
-        rect = fitz.Rect(x, y, x + erase_width, y + erase_height)
+        rect = pymupdf.Rect(x, y, x + erase_width, y + erase_height)
         page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))  
 
         # 添加新 LOGO
         logo_width, logo_height = 130, 65  
-        page.insert_image(fitz.Rect(x, y, x + logo_width, y + logo_height), filename=constants_address.Rimei_LOGO_PATH)
+        page.insert_image(pymupdf.Rect(x, y, x + logo_width, y + logo_height), filename=constants_address.Rimei_LOGO_PATH)
 
         # 添加新地址
         address_x, address_y = x, y + logo_height + 20  
@@ -73,7 +73,7 @@ def print_converted_order(request, so_num):
 
         # 遮住右上角名称
         erase_title_width, erase_title_height = 320, 30  
-        erase_rect = fitz.Rect(page_width - erase_title_width, 30, page_width, 30 + erase_title_height)
+        erase_rect = pymupdf.Rect(page_width - erase_title_width, 30, page_width, 30 + erase_title_height)
         page.draw_rect(erase_rect, color=(1, 1, 1), fill=(1, 1, 1))
 
         page.insert_text((packing_slip_x, packing_slip_y), constants_address.NEW_TITLE, fontsize=18, color=(0, 0, 0), fontfile="helvB")
@@ -177,14 +177,17 @@ def print_order_bol(request, so_num):
         })
 
     # 基本信息
+    shipfrom = constants_address.rimei_address if order.customer_name.classification == 'Rimei' else constants_address.ssa_address
+    total_weight = str(total_plts * 1250) if order.customer_name.classification == 'Rimei' else 8000
+    bill_to = order.bill_to if order.customer_name.classification == 'Rimei' else "N/A"
     container_info = {
-        "Ship From": constants_address.rimei_address,
+        "Ship From": shipfrom,
         "Ship To": order.ship_to,
-        "Bill To": order.bill_to,
+        "Bill To": bill_to,
         "SO Number": order.so_num,
         "PO Number": order.po_num,
         "Ship Date": order.pickup_date.strftime("%m/%d/%Y"),
-        "Total LBS": str(total_plts * 1250),
+        "Total LBS": total_weight,
         "Total Pallets": str(total_plts),
     }
 
@@ -443,7 +446,7 @@ def print_forklift_bol(request):
         filename=os.path.basename(file_path),
     )
 
-# Print shipout BOL
+# Print customer shipout BOL
 def print_shipout_bol(request):
     print("----------print_shipout_bol----------")
     

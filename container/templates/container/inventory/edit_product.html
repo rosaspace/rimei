@@ -12,7 +12,7 @@
         {% if product.type == 'Metal' %}
             <a href="{% url 'inventory_metal' %}" class="btn btn-secondary">Back</a>
         {% else %}
-            <a href="{% url 'inventory' %}" class="btn btn-secondary">Back</a>
+            <a href="{% url 'inventory_glove' %}" class="btn btn-secondary">Back</a>
         {% endif %}
     </div>
 
@@ -83,6 +83,29 @@
             </div>            
         </div>
         <div class="row mb-2" >
+            <!-- <div class="col-md-3">
+                <label for="plts" class="form-label required-label">July Price</label>
+                <input type="text" class="form-control" id="so_num" name="price_july" value="{{ product.price_july|default:'' }}" required>
+            </div> 
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Sep Price</label>
+                <input type="text" class="form-control" id="so_num" name="price_sep" value="{{ product.price_sep|default:'' }}" required>
+            </div>  -->
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">ABC Price</label>
+                <input type="text" class="form-control" id="so_num" name="price_abc" value="{{ product.price_abc|default:'' }}" required>
+            </div> 
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Matrix Homeowner Price</label>
+                <input type="text" class="form-control" id="so_num" name="price_matrix_homeowner" value="{{ product.price_matrix_homeowner|default:'' }}" required>
+            </div> 
+            <div class="col-md-3">
+                <label for="plts" class="form-label required-label">Matrix Warehouse Price</label>
+                <input type="text" class="form-control" id="so_num" name="price_matrix_warehouse" value="{{ product.price_matrix_warehouse|default:'' }}" required>
+            </div> 
+        </div>
+        <hr class="my-4" style="border-color: #FF0000; border-width: 2px;">
+        <div class="row mb-2" >
             <div class="col-md-6">
                 <label for="plts" class="form-label required-label">ShelfRecord</label>
                 <input type="text" class="form-control" id="so_num" name="ShelfRecord" value="{{ product.ShelfRecord|default:'' }}" required>
@@ -109,6 +132,17 @@
                 <select class="form-select" id="classification" name="classification" required>
                     <option value="">Select...</option>
                     {% for customer in classification %}
+                    <option value="{{ customer.id }}" {% if customer.id == product.classification.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="gauge" class="form-label required-label">Gauge</label>
+                <select class="form-select" id="gauge" name="gauge" required>
+                    <option value="">Select...</option>
+                    {% for customer in gauge %}
                     <option value="{{ customer.id }}" {% if customer.id == product.classification.id %}selected{% endif %}>
                         {{ customer.name }}
                     </option>

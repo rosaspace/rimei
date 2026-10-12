@@ -7,10 +7,10 @@
     <div class="row" >
         <div class="d-flex flex-wrap align-items-start">
             <div class="me-2">
-                <button class="btn btn-primary" id="printOrder">Original Order</button>
+                <button class="btn btn-primary" id="printOrder">Original</button>
             </div>
             <div class="me-2">
-                <button class="btn btn-primary" id="printConvertedOrder">Converted Order</button>
+                <button class="btn btn-primary" id="printConvertedOrder">Converted</button>
             </div>
             <div class="me-2">
                 <button class="btn btn-primary" id="printLabel">Label</button>
@@ -48,7 +48,7 @@
             <!-- Push this button to the right -->
             <div class="ms-auto">
                 <a href="{% url 'order_email' order.so_num %}?type=shippeout" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Send Shipped out
+                    <i class="fas fa-plus"></i> Shipped out
                 </a>
             </div>
         </div>
@@ -228,6 +228,11 @@
                 <input type="date" class="form-control" id="carrier_payment_date" name="carrier_payment_date"
                     value="{{ order.carrier_payment_date|date:'Y-m-d' }}">
             </div>
+
+            <div class="col-md-3">
+                <label class="form-label" for="delivery_price">Delivery Price</label>
+                <input type="text" id="delivery_price" name="delivery_price" class="form-control" value="{{ order.delivery_price }}">
+            </div>
         </div>
 
         <!-- 添加订单项目表格 -->
@@ -245,8 +250,8 @@
                 <table class="table table-bordered mb-0" id="orderTable" >
                     <thead>
                         <tr>
-                            <th>Product Name</th>
-                            <th>Product SKU</th>
+                            <th>Inventory SKU</th>
+                            <th>Order SKU</th>
                             <th>Quantity</th>
                             <th>SalesPrice</th>
                             <th>Pallet</th>
@@ -254,6 +259,12 @@
                             <th>Weight</th>
                             <th>Inventory</th>
                             <th>Price</th>
+                            <th>Sum</th>
+                            <th>Flameproof</th>
+                            <th>Sum</th>
+                            <th>Warehouse</th>
+                            <th>Sum</th>
+                            <th>HomeOwner</th>
                             <th>Sum</th>
                             <th>Action</th>
                         </tr>
@@ -314,10 +325,31 @@
                                 </div>
                             </td>
                             <td class="align-middle">
-                                <div class="d-flex align-items-center" ><span>{{ item.costprice }}</span></div>
+                                <div class="d-flex align-items-center" ><span>{{ item.actual_costprice }}</span></div>
                             </td>
                             <td class="align-middle">
-                                <div class="d-flex align-items-center" ><span>{{ item.totalprice }}</span></div>
+                                <div class="d-flex align-items-center" ><span>{{ item.actual_totalprice }}</span></div>
+                            </td>
+                            <!--Flamproof-->
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.flameproofprice }}</span></div>
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.flameproofprice_totalprice }}</span></div>
+                            </td>
+                            <!--Warehouse-->
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.warehouseprice_single }}</span></div>
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.warehouseprice }}</span></div>
+                            </td>
+                            <!--Homeowner-->
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.homeownerprice_single }}</span></div>
+                            </td>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center" ><span>{{ item.homeownerprice }}</span></div>
                             </td>
                             
                             <td class="align-middle">
@@ -339,6 +371,7 @@
                     <div>
                         <p class="mb-0">Sales Price: <strong>$ {{ total_sales_price }}</strong></p>
                         <p class="mb-0">Sales Tax: <strong>$ {{ total_sales_tax }}</strong></p>
+                        <p class="mb-0">Delivery Price: <strong>$ {{ total_sales_delivery }}</strong></p>
                         <p class="mb-0">Sales Total Grand: <strong>$ {{ total_sales_grand }}</strong></p>
                     </div>
 
@@ -346,6 +379,7 @@
                     <div>
                         <p class="mb-0">Total Price: <strong>$ {{ total_price }}</strong></p>
                         <p class="mb-0">Total Grand: <strong>$ {{ total_grand }}</strong></p>
+                        <p class="mb-0">Carrier Price: <strong>$ {{ total_sales_carrier }}</strong></p>
                         <p class="mb-0">Total Credit Grand: <strong>$ {{ total_credit_price }}</strong></p>
                     </div>
                 </div>
@@ -426,29 +460,61 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('edit-order-form');
     const itemsField = document.getElementById('orderitems-field');
 
+    if (!form) {
+        console.error("Cannot find #edit-order-form");
+        return;
+    }
+
+    if (!itemsField) {
+        console.error("Cannot find #orderitems-field");
+        return;
+    }
+
     form.addEventListener('submit', function (e) {
         const rows = document.querySelectorAll('#orderTable tbody tr');
         let items = [];
 
-        rows.forEach(row => {
-            const productId = row.querySelector('.product-main').value;
-            const productActualId = row.querySelector('.product-actual').value;
-            const quantity = row.querySelector('.quantity-input').value;
-            const salesprice = row.querySelector('.salesprice-input').value;
-            console.log("---:",productId,productActualId, quantity,salesprice)
+        rows.forEach((row, index) => {
+            const productMain = row.querySelector('.product-main');
+            const productActual = row.querySelector('.product-actual');
+            const quantityInput = row.querySelector('.quantity-input');
+            const salespriceInput = row.querySelector('.salesprice-input');
+
+            console.log("ROW:", index, {
+                productMain: productMain,
+                productActual: productActual,
+                quantityInput: quantityInput,
+                salespriceInput: salespriceInput
+            });
+
+            if (!productMain || !quantityInput) {
+                console.warn("Missing product or quantity input in row:", index);
+                return;
+            }
+
+            const productId = productMain.value;
+            const productActualId = productActual ? productActual.value : '';
+            const quantity = quantityInput.value;
+            const salesprice = salespriceInput ? salespriceInput.value : '0';
+
+            console.log("ITEM:",productId,productActualId, quantity,salesprice)
 
             if (productId && quantity) {
                 items.push({
                     product_id: productId,
                     product_actual_id: productActualId || null,
                     quantity: quantity,
-                    salesprice: salesprice
+                    salesprice: salesprice || '0'
                 });
             }
         });
 
         // 将 items 转为 JSON 字符串写入隐藏 input
         itemsField.value = JSON.stringify(items);
+
+        console.log("===== FINAL ORDER ITEMS =====");
+        console.log(items);
+        console.log("itemsField.value:", itemsField.value);
     });
 
     // 添加新行

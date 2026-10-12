@@ -1,14 +1,84 @@
 {% extends "container/base.html" %}
 {% block content %}
 
-<a href="{% url 'add_user' %}" class="btn btn-primary">👤 Add User</a>
 
-<a href="{% url 'assign_permission' %}" class="btn btn-primary">🔒 Assign Permission</a>  <!-- 添加权限分配链接 -->
+<!-- 操作区域 -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-3">
 
-<a href="{% url 'register' %}">Register here.</a>
+            <a href="{% url 'add_user' %}" class="btn btn-primary">
+                👤 Add User
+            </a>
 
-<h3>Existing Users and Permissions</h3>
-<ul class="list-group">
+            <a href="{% url 'assign_permission' %}" class="btn btn-secondary">
+                🔒 Assign Permission
+            </a>
+
+            <a href="{% url 'register' %}" class="btn btn-outline-secondary">
+                Register here
+            </a>
+
+        </div>
+    </div>
+</div>
+
+<!-- 标题 -->
+<div class="d-flex align-items-center mb-3">
+    <h3 class="mb-0 text-secondary">
+        Existing Users and Permissions
+    </h3>
+</div>
+
+<!-- 用户列表 -->
+<div class="row g-4">
+
+    {% for user in users_with_permissions %}
+    <div class="col-12 col-md-6 col-xl-4 col-xxl-3">
+
+        <div class="card shadow-sm h-100 border-0">
+
+            <div class="card-header text-dark"
+                    style="background-color: #e9ecef;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong>
+                        👤 {{ user.username }}
+                    </strong>
+
+                    <span class="badge bg-secondary">
+                        {{ user.permissions|length }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="card-body">
+                {% if user.permissions %}
+
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for permission in user.permissions %}
+                            <span class="badge bg-light text-dark border">
+                                {{ permission }}
+                            </span>
+                        {% endfor %}
+                    </div>
+
+                {% else %}
+                    <span class="text-muted">
+                        No Permissions
+                    </span>
+                {% endif %}
+            </div>
+
+        </div>
+
+    </div>
+    {% endfor %}
+
+</div>
+
+
+
+<!-- <ul class="list-group">
     {% for user in users_with_permissions %}
     <li class="list-group-item">
         <strong>{{ user.username }}</strong>
@@ -23,5 +93,5 @@
         </ul>
     </li>
     {% endfor %}
-</ul>
+</ul> -->
 {% endblock %}

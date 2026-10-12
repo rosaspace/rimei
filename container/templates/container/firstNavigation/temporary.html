@@ -2,8 +2,8 @@
 {% block content %}
 
 <!--Import-->
-<div class="row mb-3">
-    <div class="col-md-3">
+<div class="row mb-2">
+    <div class="col-md-2">
         <h4>Import Inventory</h4>    
         <!-- Import Inventory -->
         <form action="/import_inventory/" method="post" enctype="multipart/form-data">
@@ -14,7 +14,7 @@
             </div>
         </form>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <h4>Import Aline</h4>
         <!-- Import Inventory -->
         <form action="/import_aline/" method="post" enctype="multipart/form-data">
@@ -25,7 +25,7 @@
             </div>
         </form>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <h4>Import Accounting</h4>
         <form action="/import_accounting/" method="post" enctype="multipart/form-data">
             <div class="input-group">
@@ -35,13 +35,36 @@
             </div>
         </form>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <h4>Import CabinetType</h4>
         <form action="/import_cabinettype/" method="post" enctype="multipart/form-data">
             <div class="input-group">
                 {% csrf_token %}
                 <input type="file" name="excel_file" accept=".xlsx, .xls" class="form-control">
                 <button type="submit" class="btn btn-primary">Upload Excel</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-2">
+        <h4>Import DO</h4>
+        <form id="importDeliveryOrderForm"
+            action="{% url 'import_deliveryorder' %}"
+            method="post"
+            enctype="multipart/form-data">
+
+            {% csrf_token %}
+
+            <div class="input-group">
+                <input type="file"
+                    id="deliveryOrderPdf"
+                    name="pdf_file"
+                    accept=".pdf"
+                    class="form-control"
+                    required>
+
+                <button type="submit" class="btn btn-primary">
+                    Upload PDF
+                </button>
             </div>
         </form>
     </div>
@@ -224,7 +247,7 @@
 
 <!--Export-->
 <div class="row">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <h4>Export Pallets</h4>
         <form method="GET" action="{% url 'export_pallet' %}" class="mb-3">
             <div class="input-group">
@@ -244,17 +267,26 @@
             </div>
         </form>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <h4>Export Inventory</h4>
         <div class="input-group">
             <a href="{% url 'export_stock' %}?export=1" class="btn btn-primary">Export Inventory</a>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <h4>Inventory by Employee</h4>
         <div class="input-group">
             <a href="{% url 'export_inventory_byemployee' %}" class="btn btn-primary">Inventory by Employee</a>
         </div>
+    </div>
+
+    <div class="col-md-2">
+        <h4>FreighTechCartage Average Price</h4>
+        <a href="{% url 'FreighTechCartage_avg_price' %}" class="btn btn-primary" id="calculateAvgPrice">
+            Calculate Average Price
+        </a>
+
+        <div id="avgPriceResult" style="margin-top: 10px;"></div>
     </div>
 </div>
 
@@ -363,7 +395,7 @@
                         type="radio"
                         name="do_option"
                         value="6">
-                    <label class="form-check-label">Ddemi</label>
+                    <label class="form-check-label">Demi</label>
                 </div>
                 </div>
             </div>
@@ -392,7 +424,7 @@
 
     <div class="col-md-5">
         <h4>Inventory Count Number</h4>
-        <a href="{% url 'inventory_summary' %}" class="btn btn-primary mb-3">Inventory Summary</a>
+        <a href="{% url 'inventory_summary' %}" class="btn btn-success mb-3">Inventory Summary</a>
         <ul class="nav nav-tabs mb-3" role="tablist">
         {% for type, data in final_summary.items %}
             <li class="nav-item" role="presentation">
@@ -465,5 +497,100 @@ function requireOfficeDepot(isRequired) {
         input.value = ""; // 可选：防止误提交旧值
     }
 }
+
+document.getElementById('calculateAvgPrice').addEventListener('click', function(e) {
+    e.preventDefault();
+
+    const url = this.href;
+    const result = document.getElementById('avgPriceResult');
+
+    result.innerHTML = 'Loading...';
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+
+            let html = `
+                <div style="margin-bottom: 15px; font-size: 18px;">
+                    <strong>Average Price: $${Number(data.avg_price).toFixed(2)}</strong>
+                </div>
+            `;
+
+            data.containers.forEach(item => {
+                html += `
+                    <div style="margin-bottom: 5px;">
+                        Container: <strong>${item.container_id}</strong>
+                        | inboundCategory: ${item.inboundCategory}
+                        | logistics: ${item.logistics}
+                        | Price: <strong>$${Number(item.price).toFixed(2)}</strong>
+                    </div>
+                `;
+            });
+
+            result.innerHTML = html;
+        })
+        .catch(error => {
+            console.error(error);
+            result.innerHTML = 'Error';
+        });
+});
+
+document.getElementById('importDeliveryOrder').addEventListener('click', function (e) {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('deliveryOrderPdf');
+
+    if (!fileInput.files.length) {
+        alert('Please select a PDF file.');
+        return;
+    }
+
+    // 先打开窗口，避免浏览器拦截弹窗
+    const pdfWindow = window.open('about:blank', '_blank');
+
+    if (!pdfWindow) {
+        alert('Please allow pop-ups for this website.');
+        return;
+    }
+
+    pdfWindow.document.write('Generating Delivery Order PDF...');
+
+    const formData = new FormData();
+    formData.append('pdf_file', fileInput.files[0]);
+
+    fetch("{% url 'import_deliveryorder' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: formData
+    })
+    .then(async response => {
+        if (!response.ok) {
+            let message = 'Failed to generate Delivery Order PDF.';
+
+            try {
+                const data = await response.json();
+                message = data.error || message;
+            } catch (_) {}
+
+            throw new Error(message);
+        }
+
+        return response.blob();
+    })
+    .then(blob => {
+        const pdfUrl = URL.createObjectURL(blob);
+
+        pdfWindow.location.href = pdfUrl;
+    })
+    .catch(error => {
+        console.error(error);
+
+        pdfWindow.close();
+        alert(error.message);
+    });
+});
+
 </script>
 {% endblock %}

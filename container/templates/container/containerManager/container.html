@@ -108,7 +108,13 @@
                         {{ container.pickup_number }}
                     {% endif %}
                 </td>
-                <td>{{ container.plts }}</td>
+                <td>
+                    {% if container.customer.id == 12  %}
+                        -
+                    {% else %}
+                        {{ container.plts }}
+                    {% endif %}
+                </td>
                 <td>
                     {% if container.logistics.id == 2 %}
                         ---

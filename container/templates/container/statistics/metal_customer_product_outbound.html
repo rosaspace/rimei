@@ -1,0 +1,374 @@
+
+{% extends "container/base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <!-- ===================================================== -->
+    <!-- Page Title -->
+    <!-- ===================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h3 class="mb-1">
+                Metal / Wholesaler Product Outbound
+            </h3>
+
+            <div class="text-muted">
+                {{ current_year }} YTD
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- Summary Cards -->
+    <!-- ===================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <!-- Total Outbound -->
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="text-muted">
+                        Total YTD Outbound
+                    </div>
+
+                    <h3 class="mt-2">
+                        {{ total_outbound|floatformat:0 }}
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Average Monthly Outbound -->
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="text-muted">
+                        Average Monthly Outbound
+                    </div>
+
+                    <h3 class="mt-2">
+                        {{ avg_monthly_total|floatformat:0 }}
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Product Count -->
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="text-muted">
+                        Products
+                    </div>
+
+                    <h3 class="mt-2">
+                        {{ product_count }}
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="row">
+        <!-- ===================================================== -->
+        <!-- Product Outbound & Inventory -->
+        <!-- ===================================================== -->
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header">
+
+                    <h5 class="mb-0">
+                        Product Outbound & Inventory
+                    </h5>
+                    <small class="text-muted">
+                        Products Outbound Quality and Inventory
+                    </small>
+                </div>
+
+
+                <div class="card-body">
+
+                    <div class="table-responsive">
+
+                        <table
+                            id="product-outbound-table"
+                            class="table table-striped table-hover align-middle"
+                        >
+
+                            <thead>
+
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+
+                                    <th>Outbound</th>
+
+                                    <th>%</th>
+
+                                    <th>Monthly Avg</th>
+
+                                    <th>Current Inventory</th>
+
+                                    <th>Coverage</th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody>
+
+                                {% for item in product_data %}
+
+                                <tr>
+                                    <td>
+                                        {{ forloop.counter }}
+                                    </td>
+                                    <!-- Product -->
+
+                                    <td>
+
+                                        <strong>
+                                            {{ item.product_name }}
+                                        </strong>
+
+                                    </td>
+
+
+                                    <!-- Outbound -->
+
+                                    <td>
+
+                                        {{ item.outbound_qty|floatformat:0 }}
+
+                                    </td>
+
+
+                                    <!-- Percentage -->
+
+                                    <td>
+
+                                        {{ item.percentage|floatformat:1 }}%
+
+                                    </td>
+
+
+                                    <!-- Monthly Average -->
+
+                                    <td>
+
+                                        {{ item.monthly_avg|floatformat:0 }}
+
+                                    </td>
+
+
+                                    <!-- Current Inventory -->
+
+                                    <td>
+
+                                        {{ item.inventory|floatformat:0 }}
+
+                                    </td>
+
+
+                                    <!-- Coverage -->
+
+                                    <td>
+
+                                        {% if item.coverage < 1 %}
+
+                                            <span class="badge bg-danger">
+
+                                                {{ item.coverage|floatformat:1 }} mo
+
+                                            </span>
+
+                                        {% elif item.coverage < 2 %}
+
+                                            <span class="badge bg-warning text-dark">
+
+                                                {{ item.coverage|floatformat:1 }} mo
+
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge bg-success">
+
+                                                {{ item.coverage|floatformat:1 }} mo
+
+                                            </span>
+
+                                        {% endif %}
+
+                                    </td>
+
+                                </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- =========================================================
+        Inventory Coverage Ranking
+        ========================================================= -->
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        Inventory Coverage
+                    </h5>
+                    <small class="text-muted">
+                        Products with the lowest inventory coverage are shown first.
+                    </small>
+                </div>
+
+                <div class="card-body">
+
+                    <div class="table-responsive">
+
+                        <table
+                            id="coverage-product-table"
+                            class="table table-striped table-hover align-middle"
+                        >
+
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Outbound Qty</th>
+                                    <th>Monthly Avg</th>
+                                    <th>Current Inventory</th>
+                                    <th>Coverage</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                {% for item in coverage_product_data %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ forloop.counter }}
+                                    </td>
+
+                                    <td>
+                                        <strong>
+                                            {{ item.product_name }}
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        {{ item.outbound_qty|floatformat:0 }}
+                                    </td>
+
+                                    <td>
+                                        {{ item.monthly_avg|floatformat:0 }}
+                                    </td>
+
+                                    <td>
+                                        {{ item.inventory|floatformat:0 }}
+                                    </td>
+
+                                    <td>
+
+                                        {% if item.coverage < 1 %}
+
+                                            <span class="badge bg-danger">
+                                                {{ item.coverage|floatformat:1 }} months
+                                            </span>
+
+                                        {% elif item.coverage < 2 %}
+
+                                            <span class="badge bg-warning text-dark">
+                                                {{ item.coverage|floatformat:1 }} months
+                                            </span>
+
+                                        {% elif item.coverage < 3 %}
+
+                                            <span class="badge bg-info text-dark">
+                                                {{ item.coverage|floatformat:1 }} months
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge bg-success">
+                                                {{ item.coverage|floatformat:1 }} months
+                                            </span>
+
+                                        {% endif %}
+
+                                    </td>
+
+                                </tr>
+
+                                {% empty %}
+
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        No product data available.
+                                    </td>
+                                </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+

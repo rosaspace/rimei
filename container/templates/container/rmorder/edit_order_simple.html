@@ -15,6 +15,9 @@
             <div class="me-2">
                 <button class="btn btn-primary" id="printMcdOrder">Mcd Order</button>
             </div>
+            <div class="me-2">
+                <button class="btn btn-success" id="printMetalOrder">Packing List</button>
+            </div> 
             <div class="ms-auto">
                 <a href="{% url 'simplified_glove_view' %}" class="btn btn-secondary">Back</a>
             </div>
@@ -48,7 +51,7 @@
             </div>
         </div>        
 
-        <div class="row mb-2" >
+        <div class="row mb-2" > 
             <div class="col-md-6">
                 <!-- <label class="form-label">Bill To:</label> -->
                 <p class="form-control-plaintext mb-0" style="white-space: pre-line;">
@@ -112,6 +115,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const soNum = '{{ order.so_num }}';
+    const isOrder = '0';
     
     // 打印转换后的订单
     document.getElementById('printConvertedOrder').addEventListener('click', function() {
@@ -126,6 +130,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 打印Mcd订单
     document.getElementById('printMcdOrder').addEventListener('click', function() {
         window.open(`/print_order_mcd/${soNum}/`, '_blank');
+    });
+
+    // 打印Metal Order
+    document.getElementById('printMetalOrder').addEventListener('click', function() {
+        window.open(`/print_metal_invoice/${soNum}/${isOrder}`, '_blank');
     });
 });
 </script>
