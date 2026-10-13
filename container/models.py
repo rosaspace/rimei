@@ -251,10 +251,10 @@ class RMProduct(models.Model):
         # =========================================================
 
         if type_code == 'CT':
-            return f'{width} H-STUD, {length}, {gauge}'
+            return f'{width} CH-STUD, {length}, {gauge}'
 
         if type_code == 'JT':
-            return f'{width} J TRACK, {length}, {gauge}'
+            return f'{width} J-TRACK, {length}, {gauge}'
 
         # =========================================================
         # Z CHANNEL
@@ -265,6 +265,17 @@ class RMProduct(models.Model):
             return (
                 f'{width} '
                 f'DEEP Z FURRING CHANNEL ({gauge})'
+            )
+
+        # =========================================================
+        # 	Slotted Track
+        # =========================================================
+
+        if type_code == 'ST':
+
+            return (
+                f'{width} x {length} ({gauge}) '
+                f'SLOTTED DEFLECTION TRACK WITH {leg} LEG'
             )
 
         # =========================================================
@@ -286,7 +297,7 @@ class RMProduct(models.Model):
         if type_code == 'L':
             return (
                 f'{width} x {leg} x {length} '
-                f'FRAMING ANGLE, ({gauge})'
+                f'ANGLE, ({gauge})'
             )
 
         # =========================================================

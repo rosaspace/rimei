@@ -358,7 +358,7 @@ def get_product_qty_with_inventory_from_order(order_items):
             * Decimal("1.15")
         ).quantize(Decimal("0.01"), rounding=ROUND_CEILING)
         item.so_num_actual = actualproduct.name
-        item.description_actual = actualproduct.description        
+        item.description_actual = actualproduct.get_product_description()
         item.actual_costprice = roundprice
         item.actual_totalprice = roundprice * item.quantity
         item.warehouseprice_single = actualproduct.price_matrix_warehouse
