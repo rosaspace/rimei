@@ -308,6 +308,10 @@ def edit_order_full(request, so_num):
                         request.POST.get('is_paid') == 'on'
                     )
 
+                    order.customer_iscommission = (
+                        request.POST.get('is_commission') == 'on'
+                    )
+
                     order.content = (
                         request.POST.get('description')
                     )

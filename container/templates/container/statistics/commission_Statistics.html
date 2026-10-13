@@ -129,14 +129,14 @@
 
                 {% for customer, months in report.items %}
                 <tr class="table-primary">
-                    <td colspan="13">
+                    <td colspan="14">
                         <strong>{{ customer }}</strong>
                     </td>
                 </tr>
 
                     {% for month, data in months.items %}
                     <tr class="table-secondary">
-                        <td colspan="13">
+                        <td colspan="14">
                             <strong>{{ month }}</strong>
                         </td>
                     </tr>
@@ -214,6 +214,7 @@
                             <strong>${{ data.profit_amount|floatformat:2 }}</strong>
                         </td>
                         <td></td>
+                        <td></td>
                     </tr>
 
                     {% endfor %}
@@ -242,6 +243,7 @@
                     <td class="text-end">
                         <strong>${{ ground_profit_amount|floatformat:2 }}</strong>
                     </td>
+                    <td></td>
                     <td></td>
                 </tr>
                 </tbody>

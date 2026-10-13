@@ -370,6 +370,7 @@ class RMOrder(models.Model):
     customer_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     customer_payment_date = models.DateField(blank=True, null=True)  # 付款日期
     customer_ispay = models.BooleanField(default=False) # 是否付款
+    customer_iscommission = models.BooleanField(default=False) # 是否Commission
     content = models.TextField(blank=True, null=True, default='')  # 解析出的内容
 
     carrier_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)

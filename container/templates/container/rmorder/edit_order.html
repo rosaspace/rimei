@@ -206,14 +206,13 @@
                 </div>
             </div>
             
-            <!-- Description -->
             <div class="col-md-3">
-                <label for="description" class="form-label mb-1">Description</label>
-                <input type="text"
-                    class="form-control"
-                    id="description"
-                    name="description"
-                    value="{{ order.content }}">
+                <label class="form-label" for="is_commission">Commission State</label>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_commission" name="is_commission"
+                        {% if order.customer_iscommission %} checked {% endif %}>
+                    <label class="form-check-label" for="is_commission">Is Pay</label>
+                </div>
             </div>
         </div>
 
@@ -232,6 +231,16 @@
             <div class="col-md-3">
                 <label class="form-label" for="delivery_price">Delivery Price</label>
                 <input type="text" id="delivery_price" name="delivery_price" class="form-control" value="{{ order.delivery_price }}">
+            </div>
+
+            <!-- Description -->
+            <div class="col-md-3">
+                <label for="description" class="form-label mb-1">Description</label>
+                <input type="text"
+                    class="form-control"
+                    id="description"
+                    name="description"
+                    value="{{ order.content }}">
             </div>
         </div>
 

@@ -2518,7 +2518,8 @@ def get_metal_commission_orders(customer_id, month=None, start_date=None, end_da
         RMOrder.objects
         .filter(
             is_canceled=False,
-            customer_ispay=True,
+            #customer_ispay=True,
+            customer_iscommission=False
         )
         .select_related("customer_name")
         .annotate(
